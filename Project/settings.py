@@ -106,7 +106,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # =====================
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/'  # Redirect to home page after logout
+LOGOUT_REDIRECT_URL = '/'
 
 
 # =====================
@@ -125,6 +125,13 @@ USE_TZ = True
 # =====================
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
+
+# =====================
+# MEDIA FILES (for image uploads)
+# =====================
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # =====================
