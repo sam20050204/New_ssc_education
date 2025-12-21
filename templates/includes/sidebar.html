@@ -9,7 +9,11 @@
         📋 Enquiries
     </a>
 
-    <a href="{% url 'logout' %}" class="menu-item">
-        🚪 Logout
-    </a>
+    <!-- Logout as a form to handle POST request properly -->
+    <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit" class="menu-item logout-item">
+            🚪 Logout
+        </button>
+    </form>
 </nav>

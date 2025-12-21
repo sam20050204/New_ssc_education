@@ -18,9 +18,23 @@
 
     <div class="user-info">
         <span>Welcome, {{ request.user.username|default:"Admin" }}</span>
-        <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+        <a href="{% url 'logout' %}" class="logout-btn" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
+        <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
+            {% csrf_token %}
+        </form>
     </div>
 </header>
+
+<!-- 🔹 MESSAGES -->
+{% if messages %}
+<div class="messages">
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 <!-- 🔹 MAIN LAYOUT (SIDEBAR + CONTENT) -->
 <div class="layout">

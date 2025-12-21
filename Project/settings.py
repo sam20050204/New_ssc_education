@@ -106,7 +106,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # =====================
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGOUT_REDIRECT_URL = '/'  # Redirect to home page after logout
 
 
 # =====================
@@ -125,13 +125,9 @@ USE_TZ = True
 # =====================
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/login/'
+
+
 # =====================
 # DEFAULT FIELD
 # =====================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-
-

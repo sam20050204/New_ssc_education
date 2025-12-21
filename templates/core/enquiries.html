@@ -4,7 +4,22 @@
 {% block title %}Enquiries{% endblock %}
 
 {% block page_heading %}
-📋 Enquiries
+<div class="page-header-enq">
+    <div class="page-header-content-enq">
+        <div class="page-title-wrapper">
+            <div class="page-icon-enq">📋</div>
+            <div>
+                <h1 class="page-title-enq">Enquiries Management</h1>
+                <p class="page-subtitle">Filter and manage all student enquiries</p>
+            </div>
+        </div>
+        <div class="page-actions-enq">
+            <a href="{% url 'export_enquiries' %}?{{ request.GET.urlencode }}" class="action-btn-enq primary">
+                <span>📥</span> Export to Excel
+            </a>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -13,74 +28,163 @@
 
 {% block content %}
 
-<!-- SEARCH -->
-<form method="get" class="search-box">
-    <input
-        type="text"
-        name="search"
-        placeholder="Search name / mobile / course"
-        value="{{ search }}"
-    >
-    <button type="submit">Search</button>
-</form>
+<!-- FILTERS SECTION -->
+<div class="filters-container">
+    <form method="get" class="filters-form">
+        
+        <div class="filter-group">
+            <label for="search">🔍 Search</label>
+            <input
+                type="text"
+                name="search"
+                id="search"
+                placeholder="Name, mobile, course..."
+                value="{{ search }}"
+                class="filter-input"
+            >
+        </div>
+
+        <div class="filter-group">
+            <label for="month">📅 Month</label>
+            <select name="month" id="month" class="filter-select">
+                <option value="">All Months</option>
+                <option value="1" {% if month == "1" %}selected{% endif %}>January</option>
+                <option value="2" {% if month == "2" %}selected{% endif %}>February</option>
+                <option value="3" {% if month == "3" %}selected{% endif %}>March</option>
+                <option value="4" {% if month == "4" %}selected{% endif %}>April</option>
+                <option value="5" {% if month == "5" %}selected{% endif %}>May</option>
+                <option value="6" {% if month == "6" %}selected{% endif %}>June</option>
+                <option value="7" {% if month == "7" %}selected{% endif %}>July</option>
+                <option value="8" {% if month == "8" %}selected{% endif %}>August</option>
+                <option value="9" {% if month == "9" %}selected{% endif %}>September</option>
+                <option value="10" {% if month == "10" %}selected{% endif %}>October</option>
+                <option value="11" {% if month == "11" %}selected{% endif %}>November</option>
+                <option value="12" {% if month == "12" %}selected{% endif %}>December</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="year">📆 Year</label>
+            <select name="year" id="year" class="filter-select">
+                <option value="">All Years</option>
+                {% for y in available_years %}
+                    <option value="{{ y }}" {% if year == y|stringformat:"s" %}selected{% endif %}>
+                        {{ y }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="course">📚 Course</label>
+            <select name="course" id="course" class="filter-select">
+                <option value="">All Courses</option>
+                {% for c in available_courses %}
+                    <option value="{{ c }}" {% if course == c %}selected{% endif %}>
+                        {{ c }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-buttons">
+            <button type="submit" class="filter-btn apply">
+                Apply Filters
+            </button>
+            <a href="{% url 'enquiry_list' %}" class="filter-btn reset">
+                Show All
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- RESULTS SUMMARY -->
+<div class="results-summary">
+    <p>
+        Showing <strong>{{ page_obj.paginator.count }}</strong> enquir{{ page_obj.paginator.count|pluralize:"y,ies" }}
+        {% if search or month or year or course %}
+            with applied filters
+        {% endif %}
+    </p>
+</div>
 
 <!-- ENQUIRIES TABLE -->
-<table class="data-table">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Mobile</th>
-            <th>Course</th>
-            <th>Date</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for e in page_obj %}
-        <tr>
-            <td>{{ e.name }}</td>
-            <td>{{ e.mobile }}</td>
-            <td>{{ e.course }}</td>
-            <td>{{ e.created_at|date:"d M Y" }}</td>
-            <td>
-                <a href="{% url 'convert_enquiry' e.id %}" class="btn green">
-                    Convert
-                </a>
-                <button
-                    type="button"
-                    class="btn red"
-                    onclick="confirmDelete({{ e.id }})"
-                >
-                    Delete
-                </button>
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="5">No enquiries found</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Mobile</th>
+                <th>Education</th>
+                <th>Course</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in page_obj %}
+            <tr>
+                <td>
+                    <div class="name-cell">
+                        <span class="avatar">{{ e.name.0|upper }}</span>
+                        {{ e.name }}
+                    </div>
+                </td>
+                <td>{{ e.mobile }}</td>
+                <td>{{ e.education }}</td>
+                <td>
+                    <span class="course-badge">{{ e.course }}</span>
+                </td>
+                <td>{{ e.created_at|date:"d M Y, h:i A" }}</td>
+                <td>
+                    <button
+                        type="button"
+                        class="btn red"
+                        onclick="confirmDelete({{ e.id }})"
+                    >
+                        🗑️ Delete
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>No enquiries found</p>
+                    <small>Try adjusting your filters</small>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 <!-- PAGINATION -->
+{% if page_obj.paginator.num_pages > 1 %}
 <div class="pagination">
     {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}&search={{ search }}">
-            « Prev
+        <a href="?page=1&{{ filters_query }}" class="page-link">
+            « First
+        </a>
+        <a href="?page={{ page_obj.previous_page_number }}&{{ filters_query }}" class="page-link">
+            ‹ Prev
         </a>
     {% endif %}
 
-    <span>
+    <span class="page-info">
         Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
     </span>
 
     {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}&search={{ search }}">
-            Next »
+        <a href="?page={{ page_obj.next_page_number }}&{{ filters_query }}" class="page-link">
+            Next ›
+        </a>
+        <a href="?page={{ page_obj.paginator.num_pages }}&{{ filters_query }}" class="page-link">
+            Last »
         </a>
     {% endif %}
 </div>
+{% endif %}
 
 {% endblock %}
 

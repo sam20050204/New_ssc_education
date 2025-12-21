@@ -4,7 +4,33 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block page_heading %}
-Dashboard Overview
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">📊</div>
+            <div>
+                <h1 class="page-title">Dashboard Overview</h1>
+                <p class="page-subtitle">Welcome back! Here's what's happening.</p>
+            </div>
+        </div>
+        <div class="page-filters">
+            <form method="get" class="year-filter-form">
+                <label for="year-select">
+                    <span class="filter-icon">📅</span>
+                    <span class="filter-label">Select Year:</span>
+                </label>
+                <select name="year" id="year-select" class="year-select" onchange="this.form.submit()">
+                    <option value="">All Years</option>
+                    {% for year in available_years %}
+                        <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block content %}
@@ -14,18 +40,27 @@ Dashboard Overview
         <div class="stat-icon">📝</div>
         <div class="stat-number">{{ enquiry_count }}</div>
         <div class="stat-label">Total Enquiries</div>
+        {% if selected_year %}
+            <div class="stat-period">Year {{ selected_year }}</div>
+        {% endif %}
     </div>
 
     <div class="stat-card">
         <div class="stat-icon">🎓</div>
         <div class="stat-number">{{ mscit_count|default:0 }}</div>
         <div class="stat-label">MSCIT Students</div>
+        {% if selected_year %}
+            <div class="stat-period">Year {{ selected_year }}</div>
+        {% endif %}
     </div>
 
     <div class="stat-card">
         <div class="stat-icon">💻</div>
         <div class="stat-number">{{ klic_count|default:0 }}</div>
         <div class="stat-label">KLIC Students</div>
+        {% if selected_year %}
+            <div class="stat-period">Year {{ selected_year }}</div>
+        {% endif %}
     </div>
 </div>
 
