@@ -1,0 +1,82 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Admitted Students{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/admitted_students.css' %}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">🎓</div>
+            <div>
+                <h1 class="page-title">Admitted Students</h1>
+                <p class="page-subtitle">View all admitted students</p>
+            </div>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'new_admission' %}" class="action-btn primary">
+                <span>➕</span> New Admission
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="students-container">
+    <div class="students-grid">
+        {% for student in students %}
+        <div class="student-card">
+            <div class="student-photo">
+                {% if student.photo %}
+                    <img src="{{ student.photo.url }}" alt="{{ student.full_name }}">
+                {% else %}
+                    <div class="photo-placeholder">
+                        {{ student.student_name.0|upper }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="student-info">
+                <h3 class="student-name">{{ student.full_name }}</h3>
+                <span class="course-badge">{{ student.course }}{% if student.course == 'Other' %}: {{ student.custom_course }}{% endif %}</span>
+                
+                <div class="student-details">
+                    <div class="detail-item">
+                        <span class="detail-icon">📱</span>
+                        <span>{{ student.mobile_own }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-icon">🏙️</span>
+                        <span>{{ student.city }}, {{ student.district }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-icon">🎓</span>
+                        <span>{{ student.educational_qualification }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-icon">📅</span>
+                        <span>Admitted: {{ student.admission_date|date:"d M Y" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>No admitted students yet</p>
+            <a href="{% url 'new_admission' %}" class="btn-primary">Add First Student</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

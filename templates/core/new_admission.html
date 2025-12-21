@@ -1,0 +1,198 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}New Admission{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/admission.css' %}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">🎓</div>
+            <div>
+                <h1 class="page-title">New Admission</h1>
+                <p class="page-subtitle">Add new student admission details</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="admission-container">
+    <form method="post" enctype="multipart/form-data" class="admission-form" id="admissionForm">
+        {% csrf_token %}
+        
+        <!-- Course Selection -->
+        <div class="form-section">
+            <h3 class="section-title">📚 Course Information</h3>
+            
+            <div class="form-group full-width">
+                <label for="course">Course *</label>
+                <select name="course" id="course" required>
+                    <option value="">-- Select Course --</option>
+                    <option value="MS-CIT">MS-CIT</option>
+                    <option value="Tally">Tally</option>
+                    <option value="Advance Excel">Advance Excel</option>
+                    <option value="IOT">IOT</option>
+                    <option value="Scratch">Scratch</option>
+                    <option value="Other">Other (Specify below)</option>
+                </select>
+            </div>
+            
+            <div class="form-group full-width" id="customCourseGroup" style="display: none;">
+                <label for="custom_course">Specify Course Name *</label>
+                <input type="text" name="custom_course" id="custom_course" placeholder="Enter course name">
+            </div>
+        </div>
+
+        <!-- Personal Information with Photo -->
+        <div class="form-section">
+            <h3 class="section-title">👤 Personal Information</h3>
+            
+            <div class="name-photo-container">
+                <div class="name-fields">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="student_name">Student Name *</label>
+                            <input type="text" name="student_name" id="student_name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="father_name">Father Name *</label>
+                            <input type="text" name="father_name" id="father_name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="surname">Surname *</label>
+                            <input type="text" name="surname" id="surname" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="full_name">Full Name (Auto-generated) *</label>
+                        <input type="text" name="full_name" id="full_name" readonly required>
+                    </div>
+                </div>
+                
+                <div class="photo-upload-container">
+                    <label class="photo-label">Student Photo</label>
+                    <div class="photo-preview" id="photoPreview">
+                        <span class="photo-placeholder">📷</span>
+                        <img id="previewImage" style="display: none;">
+                    </div>
+                    <input type="file" name="photo" id="photo" accept="image/*" class="photo-input">
+                    <label for="photo" class="photo-upload-btn">Choose Photo</label>
+                    <small class="photo-hint">Passport size photo (Optional)</small>
+                </div>
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="mother_name">Mother Name *</label>
+                <input type="text" name="mother_name" id="mother_name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="date_of_birth">Date of Birth *</label>
+                <input type="date" name="date_of_birth" id="date_of_birth" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="gender">Gender *</label>
+                <select name="gender" id="gender" required>
+                    <option value="">-- Select Gender --</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="marital_status">Marital Status *</label>
+                <select name="marital_status" id="marital_status" required>
+                    <option value="">-- Select Status --</option>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="form-section">
+            <h3 class="section-title">📞 Contact Information</h3>
+            
+            <div class="form-group">
+                <label for="mobile_own">Mobile No. (Own) *</label>
+                <input type="tel" name="mobile_own" id="mobile_own" pattern="[0-9]{10}" placeholder="10-digit mobile number" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="parent_mobile">Parent Mobile No. (Optional)</label>
+                <input type="tel" name="parent_mobile" id="parent_mobile" pattern="[0-9]{10}" placeholder="10-digit mobile number">
+            </div>
+        </div>
+
+        <!-- Address Information -->
+        <div class="form-section">
+            <h3 class="section-title">🏠 Address Information</h3>
+            
+            <div class="form-group full-width">
+                <label for="address">Address *</label>
+                <textarea name="address" id="address" rows="3" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="city">City *</label>
+                <input type="text" name="city" id="city" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="tehsil_block">Tehsil/Block *</label>
+                <input type="text" name="tehsil_block" id="tehsil_block" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="district">District *</label>
+                <input type="text" name="district" id="district" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="pin_code">Pin Code *</label>
+                <input type="text" name="pin_code" id="pin_code" pattern="[0-9]{6}" placeholder="6-digit pin code" required>
+            </div>
+        </div>
+
+        <!-- Educational Information -->
+        <div class="form-section">
+            <h3 class="section-title">🎯 Educational Information</h3>
+            
+            <div class="form-group full-width">
+                <label for="educational_qualification">Educational Qualification *</label>
+                <input type="text" name="educational_qualification" id="educational_qualification" placeholder="e.g., 12th Pass, Graduate, etc." required>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">
+                ✅ Submit Admission
+            </button>
+            <button type="reset" class="btn-reset" onclick="return confirm('Are you sure you want to reset the form?')">
+                🔄 Reset Form
+            </button>
+            <a href="{% url 'admitted_students' %}" class="btn-cancel">
+                ❌ Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/admission.js' %}"></script>
+{% endblock %}

@@ -9,6 +9,16 @@
         📋 Enquiries
     </a>
 
+    <a href="{% url 'new_admission' %}"
+       class="menu-item {% if active_page == 'new_admission' %}active{% endif %}">
+        ➕ New Admission
+    </a>
+
+    <a href="{% url 'admitted_students' %}"
+       class="menu-item {% if active_page == 'admitted_students' %}active{% endif %}">
+        🎓 Admitted Students
+    </a>
+
     <!-- Logout as a form to handle POST request properly -->
     <form method="post" action="{% url 'logout' %}" style="margin: 0;">
         {% csrf_token %}
