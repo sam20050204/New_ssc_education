@@ -12,4 +12,11 @@ urlpatterns = [
     # New Admission URLs
     path('admission/new/', views.new_admission, name='new_admission'),
     path('admission/students/', views.admitted_students, name='admitted_students'),
+    
+    # Student Detail and Update URLs (FIXED)
+    path('student-detail-admitted/<int:student_id>/', views.student_detail_admitted, name='student_detail_admitted'),
+    path('update-student-admitted/<int:student_id>/', views.update_student_admitted, name='update_student_admitted'),
+    
+    # Export Students
+    path('export-students-excel/', views.export_students_excel, name='export_students_excel'),
 ]

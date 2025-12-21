@@ -18,7 +18,7 @@ function getCookie(name) {
 function openStudentModal(studentId) {
     const modal = document.getElementById('studentModal');
     
-    fetch(`/student-detail-admitted/${studentId}/`)
+    fetch(`/admission/student-detail-admitted/${studentId}/`)
         .then(response => response.json())
         .then(data => {
             // Set student ID
@@ -39,7 +39,8 @@ function openStudentModal(studentId) {
             if (data.photo) {
                 modalPhoto.src = data.photo;
             } else {
-                modalPhoto.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23667eea"/><text x="50%" y="50%" font-size="60" fill="white" text-anchor="middle" dy=".3em">' + data.student_name.charAt(0) + '</text></svg>';
+                const firstLetter = data.student_name.charAt(0).toUpperCase();
+                modalPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23667eea"/><text x="50%" y="50%" font-size="60" fill="white" text-anchor="middle" dy=".3em">${firstLetter}</text></svg>`;
             }
             
             // Contact info
@@ -156,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
             saveBtn.textContent = '💾 Saving...';
             saveBtn.disabled = true;
             
-            fetch(`/update-student-admitted/${studentId}/`, {
+            fetch(`/admission/update-student-admitted/${studentId}/`, {
                 method: 'POST',
                 body: formData,
                 headers: {

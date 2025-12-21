@@ -3,18 +3,22 @@
 
 {% block title %}Admitted Students{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/admitted_students.css' %}">
+{% endblock %}
+
 {% block page_heading %}
-<div class="page-header-enq">
-    <div class="page-header-content-enq">
+<div class="page-header">
+    <div class="page-header-content">
         <div class="page-title-wrapper">
-            <div class="page-icon-enq">🎓</div>
+            <div class="page-icon">🎓</div>
             <div>
-                <h1 class="page-title-enq">Admitted Students</h1>
+                <h1 class="page-title">Admitted Students</h1>
                 <p class="page-subtitle">View and manage all admitted students</p>
             </div>
         </div>
-        <div class="page-actions-enq">
-            <a href="{% url 'new_admission' %}" class="action-btn-enq primary">
+        <div class="page-actions">
+            <a href="{% url 'new_admission' %}" class="action-btn primary">
                 <span>➕</span> Add New Student
             </a>
         </div>
@@ -22,15 +26,11 @@
 </div>
 {% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'core/admitted_students.css' %}">
-{% endblock %}
-
 {% block content %}
 
 <!-- SEARCH AND FILTERS -->
 <div class="filters-container">
-    <form method="get" class="filters-form">
+    <form method="get" class="filters-form" id="filterForm">
         
         <div class="filter-group search-group">
             <label for="search">🔍 Search Student</label>
@@ -38,7 +38,7 @@
                 type="text"
                 name="search"
                 id="search"
-                placeholder="Search by name..."
+                placeholder="Search by name or mobile..."
                 value="{{ search }}"
                 class="filter-input"
             >
@@ -90,59 +90,76 @@
 
         <div class="filter-buttons">
             <button type="submit" class="filter-btn apply">
-                Filter
+                🔍 Apply Filters
             </button>
             <a href="{% url 'admitted_students' %}" class="filter-btn reset">
-                Show All
+                🔄 Reset
             </a>
         </div>
     </form>
 </div>
 
 <!-- RESULTS SUMMARY -->
+{% if search or month or year or course %}
 <div class="results-summary">
     <p>
         Showing <strong>{{ students|length }}</strong> student{{ students|length|pluralize }}
-        {% if search or month or year or course %}
-            with applied filters
-        {% endif %}
+        {% if search %}matching "{{ search }}"{% endif %}
+        {% if course %}in {{ course }}{% endif %}
+        {% if month %}for month {{ month }}{% endif %}
+        {% if year %}in year {{ year }}{% endif %}
     </p>
 </div>
+{% endif %}
 
 <!-- STUDENTS LIST -->
 <div class="students-container">
     {% if students %}
         {% for student in students %}
-        <div class="student-card-horizontal" onclick="openStudentModal({{ student.id }})">
-            <div class="student-photo-square">
+        <div class="student-card" onclick="openStudentModal({{ student.id }})">
+            <!-- Photo -->
+            <div class="student-photo">
                 {% if student.photo %}
                     <img src="{{ student.photo.url }}" alt="{{ student.full_name }}">
                 {% else %}
-                    <div class="photo-placeholder-square">
+                    <div class="photo-placeholder">
                         {{ student.student_name|slice:":1"|upper }}
                     </div>
                 {% endif %}
             </div>
             
-            <div class="student-info-horizontal">
-                <h3 class="student-name-horizontal">{{ student.full_name }}</h3>
-                <div class="student-quick-info">
-                    <span class="info-item">
-                        <span class="info-icon">📞</span>
-                        {{ student.mobile_own }}
-                    </span>
-                    <span class="info-item">
-                        <span class="info-icon">📚</span>
-                        {% if student.course == "Other" and student.custom_course %}
-                            {{ student.custom_course }}
-                        {% else %}
-                            {{ student.course }}
-                        {% endif %}
-                    </span>
-                    <span class="info-item fee-info">
-                        <span class="info-icon">💰</span>
-                        Fees: ₹5,000
-                    </span>
+            <!-- Student Info -->
+            <div class="student-info">
+                <h3 class="student-name">{{ student.full_name }}</h3>
+                
+                <div class="course-badge">
+                    {% if student.course == "Other" and student.custom_course %}
+                        {{ student.custom_course }}
+                    {% else %}
+                        {{ student.course }}
+                    {% endif %}
+                </div>
+                
+                <div class="student-details">
+                    <div class="detail-item">
+                        <span class="detail-icon">📞</span>
+                        <span>{{ student.mobile_own }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-icon">📍</span>
+                        <span>{{ student.city }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-icon">📅</span>
+                        <span>{{ student.admission_date|date:"d M, Y" }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-icon">🎓</span>
+                        <span>{{ student.educational_qualification }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -156,6 +173,8 @@
                 <br><br>
                 <a href="{% url 'admitted_students' %}" class="btn-primary">Show All Students</a>
             {% else %}
+                <small>Start by adding your first student</small>
+                <br><br>
                 <a href="{% url 'new_admission' %}" class="btn-primary">Add First Student</a>
             {% endif %}
         </div>
@@ -166,7 +185,7 @@
 <div id="studentModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">&times;</span>
-        <h2>Student Details</h2>
+        <h2>📋 Student Details</h2>
         
         <form id="studentForm" enctype="multipart/form-data">
             {% csrf_token %}
@@ -175,6 +194,7 @@
             <div class="form-grid">
                 <!-- Photo Section -->
                 <div class="photo-section">
+                    <label class="photo-label">Student Photo</label>
                     <div class="modal-photo">
                         <img id="modalPhoto" src="" alt="Student Photo">
                     </div>
@@ -190,49 +210,49 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Student Name:</label>
+                            <label>Student Name <span class="required">*</span></label>
                             <input type="text" id="studentName" name="student_name" required>
                         </div>
                         <div class="form-group">
-                            <label>Father Name:</label>
+                            <label>Father Name <span class="required">*</span></label>
                             <input type="text" id="fatherName" name="father_name" required>
                         </div>
                         <div class="form-group">
-                            <label>Surname:</label>
+                            <label>Surname <span class="required">*</span></label>
                             <input type="text" id="surname" name="surname" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group full-width">
-                            <label>Full Name:</label>
+                            <label>Full Name (Auto-generated)</label>
                             <input type="text" id="fullName" name="full_name" readonly class="readonly">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Mother Name:</label>
+                            <label>Mother Name <span class="required">*</span></label>
                             <input type="text" id="motherName" name="mother_name" required>
                         </div>
                         <div class="form-group">
-                            <label>Date of Birth:</label>
-                            <input type="date" id="dob" name="date_of_birth">
+                            <label>Date of Birth <span class="required">*</span></label>
+                            <input type="date" id="dob" name="date_of_birth" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Gender:</label>
-                            <select id="gender" name="gender">
+                            <label>Gender <span class="required">*</span></label>
+                            <select id="gender" name="gender" required>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Marital Status:</label>
-                            <select id="maritalStatus" name="marital_status">
+                            <label>Marital Status <span class="required">*</span></label>
+                            <select id="maritalStatus" name="marital_status" required>
                                 <option value="Single">Single</option>
                                 <option value="Married">Married</option>
                             </select>
@@ -246,12 +266,12 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Mobile (Own):</label>
-                            <input type="tel" id="mobileOwn" name="mobile_own" required>
+                            <label>Mobile (Own) <span class="required">*</span></label>
+                            <input type="tel" id="mobileOwn" name="mobile_own" pattern="[0-9]{10}" required>
                         </div>
                         <div class="form-group">
-                            <label>Parent Mobile:</label>
-                            <input type="tel" id="parentMobile" name="parent_mobile">
+                            <label>Parent Mobile</label>
+                            <input type="tel" id="parentMobile" name="parent_mobile" pattern="[0-9]{10}">
                         </div>
                     </div>
                 </div>
@@ -262,8 +282,8 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Course:</label>
-                            <select id="courseSelect" name="course">
+                            <label>Course <span class="required">*</span></label>
+                            <select id="courseSelect" name="course" required>
                                 <option value="MS-CIT">MS-CIT</option>
                                 <option value="Tally">Tally</option>
                                 <option value="Advance Excel">Advance Excel</option>
@@ -273,15 +293,15 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Custom Course:</label>
+                            <label>Custom Course</label>
                             <input type="text" id="customCourse" name="custom_course" placeholder="If Other selected">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group full-width">
-                            <label>Educational Qualification:</label>
-                            <input type="text" id="qualification" name="educational_qualification">
+                            <label>Educational Qualification <span class="required">*</span></label>
+                            <input type="text" id="qualification" name="educational_qualification" required>
                         </div>
                     </div>
                 </div>
@@ -292,30 +312,30 @@
                     
                     <div class="form-row">
                         <div class="form-group full-width">
-                            <label>Address:</label>
-                            <textarea id="address" name="address" rows="2"></textarea>
+                            <label>Address <span class="required">*</span></label>
+                            <textarea id="address" name="address" rows="2" required></textarea>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>City:</label>
-                            <input type="text" id="city" name="city">
+                            <label>City <span class="required">*</span></label>
+                            <input type="text" id="city" name="city" required>
                         </div>
                         <div class="form-group">
-                            <label>Tehsil/Block:</label>
-                            <input type="text" id="tehsil" name="tehsil_block">
-                        </div>
-                        <div class="form-group">
-                            <label>District:</label>
-                            <input type="text" id="district" name="district">
+                            <label>Tehsil/Block <span class="required">*</span></label>
+                            <input type="text" id="tehsil" name="tehsil_block" required>
                         </div>
                     </div>
-
+                    
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Pin Code:</label>
-                            <input type="text" id="pinCode" name="pin_code">
+                            <label>District <span class="required">*</span></label>
+                            <input type="text" id="district" name="district" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Pin Code <span class="required">*</span></label>
+                            <input type="text" id="pinCode" name="pin_code" pattern="[0-9]{6}" required>
                         </div>
                     </div>
                 </div>
@@ -326,15 +346,15 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Total Fees (₹):</label>
-                            <input type="number" id="totalFees" name="total_fees" step="0.01" min="0" value="5000">
+                            <label>Total Fees (₹) <span class="required">*</span></label>
+                            <input type="number" id="totalFees" name="total_fees" step="0.01" min="0" value="5000" required>
                         </div>
                         <div class="form-group">
-                            <label>Paid Fees (₹):</label>
+                            <label>Paid Fees (₹)</label>
                             <input type="number" id="paidFees" name="paid_fees" step="0.01" min="0" value="0">
                         </div>
                         <div class="form-group">
-                            <label>Remaining Fees (₹):</label>
+                            <label>Remaining Fees (₹)</label>
                             <input type="number" id="remainingFees" readonly class="readonly">
                         </div>
                     </div>
