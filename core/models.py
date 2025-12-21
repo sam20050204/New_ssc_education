@@ -76,3 +76,74 @@ class AdmittedStudent(models.Model):
         ordering = ['-admission_date']
         verbose_name = 'Admitted Student'
         verbose_name_plural = 'Admitted Students'
+
+from django.db import models
+from django.core.validators import MinValueValidator
+
+class Course(models.Model):
+    name = models.CharField(max_length=100)
+    duration = models.CharField(max_length=50)
+    
+    def __str__(self):
+        return self.name
+
+class Student(models.Model):
+    # Personal Information
+    name = models.CharField(max_length=200)
+    phone = models.CharField(max_length=15)
+    email = models.EmailField(blank=True, null=True)
+    photo = models.ImageField(upload_to='student_photos/', blank=True, null=True)
+    
+    # Course Information
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True)
+    admission_date = models.DateField()
+    
+    # Address
+    address = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    pincode = models.CharField(max_length=10, blank=True, null=True)
+    
+    # Parent/Guardian Information
+    parent_name = models.CharField(max_length=200, blank=True, null=True)
+    parent_phone = models.CharField(max_length=15, blank=True, null=True)
+    
+    # Financial Information
+    total_fees = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        validators=[MinValueValidator(0)],
+        default=0
+    )
+    paid_fees = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        validators=[MinValueValidator(0)],
+        default=0
+    )
+    
+    # Additional Fields
+    qualification = models.CharField(max_length=100, blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['admission_date', 'name']
+    
+    def __str__(self):
+        return f"{self.name} - {self.course}"
+    
+    @property
+    def remaining_fees(self):
+        return self.total_fees - self.paid_fees
+    
+    @property
+    def fees_percentage_paid(self):
+        if self.total_fees > 0:
+            return (self.paid_fees / self.total_fees) * 100
+        return 0

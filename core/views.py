@@ -300,3 +300,237 @@ def admitted_students(request):
         "active_page": "admission"
     })
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, JsonResponse
+from django.contrib import messages
+from django.db.models import Q
+from datetime import datetime
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from io import BytesIO
+from .models import Student, Course
+
+def admitted_students(request):
+    """View to display all admitted students with filters"""
+    students = Student.objects.filter(is_active=True)
+    
+    # Get filter parameters
+    month = request.GET.get('month', '')
+    year = request.GET.get('year', '')
+    course_id = request.GET.get('course', '')
+    
+    # Apply filters
+    if month and year:
+        students = students.filter(
+            admission_date__month=month,
+            admission_date__year=year
+        )
+    elif year:
+        students = students.filter(admission_date__year=year)
+    
+    if course_id:
+        students = students.filter(course_id=course_id)
+    
+    # Sort in ascending order
+    students = students.order_by('admission_date', 'name')
+    
+    # Get all courses for filter dropdown
+    courses = Course.objects.all()
+    
+    # Get unique years from admission dates
+    years = Student.objects.dates('admission_date', 'year').distinct()
+    year_list = [date.year for date in years]
+    
+    context = {
+        'students': students,
+        'courses': courses,
+        'years': year_list,
+        'selected_month': month,
+        'selected_year': year,
+        'selected_course': course_id,
+        'months': [
+            {'value': 1, 'name': 'January'},
+            {'value': 2, 'name': 'February'},
+            {'value': 3, 'name': 'March'},
+            {'value': 4, 'name': 'April'},
+            {'value': 5, 'name': 'May'},
+            {'value': 6, 'name': 'June'},
+            {'value': 7, 'name': 'July'},
+            {'value': 8, 'name': 'August'},
+            {'value': 9, 'name': 'September'},
+            {'value': 10, 'name': 'October'},
+            {'value': 11, 'name': 'November'},
+            {'value': 12, 'name': 'December'},
+        ]
+    }
+    
+    return render(request, 'core/admitted_students.html', context)
+
+def student_detail(request, student_id):
+    """View to get student details via AJAX"""
+    student = get_object_or_404(Student, id=student_id)
+    
+    data = {
+        'id': student.id,
+        'name': student.name,
+        'phone': student.phone,
+        'email': student.email or '',
+        'photo': student.photo.url if student.photo else '',
+        'course': student.course.name if student.course else '',
+        'course_id': student.course.id if student.course else '',
+        'admission_date': student.admission_date.strftime('%Y-%m-%d'),
+        'address': student.address or '',
+        'city': student.city or '',
+        'state': student.state or '',
+        'pincode': student.pincode or '',
+        'parent_name': student.parent_name or '',
+        'parent_phone': student.parent_phone or '',
+        'total_fees': str(student.total_fees),
+        'paid_fees': str(student.paid_fees),
+        'remaining_fees': str(student.remaining_fees),
+        'qualification': student.qualification or '',
+        'date_of_birth': student.date_of_birth.strftime('%Y-%m-%d') if student.date_of_birth else '',
+    }
+    
+    return JsonResponse(data)
+
+def update_student(request, student_id):
+    """View to update student details"""
+    if request.method == 'POST':
+        student = get_object_or_404(Student, id=student_id)
+        
+        # Update basic info
+        student.name = request.POST.get('name')
+        student.phone = request.POST.get('phone')
+        student.email = request.POST.get('email')
+        student.address = request.POST.get('address')
+        student.city = request.POST.get('city')
+        student.state = request.POST.get('state')
+        student.pincode = request.POST.get('pincode')
+        student.parent_name = request.POST.get('parent_name')
+        student.parent_phone = request.POST.get('parent_phone')
+        student.qualification = request.POST.get('qualification')
+        
+        # Update course
+        course_id = request.POST.get('course')
+        if course_id:
+            student.course_id = course_id
+        
+        # Update dates
+        admission_date = request.POST.get('admission_date')
+        if admission_date:
+            student.admission_date = admission_date
+        
+        date_of_birth = request.POST.get('date_of_birth')
+        if date_of_birth:
+            student.date_of_birth = date_of_birth
+        
+        # Update financial info
+        student.total_fees = request.POST.get('total_fees', 0)
+        student.paid_fees = request.POST.get('paid_fees', 0)
+        
+        # Handle photo upload
+        if request.FILES.get('photo'):
+            student.photo = request.FILES['photo']
+        
+        student.save()
+        
+        messages.success(request, 'Student details updated successfully!')
+        return JsonResponse({'success': True})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+def export_students_excel(request):
+    """Export admitted students to Excel"""
+    students = Student.objects.filter(is_active=True)
+    
+    # Apply same filters as the main view
+    month = request.GET.get('month', '')
+    year = request.GET.get('year', '')
+    course_id = request.GET.get('course', '')
+    
+    if month and year:
+        students = students.filter(
+            admission_date__month=month,
+            admission_date__year=year
+        )
+    elif year:
+        students = students.filter(admission_date__year=year)
+    
+    if course_id:
+        students = students.filter(course_id=course_id)
+    
+    students = students.order_by('admission_date', 'name')
+    
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Admitted Students"
+    
+    # Define headers
+    headers = [
+        'S.No', 'Name', 'Phone', 'Email', 'Course', 'Admission Date',
+        'Address', 'City', 'State', 'Pincode', 'Parent Name', 'Parent Phone',
+        'Qualification', 'Date of Birth', 'Total Fees', 'Paid Fees', 'Remaining Fees'
+    ]
+    
+    # Style for header
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    
+    # Write headers
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    
+    # Write data
+    for row_num, student in enumerate(students, 2):
+        ws.cell(row=row_num, column=1).value = row_num - 1
+        ws.cell(row=row_num, column=2).value = student.name
+        ws.cell(row=row_num, column=3).value = student.phone
+        ws.cell(row=row_num, column=4).value = student.email or ''
+        ws.cell(row=row_num, column=5).value = student.course.name if student.course else ''
+        ws.cell(row=row_num, column=6).value = student.admission_date.strftime('%d-%m-%Y')
+        ws.cell(row=row_num, column=7).value = student.address or ''
+        ws.cell(row=row_num, column=8).value = student.city or ''
+        ws.cell(row=row_num, column=9).value = student.state or ''
+        ws.cell(row=row_num, column=10).value = student.pincode or ''
+        ws.cell(row=row_num, column=11).value = student.parent_name or ''
+        ws.cell(row=row_num, column=12).value = student.parent_phone or ''
+        ws.cell(row=row_num, column=13).value = student.qualification or ''
+        ws.cell(row=row_num, column=14).value = student.date_of_birth.strftime('%d-%m-%Y') if student.date_of_birth else ''
+        ws.cell(row=row_num, column=15).value = float(student.total_fees)
+        ws.cell(row=row_num, column=16).value = float(student.paid_fees)
+        ws.cell(row=row_num, column=17).value = float(student.remaining_fees)
+    
+    # Adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+    
+    # Save to BytesIO
+    excel_file = BytesIO()
+    wb.save(excel_file)
+    excel_file.seek(0)
+    
+    # Create response
+    response = HttpResponse(
+        excel_file.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    filename = f'admitted_students_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response

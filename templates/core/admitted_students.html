@@ -1,82 +1,248 @@
-{% extends 'base/base.html' %}
 {% load static %}
-
-{% block title %}Admitted Students{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'core/admitted_students.css' %}">
-{% endblock %}
-
-{% block page_heading %}
-<div class="page-header">
-    <div class="page-header-content">
-        <div class="page-title-wrapper">
-            <div class="page-icon">🎓</div>
-            <div>
-                <h1 class="page-title">Admitted Students</h1>
-                <p class="page-subtitle">View all admitted students</p>
-            </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admitted Students</title>
+    <link rel="stylesheet" href="{% static 'core/students.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Admitted Students</h1>
+            <button class="export-btn" onclick="exportToExcel()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Export to Excel
+            </button>
         </div>
-        <div class="page-actions">
-            <a href="{% url 'new_admission' %}" class="action-btn primary">
-                <span>➕</span> New Admission
-            </a>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <form id="filterForm" method="GET">
+                <div class="filter-group">
+                    <label for="month">Month:</label>
+                    <select name="month" id="month">
+                        <option value="">All Months</option>
+                        {% for month in months %}
+                        <option value="{{ month.value }}" {% if selected_month|stringformat:"s" == month.value|stringformat:"s" %}selected{% endif %}>
+                            {{ month.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="year">Year:</label>
+                    <select name="year" id="year">
+                        <option value="">All Years</option>
+                        {% for year in years %}
+                        <option value="{{ year }}" {% if selected_year|stringformat:"s" == year|stringformat:"s" %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="course">Course:</label>
+                    <select name="course" id="course">
+                        <option value="">All Courses</option>
+                        {% for course in courses %}
+                        <option value="{{ course.id }}" {% if selected_course|stringformat:"s" == course.id|stringformat:"s" %}selected{% endif %}>
+                            {{ course.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" class="filter-btn">Apply Filters</button>
+                <button type="button" class="reset-btn" onclick="resetFilters()">Show All</button>
+            </form>
         </div>
-    </div>
-</div>
-{% endblock %}
 
-{% block content %}
-
-<div class="students-container">
-    <div class="students-grid">
-        {% for student in students %}
-        <div class="student-card">
-            <div class="student-photo">
-                {% if student.photo %}
-                    <img src="{{ student.photo.url }}" alt="{{ student.full_name }}">
-                {% else %}
-                    <div class="photo-placeholder">
-                        {{ student.student_name.0|upper }}
+        <!-- Students Grid -->
+        <div class="students-grid">
+            {% if students %}
+                {% for student in students %}
+                <div class="student-card" onclick="openStudentModal({{ student.id }})">
+                    <div class="student-photo">
+                        {% if student.photo %}
+                            <img src="{{ student.photo.url }}" alt="{{ student.name }}">
+                        {% else %}
+                            <div class="no-photo">
+                                <span>{{ student.name|slice:":1"|upper }}</span>
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
-            </div>
-            
-            <div class="student-info">
-                <h3 class="student-name">{{ student.full_name }}</h3>
-                <span class="course-badge">{{ student.course }}{% if student.course == 'Other' %}: {{ student.custom_course }}{% endif %}</span>
-                
-                <div class="student-details">
-                    <div class="detail-item">
-                        <span class="detail-icon">📱</span>
-                        <span>{{ student.mobile_own }}</span>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <span class="detail-icon">🏙️</span>
-                        <span>{{ student.city }}, {{ student.district }}</span>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <span class="detail-icon">🎓</span>
-                        <span>{{ student.educational_qualification }}</span>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <span class="detail-icon">📅</span>
-                        <span>Admitted: {{ student.admission_date|date:"d M Y" }}</span>
+                    <div class="student-info">
+                        <h3>{{ student.name }}</h3>
+                        <p class="phone">📞 {{ student.phone }}</p>
+                        <p class="course">📚 {{ student.course.name }}</p>
+                        <p class="admission-date">📅 {{ student.admission_date|date:"d M, Y" }}</p>
                     </div>
                 </div>
-            </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-students">
+                    <p>No students found matching the selected filters.</p>
+                </div>
+            {% endif %}
         </div>
-        {% empty %}
-        <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <p>No admitted students yet</p>
-            <a href="{% url 'new_admission' %}" class="btn-primary">Add First Student</a>
-        </div>
-        {% endfor %}
     </div>
-</div>
 
-{% endblock %}
+    <!-- Student Detail Modal -->
+    <div id="studentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Student Details</h2>
+            
+            <form id="studentForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" id="studentId" name="student_id">
+                
+                <div class="form-grid">
+                    <!-- Photo Section -->
+                    <div class="photo-section">
+                        <div class="modal-photo">
+                            <img id="modalPhoto" src="" alt="Student Photo">
+                        </div>
+                        <input type="file" id="photoInput" name="photo" accept="image/*" style="display:none;">
+                        <button type="button" class="change-photo-btn" onclick="document.getElementById('photoInput').click()">
+                            Change Photo
+                        </button>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <div class="form-section">
+                        <h3>Personal Information</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Name:</label>
+                                <input type="text" id="studentName" name="name" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Phone:</label>
+                                <input type="tel" id="studentPhone" name="phone" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email:</label>
+                                <input type="email" id="studentEmail" name="email">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Date of Birth:</label>
+                                <input type="date" id="studentDOB" name="date_of_birth">
+                            </div>
+                            <div class="form-group">
+                                <label>Qualification:</label>
+                                <input type="text" id="studentQualification" name="qualification">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Course Information -->
+                    <div class="form-section">
+                        <h3>Course Information</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Course:</label>
+                                <select id="studentCourse" name="course">
+                                    {% for course in courses %}
+                                    <option value="{{ course.id }}">{{ course.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Admission Date:</label>
+                                <input type="date" id="studentAdmissionDate" name="admission_date" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information -->
+                    <div class="form-section">
+                        <h3>Address</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>Address:</label>
+                                <textarea id="studentAddress" name="address" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>City:</label>
+                                <input type="text" id="studentCity" name="city">
+                            </div>
+                            <div class="form-group">
+                                <label>State:</label>
+                                <input type="text" id="studentState" name="state">
+                            </div>
+                            <div class="form-group">
+                                <label>Pincode:</label>
+                                <input type="text" id="studentPincode" name="pincode">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Parent Information -->
+                    <div class="form-section">
+                        <h3>Parent/Guardian Information</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Parent Name:</label>
+                                <input type="text" id="studentParentName" name="parent_name">
+                            </div>
+                            <div class="form-group">
+                                <label>Parent Phone:</label>
+                                <input type="tel" id="studentParentPhone" name="parent_phone">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Information -->
+                    <div class="form-section financial-section">
+                        <h3>Financial Information</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Total Fees:</label>
+                                <input type="number" id="studentTotalFees" name="total_fees" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Paid Fees:</label>
+                                <input type="number" id="studentPaidFees" name="paid_fees" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Remaining Fees:</label>
+                                <input type="number" id="studentRemainingFees" name="remaining_fees" step="0.01" readonly class="readonly">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="save-btn">Save Changes</button>
+                    <button type="button" class="cancel-btn" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{% static 'core/students.js' %}"></script>
+</body>
+</html>
