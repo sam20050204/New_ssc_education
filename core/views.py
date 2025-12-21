@@ -4,10 +4,16 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
+from django.db.models.functions import ExtractYear
 import csv
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from io import BytesIO
+from datetime import datetime
 
-from .models import Enquiry
+from .models import Enquiry, AdmittedStudent, Course, Student
 
 
 # ================= CUSTOM LOGOUT =================
@@ -41,8 +47,6 @@ def home(request):
 # ================= DASHBOARD =================
 @login_required
 def dashboard(request):
-    from django.db.models.functions import ExtractYear
-    
     # Get selected year from query parameter
     selected_year = request.GET.get('year', '')
     
@@ -64,7 +68,7 @@ def dashboard(request):
     # Count total enquiries
     enquiry_count = enquiries.count()
     
-    # Count by course (you can customize these filters based on your course names)
+    # Count by course
     mscit_count = enquiries.filter(course__icontains='MSCIT').count()
     klic_count = enquiries.filter(course__icontains='KLIC').count()
     
@@ -81,8 +85,6 @@ def dashboard(request):
 # ================= ENQUIRY LIST =================
 @login_required
 def enquiry_list(request):
-    from django.db.models.functions import ExtractYear
-    
     # Get filter parameters
     search = request.GET.get("search", "")
     month = request.GET.get("month", "")
@@ -127,7 +129,7 @@ def enquiry_list(request):
     )
     
     # Pagination
-    paginator = Paginator(enquiries, 10)  # 10 per page
+    paginator = Paginator(enquiries, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
     
@@ -167,8 +169,6 @@ def delete_enquiry(request, id):
 # ================= EXPORT ENQUIRIES =================
 @login_required
 def export_enquiries(request):
-    from django.utils import timezone
-    
     # Get filter parameters
     search = request.GET.get("search", "")
     month = request.GET.get("month", "")
@@ -229,8 +229,6 @@ def convert_enquiry(request, id):
 # ================= NEW ADMISSION =================
 @login_required
 def new_admission(request):
-    from .models import AdmittedStudent
-    
     if request.method == "POST":
         try:
             # Get form data
@@ -252,6 +250,7 @@ def new_admission(request):
             district = request.POST.get("district")
             pin_code = request.POST.get("pin_code")
             educational_qualification = request.POST.get("educational_qualification")
+            total_fees = request.POST.get("total_fees", 5000)
             photo = request.FILES.get("photo")
             
             # Create admission record
@@ -277,97 +276,140 @@ def new_admission(request):
                 photo=photo
             )
             
-            messages.success(request, f"Admission for {full_name} has been successfully recorded!")
+            messages.success(request, f"Admission for {full_name} has been successfully recorded! Total Fees: ₹{total_fees}")
             return redirect("new_admission")
             
         except Exception as e:
             messages.error(request, f"Error: {str(e)}")
     
     return render(request, "core/new_admission.html", {
-        "active_page": "admission"
+        "active_page": "new_admission"
     })
 
 
 # ================= ADMITTED STUDENTS LIST =================
 @login_required
 def admitted_students(request):
-    from .models import AdmittedStudent
+    # Get filter parameters
+    search = request.GET.get("search", "")
+    month = request.GET.get("month", "")
+    year = request.GET.get("year", "")
+    course = request.GET.get("course", "")
     
+    # Start with all admitted students, ordered by latest first
     students = AdmittedStudent.objects.all().order_by('-admission_date')
     
-    return render(request, "core/admitted_students.html", {
-        "students": students,
-        "active_page": "admission"
-    })
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, JsonResponse
-from django.contrib import messages
-from django.db.models import Q
-from datetime import datetime
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill
-from io import BytesIO
-from .models import Student, Course
-
-def admitted_students(request):
-    """View to display all admitted students with filters"""
-    students = Student.objects.filter(is_active=True)
-    
-    # Get filter parameters
-    month = request.GET.get('month', '')
-    year = request.GET.get('year', '')
-    course_id = request.GET.get('course', '')
-    
     # Apply filters
-    if month and year:
+    if search:
         students = students.filter(
-            admission_date__month=month,
-            admission_date__year=year
+            Q(full_name__icontains=search) |
+            Q(student_name__icontains=search) |
+            Q(mobile_own__icontains=search)
         )
-    elif year:
+    
+    if month:
+        students = students.filter(admission_date__month=month)
+    
+    if year:
         students = students.filter(admission_date__year=year)
     
-    if course_id:
-        students = students.filter(course_id=course_id)
+    if course:
+        students = students.filter(course=course)
     
-    # Sort in ascending order
-    students = students.order_by('admission_date', 'name')
+    # Get available years for filter dropdown
+    available_years = (
+        AdmittedStudent.objects
+        .annotate(year=ExtractYear('admission_date'))
+        .values_list('year', flat=True)
+        .distinct()
+        .order_by('-year')
+    )
     
-    # Get all courses for filter dropdown
-    courses = Course.objects.all()
-    
-    # Get unique years from admission dates
-    years = Student.objects.dates('admission_date', 'year').distinct()
-    year_list = [date.year for date in years]
-    
-    context = {
+    return render(request, 'core/admitted_students.html', {
         'students': students,
-        'courses': courses,
-        'years': year_list,
-        'selected_month': month,
-        'selected_year': year,
-        'selected_course': course_id,
-        'months': [
-            {'value': 1, 'name': 'January'},
-            {'value': 2, 'name': 'February'},
-            {'value': 3, 'name': 'March'},
-            {'value': 4, 'name': 'April'},
-            {'value': 5, 'name': 'May'},
-            {'value': 6, 'name': 'June'},
-            {'value': 7, 'name': 'July'},
-            {'value': 8, 'name': 'August'},
-            {'value': 9, 'name': 'September'},
-            {'value': 10, 'name': 'October'},
-            {'value': 11, 'name': 'November'},
-            {'value': 12, 'name': 'December'},
-        ]
+        'search': search,
+        'month': month,
+        'year': year,
+        'course': course,
+        'available_years': available_years,
+        'active_page': 'admitted_students'
+    })
+
+
+# ================= STUDENT DETAIL (ADMITTED) =================
+@login_required
+def student_detail_admitted(request, student_id):
+    student = get_object_or_404(AdmittedStudent, id=student_id)
+    
+    data = {
+        'id': student.id,
+        'student_name': student.student_name,
+        'father_name': student.father_name,
+        'surname': student.surname,
+        'mother_name': student.mother_name,
+        'full_name': student.full_name,
+        'date_of_birth': student.date_of_birth.strftime('%Y-%m-%d'),
+        'mobile_own': student.mobile_own,
+        'parent_mobile': student.parent_mobile or '',
+        'gender': student.gender,
+        'marital_status': student.marital_status,
+        'photo': student.photo.url if student.photo else '',
+        'course': student.course,
+        'custom_course': student.custom_course or '',
+        'educational_qualification': student.educational_qualification,
+        'address': student.address,
+        'city': student.city,
+        'tehsil_block': student.tehsil_block,
+        'district': student.district,
+        'pin_code': student.pin_code,
+        'total_fees': 5000,  # Default or get from somewhere
+        'paid_fees': 0,  # Default or get from somewhere
     }
     
-    return render(request, 'core/admitted_students.html', context)
+    return JsonResponse(data)
 
+
+# ================= UPDATE STUDENT (ADMITTED) =================
+@login_required
+def update_student_admitted(request, student_id):
+    if request.method == 'POST':
+        student = get_object_or_404(AdmittedStudent, id=student_id)
+        
+        # Update fields
+        student.student_name = request.POST.get('student_name')
+        student.father_name = request.POST.get('father_name')
+        student.surname = request.POST.get('surname')
+        student.mother_name = request.POST.get('mother_name')
+        student.full_name = request.POST.get('full_name')
+        student.date_of_birth = request.POST.get('date_of_birth')
+        student.mobile_own = request.POST.get('mobile_own')
+        student.parent_mobile = request.POST.get('parent_mobile')
+        student.gender = request.POST.get('gender')
+        student.marital_status = request.POST.get('marital_status')
+        student.course = request.POST.get('course')
+        student.custom_course = request.POST.get('custom_course')
+        student.educational_qualification = request.POST.get('educational_qualification')
+        student.address = request.POST.get('address')
+        student.city = request.POST.get('city')
+        student.tehsil_block = request.POST.get('tehsil_block')
+        student.district = request.POST.get('district')
+        student.pin_code = request.POST.get('pin_code')
+        
+        # Handle photo upload
+        if request.FILES.get('photo'):
+            student.photo = request.FILES['photo']
+        
+        student.save()
+        
+        messages.success(request, 'Student details updated successfully!')
+        return JsonResponse({'success': True})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+# ================= STUDENT DETAIL =================
+@login_required
 def student_detail(request, student_id):
-    """View to get student details via AJAX"""
     student = get_object_or_404(Student, id=student_id)
     
     data = {
@@ -394,8 +436,10 @@ def student_detail(request, student_id):
     
     return JsonResponse(data)
 
+
+# ================= UPDATE STUDENT =================
+@login_required
 def update_student(request, student_id):
-    """View to update student details"""
     if request.method == 'POST':
         student = get_object_or_404(Student, id=student_id)
         
@@ -440,8 +484,10 @@ def update_student(request, student_id):
     
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
+
+# ================= EXPORT STUDENTS TO EXCEL =================
+@login_required
 def export_students_excel(request):
-    """Export admitted students to Excel"""
     students = Student.objects.filter(is_active=True)
     
     # Apply same filters as the main view

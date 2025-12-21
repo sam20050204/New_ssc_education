@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 
 class Enquiry(models.Model):
     name = models.CharField(max_length=100)
@@ -77,8 +78,6 @@ class AdmittedStudent(models.Model):
         verbose_name = 'Admitted Student'
         verbose_name_plural = 'Admitted Students'
 
-from django.db import models
-from django.core.validators import MinValueValidator
 
 class Course(models.Model):
     name = models.CharField(max_length=100)
@@ -86,6 +85,7 @@ class Course(models.Model):
     
     def __str__(self):
         return self.name
+
 
 class Student(models.Model):
     # Personal Information

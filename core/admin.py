@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Enquiry, AdmittedStudent
+from .models import Enquiry, AdmittedStudent, Course, Student
 
 @admin.register(Enquiry)
 class EnquiryAdmin(admin.ModelAdmin):
@@ -39,6 +39,45 @@ class AdmittedStudentAdmin(admin.ModelAdmin):
         }),
         ('Metadata', {
             'fields': ('admission_date', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ("name", "duration")
+    search_fields = ("name",)
+
+
+@admin.register(Student)
+class StudentAdmin(admin.ModelAdmin):
+    list_display = ("name", "course", "phone", "admission_date", "remaining_fees", "is_active")
+    search_fields = ("name", "phone", "email")
+    list_filter = ("course", "is_active", "admission_date")
+    readonly_fields = ("created_at", "updated_at", "remaining_fees", "fees_percentage_paid")
+    
+    fieldsets = (
+        ('Personal Information', {
+            'fields': ('name', 'phone', 'email', 'photo', 'date_of_birth', 'qualification')
+        }),
+        ('Course Information', {
+            'fields': ('course', 'admission_date')
+        }),
+        ('Address', {
+            'fields': ('address', 'city', 'state', 'pincode')
+        }),
+        ('Parent/Guardian', {
+            'fields': ('parent_name', 'parent_phone')
+        }),
+        ('Financial', {
+            'fields': ('total_fees', 'paid_fees', 'remaining_fees', 'fees_percentage_paid')
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )

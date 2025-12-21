@@ -14,61 +14,54 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// Reset filters
-function resetFilters() {
-    window.location.href = window.location.pathname;
-}
-
-// Export to Excel
-function exportToExcel() {
-    const form = document.getElementById('filterForm');
-    const params = new URLSearchParams(new FormData(form));
-    window.location.href = '/export-students/?' + params.toString();
-}
-
 // Open student modal
 function openStudentModal(studentId) {
     const modal = document.getElementById('studentModal');
     
-    fetch(`/student-detail/${studentId}/`)
+    fetch(`/student-detail-admitted/${studentId}/`)
         .then(response => response.json())
         .then(data => {
             // Set student ID
             document.getElementById('studentId').value = data.id;
             
             // Personal info
-            document.getElementById('studentName').value = data.name;
-            document.getElementById('studentPhone').value = data.phone;
-            document.getElementById('studentEmail').value = data.email;
-            document.getElementById('studentDOB').value = data.date_of_birth;
-            document.getElementById('studentQualification').value = data.qualification;
+            document.getElementById('studentName').value = data.student_name;
+            document.getElementById('fatherName').value = data.father_name;
+            document.getElementById('surname').value = data.surname;
+            document.getElementById('motherName').value = data.mother_name;
+            document.getElementById('fullName').value = data.full_name;
+            document.getElementById('dob').value = data.date_of_birth;
+            document.getElementById('gender').value = data.gender;
+            document.getElementById('maritalStatus').value = data.marital_status;
             
             // Photo
             const modalPhoto = document.getElementById('modalPhoto');
             if (data.photo) {
                 modalPhoto.src = data.photo;
             } else {
-                modalPhoto.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23667eea"/><text x="50%" y="50%" font-size="60" fill="white" text-anchor="middle" dy=".3em">' + data.name.charAt(0) + '</text></svg>';
+                modalPhoto.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23667eea"/><text x="50%" y="50%" font-size="60" fill="white" text-anchor="middle" dy=".3em">' + data.student_name.charAt(0) + '</text></svg>';
             }
             
+            // Contact info
+            document.getElementById('mobileOwn').value = data.mobile_own;
+            document.getElementById('parentMobile').value = data.parent_mobile || '';
+            
             // Course info
-            document.getElementById('studentCourse').value = data.course_id;
-            document.getElementById('studentAdmissionDate').value = data.admission_date;
+            document.getElementById('courseSelect').value = data.course;
+            document.getElementById('customCourse').value = data.custom_course || '';
+            document.getElementById('qualification').value = data.educational_qualification;
             
             // Address
-            document.getElementById('studentAddress').value = data.address;
-            document.getElementById('studentCity').value = data.city;
-            document.getElementById('studentState').value = data.state;
-            document.getElementById('studentPincode').value = data.pincode;
-            
-            // Parent info
-            document.getElementById('studentParentName').value = data.parent_name;
-            document.getElementById('studentParentPhone').value = data.parent_phone;
+            document.getElementById('address').value = data.address;
+            document.getElementById('city').value = data.city;
+            document.getElementById('tehsil').value = data.tehsil_block;
+            document.getElementById('district').value = data.district;
+            document.getElementById('pinCode').value = data.pin_code;
             
             // Financial info
-            document.getElementById('studentTotalFees').value = data.total_fees;
-            document.getElementById('studentPaidFees').value = data.paid_fees;
-            document.getElementById('studentRemainingFees').value = data.remaining_fees;
+            document.getElementById('totalFees').value = data.total_fees || 5000;
+            document.getElementById('paidFees').value = data.paid_fees || 0;
+            calculateRemainingFees();
             
             modal.style.display = 'block';
         })
@@ -93,16 +86,30 @@ window.onclick = function(event) {
 
 // Calculate remaining fees
 function calculateRemainingFees() {
-    const totalFees = parseFloat(document.getElementById('studentTotalFees').value) || 0;
-    const paidFees = parseFloat(document.getElementById('studentPaidFees').value) || 0;
+    const totalFees = parseFloat(document.getElementById('totalFees').value) || 0;
+    const paidFees = parseFloat(document.getElementById('paidFees').value) || 0;
     const remainingFees = totalFees - paidFees;
-    document.getElementById('studentRemainingFees').value = remainingFees.toFixed(2);
+    document.getElementById('remainingFees').value = remainingFees.toFixed(2);
 }
 
-// Add event listeners for fee calculations
+// Auto-generate full name
+function generateFullName() {
+    const studentName = document.getElementById('studentName').value.trim();
+    const fatherName = document.getElementById('fatherName').value.trim();
+    const surname = document.getElementById('surname').value.trim();
+    
+    const parts = [];
+    if (studentName) parts.push(studentName);
+    if (fatherName) parts.push(fatherName);
+    if (surname) parts.push(surname);
+    
+    document.getElementById('fullName').value = parts.join(' ');
+}
+
+// Add event listeners
 document.addEventListener('DOMContentLoaded', function() {
-    const totalFeesInput = document.getElementById('studentTotalFees');
-    const paidFeesInput = document.getElementById('studentPaidFees');
+    const totalFeesInput = document.getElementById('totalFees');
+    const paidFeesInput = document.getElementById('paidFees');
     
     if (totalFeesInput) {
         totalFeesInput.addEventListener('input', calculateRemainingFees);
@@ -110,6 +117,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (paidFeesInput) {
         paidFeesInput.addEventListener('input', calculateRemainingFees);
     }
+    
+    // Auto-generate full name
+    const studentNameInput = document.getElementById('studentName');
+    const fatherNameInput = document.getElementById('fatherName');
+    const surnameInput = document.getElementById('surname');
+    
+    if (studentNameInput) studentNameInput.addEventListener('input', generateFullName);
+    if (fatherNameInput) fatherNameInput.addEventListener('input', generateFullName);
+    if (surnameInput) surnameInput.addEventListener('input', generateFullName);
     
     // Handle photo preview
     const photoInput = document.getElementById('photoInput');
@@ -137,10 +153,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show loading state
             const saveBtn = document.querySelector('.save-btn');
             const originalText = saveBtn.textContent;
-            saveBtn.textContent = 'Saving...';
+            saveBtn.textContent = '💾 Saving...';
             saveBtn.disabled = true;
             
-            fetch(`/update-student/${studentId}/`, {
+            fetch(`/update-student-admitted/${studentId}/`, {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -150,16 +166,16 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Student details updated successfully!');
+                    alert('✅ Student details updated successfully!');
                     closeModal();
                     location.reload();
                 } else {
-                    alert('Error updating student details: ' + (data.error || 'Unknown error'));
+                    alert('❌ Error: ' + (data.error || 'Unknown error'));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error updating student details');
+                alert('❌ Error updating student details');
             })
             .finally(() => {
                 saveBtn.textContent = originalText;
