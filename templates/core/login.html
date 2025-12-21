@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | SSC Educations</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/login.css' %}">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="logo">SSC Educations</div>
+    <ul>
+        <li><a href="{% url 'home' %}">Home</a></li>
+        <li><a href="{% url 'login' %}" class="active">Login</a></li>
+    </ul>
+</nav>
+
+<!-- LOGIN CONTAINER -->
+<div class="login-wrapper">
+
+    <div class="login-card">
+        <h2>Welcome Back 👋</h2>
+        <p>Login to access your dashboard</p>
+
+        {% if form.errors %}
+            <div class="error">Invalid username or password</div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <input type="text" name="username" placeholder="Username" required>
+
+            <div class="password-box">
+                <input type="password" name="password" id="password" placeholder="Password" required>
+                <span onclick="togglePassword()">Show</span>
+            </div>
+
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+</div>
+
+<script src="{% static 'core/login.js' %}"></script>
+</body>
+</html>

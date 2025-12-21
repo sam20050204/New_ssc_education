@@ -1,0 +1,47 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enquiries</title>
+    <link rel="stylesheet" href="{% static 'core/dashboard.css' %}">
+</head>
+<body>
+
+{% include 'includes/sidebar.html' %}
+
+<div class="main-content">
+    <h2>📝 Enquiry List</h2>
+
+    <form method="get" style="margin-bottom:20px;">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search..." />
+        <button type="submit">Search</button>
+        <a href="{% url 'export_enquiries' %}">📥 Export Excel</a>
+    </form>
+
+    <table border="1" width="100%" cellpadding="10">
+        <tr>
+            <th>Name</th>
+            <th>Mobile</th>
+            <th>Education</th>
+            <th>Course</th>
+            <th>Date</th>
+        </tr>
+
+        {% for e in enquiries %}
+        <tr>
+            <td>{{ e.name }}</td>
+            <td>{{ e.mobile }}</td>
+            <td>{{ e.education }}</td>
+            <td>{{ e.course }}</td>
+            <td>{{ e.created_at|date:"d-m-Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No enquiries found</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Dashboard{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Base CSS -->
+    <link rel="stylesheet" href="{% static 'core/dashboard.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- 🔹 TOP NAVBAR -->
+<header class="top-header">
+    <h1>📊 Shri Samarth Computer Education</h1>
+
+    <div class="user-info">
+        <span>Welcome, {{ request.user.username|default:"Admin" }}</span>
+        <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+    </div>
+</header>
+
+<!-- 🔹 MAIN LAYOUT (SIDEBAR + CONTENT) -->
+<div class="layout">
+
+    <!-- SIDEBAR -->
+    {% include 'includes/sidebar.html' %}
+
+    <!-- PAGE CONTENT -->
+    <main class="main-content">
+
+        {% block page_heading %}
+        <!-- Page heading goes here -->
+        {% endblock %}
+
+        {% block content %}
+        <!-- Page content goes here -->
+        {% endblock %}
+
+    </main>
+
+</div>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

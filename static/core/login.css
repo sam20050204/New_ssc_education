@@ -1,0 +1,137 @@
+/* GLOBAL */
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Segoe UI, Arial;
+}
+body{
+    background:linear-gradient(to right,#0a014f,#1b1b8f);
+    min-height:100vh;
+}
+
+/* NAVBAR */
+.navbar{
+    background:#0a014f;
+    color:#fff;
+    padding:15px 40px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.navbar .logo{
+    font-size:22px;
+    font-weight:600;
+}
+.navbar ul{
+    list-style:none;
+    display:flex;
+    gap:20px;
+}
+.navbar ul li a{
+    color:#fff;
+    text-decoration:none;
+    font-weight:500;
+}
+.navbar ul li a.active{
+    border-bottom:2px solid #ff4500;
+}
+
+/* LOGIN WRAPPER */
+.login-wrapper{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:60px 20px;
+}
+
+/* LOGIN CARD */
+.login-card{
+    background:#fff;
+    width:100%;
+    max-width:380px;
+    padding:35px 30px;
+    border-radius:12px;
+    box-shadow:0 15px 30px rgba(0,0,0,0.25);
+    animation:fadeIn 0.8s ease;
+}
+
+.login-card h2{
+    text-align:center;
+    color:#0a014f;
+    margin-bottom:8px;
+}
+.login-card p{
+    text-align:center;
+    font-size:14px;
+    color:#666;
+    margin-bottom:22px;
+}
+
+/* INPUTS */
+.login-card input{
+    width:100%;
+    padding:12px;
+    margin-bottom:14px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    font-size:15px;
+}
+.login-card input:focus{
+    outline:none;
+    border-color:#1b1b8f;
+}
+
+/* PASSWORD TOGGLE */
+.password-box{
+    position:relative;
+}
+.password-box span{
+    position:absolute;
+    right:12px;
+    top:12px;
+    cursor:pointer;
+    font-size:14px;
+    color:#1b1b8f;
+}
+
+/* BUTTON */
+.login-card button{
+    width:100%;
+    background:#ff4500;
+    color:#fff;
+    padding:12px;
+    border:none;
+    border-radius:6px;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    transition:background 0.3s ease;
+}
+.login-card button:hover{
+    background:#e03d00;
+}
+
+/* ERROR */
+.error{
+    background:#ffe0e0;
+    color:#b30000;
+    padding:10px;
+    border-radius:5px;
+    font-size:14px;
+    margin-bottom:15px;
+    text-align:center;
+}
+
+/* ANIMATION */
+@keyframes fadeIn{
+    from{opacity:0; transform:translateY(20px);}
+    to{opacity:1; transform:translateY(0);}
+}
+
+/* RESPONSIVE */
+@media(max-width:480px){
+    .login-card{
+        padding:30px 20px;
+    }
+}

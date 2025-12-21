@@ -1,0 +1,89 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Enquiries{% endblock %}
+
+{% block page_heading %}
+📋 Enquiries
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/enquiries.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- SEARCH -->
+<form method="get" class="search-box">
+    <input
+        type="text"
+        name="search"
+        placeholder="Search name / mobile / course"
+        value="{{ search }}"
+    >
+    <button type="submit">Search</button>
+</form>
+
+<!-- ENQUIRIES TABLE -->
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Mobile</th>
+            <th>Course</th>
+            <th>Date</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for e in page_obj %}
+        <tr>
+            <td>{{ e.name }}</td>
+            <td>{{ e.mobile }}</td>
+            <td>{{ e.course }}</td>
+            <td>{{ e.created_at|date:"d M Y" }}</td>
+            <td>
+                <a href="{% url 'convert_enquiry' e.id %}" class="btn green">
+                    Convert
+                </a>
+                <button
+                    type="button"
+                    class="btn red"
+                    onclick="confirmDelete({{ e.id }})"
+                >
+                    Delete
+                </button>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No enquiries found</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- PAGINATION -->
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&search={{ search }}">
+            « Prev
+        </a>
+    {% endif %}
+
+    <span>
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&search={{ search }}">
+            Next »
+        </a>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/enquiries.js' %}"></script>
+{% endblock %}

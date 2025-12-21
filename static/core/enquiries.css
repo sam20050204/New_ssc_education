@@ -1,0 +1,46 @@
+.content{
+    margin-left:300px;
+    padding:30px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+    background:#fff;
+}
+
+th, td{
+    padding:12px;
+    border-bottom:1px solid #ddd;
+}
+
+th{
+    background:#f4f6f8;
+}
+
+.search-box{
+    display:flex;
+    gap:10px;
+}
+
+.search-box input{
+    padding:8px;
+    width:300px;
+}
+
+.btn{
+    padding:6px 12px;
+    text-decoration:none;
+    border:none;
+    cursor:pointer;
+    color:#fff;
+    border-radius:4px;
+}
+
+.green{ background:#27ae60; }
+.red{ background:#e74c3c; }
+
+.pagination{
+    margin-top:20px;
+}

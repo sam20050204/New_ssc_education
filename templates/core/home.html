@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SSC Educations</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+{% load static %}
+<link rel="stylesheet" href="{% static 'core/style.css' %}">
+
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<nav>
+    <h2>Shri Samarth Computer Educations</h2>
+    <ul>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#programs">Courses</a></li>
+
+        {% if user.is_authenticated %}
+            <li>Hello, {{ user.username }}</li>
+            <li><a href="{% url 'dashboard' %}" class="login-btn">Dashboard</a></li>
+            <li><a href="{% url 'logout' %}" class="login-btn">Logout</a></li>
+        {% else %}
+            <li><a href="{% url 'login' %}" class="login-btn">Login</a></li>
+        {% endif %}
+    </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="home">
+    <h1>Build Your Career with Industry-Ready Education</h1>
+    <p>
+        SSC Educations provides professional computer training,
+        practical skills, and career guidance.
+    </p>
+    <button class="btn" onclick="openModal()">Enquire Now</button>
+</div>
+
+<!-- COURSES -->
+<section id="programs">
+    <h2>Our Courses</h2>
+    <div class="programs">
+        <div class="box">
+            <h3>MS-CIT</h3>
+            <p>Computer fundamentals for modern careers.</p>
+        </div>
+        <div class="box">
+            <h3>Tally</h3>
+            <p>Accounting & GST with real-world practice.</p>
+        </div>
+        <div class="box">
+            <h3>Advance Excel</h3>
+            <p>Data analysis, dashboards, automation.</p>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <p>© 2025 SSC Educations | All Rights Reserved</p>
+</footer>
+
+<!-- ENQUIRY MODAL -->
+<div class="modal" id="enquiryModal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h3>Enquiry Form</h3>
+
+        <!-- IMPORTANT: POST goes to same home view -->
+        <form method="post">
+            {% csrf_token %}
+
+            <input type="text" name="name" placeholder="Full Name" required>
+            <input type="text" name="mobile" placeholder="Mobile Number" required>
+            <input type="text" name="education" placeholder="Education" required>
+
+            <select name="course" required>
+                <option value="">Select Course</option>
+                <option value="MS-CIT">MS-CIT</option>
+                <option value="Tally">Tally</option>
+                <option value="Advance Excel">Advance Excel</option>
+            </select>
+
+            <button type="submit" class="btn">Submit Enquiry</button>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'core/main.js' %}"></script>
+
+{% if messages %}
+  <div id="toast-container">
+    {% for message in messages %}
+      <div class="toast {{ message.tags }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+</body>
+</html>

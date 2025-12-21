@@ -1,0 +1,49 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_heading %}
+Dashboard Overview
+{% endblock %}
+
+{% block content %}
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">📝</div>
+        <div class="stat-number">{{ enquiry_count }}</div>
+        <div class="stat-label">Total Enquiries</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">🎓</div>
+        <div class="stat-number">{{ mscit_count|default:0 }}</div>
+        <div class="stat-label">MSCIT Students</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">💻</div>
+        <div class="stat-number">{{ klic_count|default:0 }}</div>
+        <div class="stat-label">KLIC Students</div>
+    </div>
+</div>
+
+<div class="charts-container">
+    <div class="chart-container">
+        <h3>Course Distribution</h3>
+        <canvas id="pieChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h3>Monthly Admissions</h3>
+        <canvas id="barChart"></canvas>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="{% static 'core/dashboard.js' %}"></script>
+{% endblock %}
