@@ -66,12 +66,36 @@ class AdmittedStudent(models.Model):
     # Photo
     photo = models.ImageField(upload_to='student_photos/', blank=True, null=True)
     
+    # Financial Information (NEW FIELDS)
+    total_fees = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        validators=[MinValueValidator(0)],
+        default=5000
+    )
+    paid_fees = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        validators=[MinValueValidator(0)],
+        default=0
+    )
+    
     # Metadata
     admission_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return self.full_name
+    
+    @property
+    def remaining_fees(self):
+        return self.total_fees - self.paid_fees
+    
+    @property
+    def fees_percentage_paid(self):
+        if self.total_fees > 0:
+            return (self.paid_fees / self.total_fees) * 100
+        return 0
     
     class Meta:
         ordering = ['-admission_date']
@@ -147,3 +171,68 @@ class Student(models.Model):
         if self.total_fees > 0:
             return (self.paid_fees / self.total_fees) * 100
         return 0
+
+
+# NEW MODEL FOR FEE PAYMENTS
+class FeePayment(models.Model):
+    PAYMENT_MODE_CHOICES = [
+        ('Cash', 'Cash'),
+        ('UPI', 'UPI'),
+        ('Card', 'Card'),
+        ('Bank Transfer', 'Bank Transfer'),
+    ]
+    
+    # Receipt number - auto-generated
+    receipt_no = models.CharField(max_length=20, unique=True, editable=False)
+    
+    # Student reference
+    student = models.ForeignKey(
+        'AdmittedStudent', 
+        on_delete=models.CASCADE,
+        related_name='fee_payments'
+    )
+    
+    # Payment details
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0.01)]
+    )
+    payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    
+    # Additional info
+    remarks = models.TextField(blank=True, null=True)
+    
+    # Fees snapshot at time of payment
+    total_fees_at_payment = models.DecimalField(max_digits=10, decimal_places=2)
+    paid_before_this = models.DecimalField(max_digits=10, decimal_places=2)
+    remaining_after_this = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-payment_date']
+        verbose_name = 'Fee Payment'
+        verbose_name_plural = 'Fee Payments'
+    
+    def __str__(self):
+        return f"{self.receipt_no} - {self.student.full_name} - ₹{self.amount}"
+    
+    def save(self, *args, **kwargs):
+        if not self.receipt_no:
+            # Generate receipt number
+            last_payment = FeePayment.objects.order_by('-id').first()
+            if last_payment and last_payment.receipt_no:
+                try:
+                    last_number = int(last_payment.receipt_no.split('-')[1])
+                    new_number = last_number + 1
+                except:
+                    new_number = 1
+            else:
+                new_number = 1
+            self.receipt_no = f"RCP-{new_number:06d}"
+        
+        super().save(*args, **kwargs)

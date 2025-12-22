@@ -19,6 +19,12 @@
         🎓 Admitted Students
     </a>
 
+    <!-- NEW: Fees Payment Link -->
+    <a href="{% url 'fees_payment' %}"
+       class="menu-item {% if active_page == 'fees_payment' %}active{% endif %}">
+        💰 Fees Payment
+    </a>
+
     <!-- Logout as a form to handle POST request properly -->
     <form method="post" action="{% url 'logout' %}" style="margin: 0;">
         {% csrf_token %}

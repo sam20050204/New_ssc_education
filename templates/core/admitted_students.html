@@ -112,76 +112,60 @@
 </div>
 {% endif %}
 
-<!-- STUDENTS LIST -->
+<!-- STUDENTS GRID -->
 <div class="students-container">
-    {% if students %}
-        {% for student in students %}
-        <div class="student-card" onclick="openStudentModal({{ student.id }})">
-            <!-- Photo -->
-            <div class="student-photo">
-                {% if student.photo %}
-                    <img src="{{ student.photo.url }}" alt="{{ student.full_name }}">
-                {% else %}
-                    <div class="photo-placeholder">
-                        {{ student.student_name|slice:":1"|upper }}
-                    </div>
-                {% endif %}
-            </div>
-            
-            <!-- Student Info -->
-            <div class="student-info">
-                <h3 class="student-name">{{ student.full_name }}</h3>
-                
-                <div class="course-badge">
-                    {% if student.course == "Other" and student.custom_course %}
-                        {{ student.custom_course }}
+    <div class="students-grid">
+        {% if students %}
+            {% for student in students %}
+            <div class="student-card" onclick="openStudentModal({{ student.id }})">
+                <!-- Photo -->
+                <div class="student-photo">
+                    {% if student.photo %}
+                        <img src="{{ student.photo.url }}" alt="{{ student.full_name }}">
                     {% else %}
-                        {{ student.course }}
+                        <div class="photo-placeholder">
+                            {{ student.student_name|slice:":1"|upper }}
+                        </div>
                     {% endif %}
                 </div>
                 
-                <div class="student-details">
-                    <div class="detail-item">
-                        <span class="detail-icon">📞</span>
-                        <span>{{ student.mobile_own }}</span>
-                    </div>
+                <!-- Student Info -->
+                <div class="student-info">
+                    <h3 class="student-name">{{ student.full_name }}</h3>
                     
-                    <div class="detail-item">
-                        <span class="detail-icon">📍</span>
-                        <span>{{ student.city }}</span>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <span class="detail-icon">📅</span>
-                        <span>{{ student.admission_date|date:"d M, Y" }}</span>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <span class="detail-icon">🎓</span>
-                        <span>{{ student.educational_qualification }}</span>
+                    <div class="student-details">
+                        <div class="detail-item">
+                            <span class="detail-icon">📞</span>
+                            <span>{{ student.mobile_own }}</span>
+                        </div>
+                        
+                        <div class="detail-item fees">
+                            <span class="detail-icon">💰</span>
+                            <span>Remaining: ₹5,000</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <p>No students found</p>
-            {% if search or month or year or course %}
-                <small>Try adjusting your filters</small>
-                <br><br>
-                <a href="{% url 'admitted_students' %}" class="btn-primary">Show All Students</a>
-            {% else %}
-                <small>Start by adding your first student</small>
-                <br><br>
-                <a href="{% url 'new_admission' %}" class="btn-primary">Add First Student</a>
-            {% endif %}
-        </div>
-    {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-icon">📭</div>
+                <p>No students found</p>
+                {% if search or month or year or course %}
+                    <small>Try adjusting your filters</small>
+                    <br><br>
+                    <a href="{% url 'admitted_students' %}" class="btn-primary">Show All Students</a>
+                {% else %}
+                    <small>Start by adding your first student</small>
+                    <br><br>
+                    <a href="{% url 'new_admission' %}" class="btn-primary">Add First Student</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
 </div>
 
-<!-- STUDENT DETAIL MODAL -->
+<!-- STUDENT DETAIL MODAL (same as before) -->
 <div id="studentModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">&times;</span>
