@@ -7,13 +7,15 @@ from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db.models.functions import ExtractYear
+from django.db import transaction
 import csv
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from io import BytesIO
 from datetime import datetime
+from decimal import Decimal
 
-from .models import Enquiry, AdmittedStudent, Course, Student
+from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
 
 
 # ================= CUSTOM LOGOUT =================
@@ -47,10 +49,8 @@ def home(request):
 # ================= DASHBOARD =================
 @login_required
 def dashboard(request):
-    # Get selected year from query parameter
     selected_year = request.GET.get('year', '')
     
-    # Get all available years from enquiries
     available_years = (
         Enquiry.objects
         .annotate(year=ExtractYear('created_at'))
@@ -59,16 +59,12 @@ def dashboard(request):
         .order_by('-year')
     )
     
-    # Filter enquiries based on selected year
     enquiries = Enquiry.objects.all()
     
     if selected_year:
         enquiries = enquiries.filter(created_at__year=selected_year)
     
-    # Count total enquiries
     enquiry_count = enquiries.count()
-    
-    # Count by course
     mscit_count = enquiries.filter(course__icontains='MSCIT').count()
     klic_count = enquiries.filter(course__icontains='KLIC').count()
     
@@ -85,16 +81,13 @@ def dashboard(request):
 # ================= ENQUIRY LIST =================
 @login_required
 def enquiry_list(request):
-    # Get filter parameters
     search = request.GET.get("search", "")
     month = request.GET.get("month", "")
     year = request.GET.get("year", "")
     course = request.GET.get("course", "")
     
-    # Start with all enquiries, ordered by latest first
     enquiries = Enquiry.objects.all().order_by("-created_at")
     
-    # Apply filters
     if search:
         enquiries = enquiries.filter(
             Q(name__icontains=search) |
@@ -111,7 +104,6 @@ def enquiry_list(request):
     if course:
         enquiries = enquiries.filter(course=course)
     
-    # Get available years for filter dropdown
     available_years = (
         Enquiry.objects
         .annotate(year=ExtractYear('created_at'))
@@ -120,7 +112,6 @@ def enquiry_list(request):
         .order_by('-year')
     )
     
-    # Get available courses for filter dropdown
     available_courses = (
         Enquiry.objects
         .values_list('course', flat=True)
@@ -128,12 +119,10 @@ def enquiry_list(request):
         .order_by('course')
     )
     
-    # Pagination
     paginator = Paginator(enquiries, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
     
-    # Build filter query string for pagination links
     filters_query = ""
     if search:
         filters_query += f"&search={search}"
@@ -169,16 +158,13 @@ def delete_enquiry(request, id):
 # ================= EXPORT ENQUIRIES =================
 @login_required
 def export_enquiries(request):
-    # Get filter parameters
     search = request.GET.get("search", "")
     month = request.GET.get("month", "")
     year = request.GET.get("year", "")
     course = request.GET.get("course", "")
     
-    # Start with all enquiries, ordered by latest first
     enquiries = Enquiry.objects.all().order_by("-created_at")
     
-    # Apply same filters as list view
     if search:
         enquiries = enquiries.filter(
             Q(name__icontains=search) |
@@ -195,7 +181,6 @@ def export_enquiries(request):
     if course:
         enquiries = enquiries.filter(course=course)
     
-    # Create CSV response
     response = HttpResponse(content_type="text/csv")
     timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
     response["Content-Disposition"] = f'attachment; filename="enquiries_{timestamp}.csv"'
@@ -231,7 +216,6 @@ def convert_enquiry(request, id):
 def new_admission(request):
     if request.method == "POST":
         try:
-            # Get form data
             course = request.POST.get("course")
             custom_course = request.POST.get("custom_course", "")
             student_name = request.POST.get("student_name")
@@ -253,7 +237,6 @@ def new_admission(request):
             total_fees = request.POST.get("total_fees", 5000)
             photo = request.FILES.get("photo")
             
-            # Create admission record
             admission = AdmittedStudent.objects.create(
                 course=course,
                 custom_course=custom_course if course == "Other" else "",
@@ -273,6 +256,7 @@ def new_admission(request):
                 district=district,
                 pin_code=pin_code,
                 educational_qualification=educational_qualification,
+                total_fees=total_fees,
                 photo=photo
             )
             
@@ -290,16 +274,13 @@ def new_admission(request):
 # ================= ADMITTED STUDENTS LIST =================
 @login_required
 def admitted_students(request):
-    # Get filter parameters
     search = request.GET.get("search", "")
     month = request.GET.get("month", "")
     year = request.GET.get("year", "")
     course = request.GET.get("course", "")
     
-    # Start with all admitted students, ordered by latest first
     students = AdmittedStudent.objects.all().order_by('-admission_date')
     
-    # Apply filters
     if search:
         students = students.filter(
             Q(full_name__icontains=search) |
@@ -316,7 +297,6 @@ def admitted_students(request):
     if course:
         students = students.filter(course=course)
     
-    # Get available years for filter dropdown
     available_years = (
         AdmittedStudent.objects
         .annotate(year=ExtractYear('admission_date'))
@@ -362,8 +342,9 @@ def student_detail_admitted(request, student_id):
         'tehsil_block': student.tehsil_block,
         'district': student.district,
         'pin_code': student.pin_code,
-        'total_fees': 5000,  # Default or get from somewhere
-        'paid_fees': 0,  # Default or get from somewhere
+        'total_fees': float(student.total_fees),
+        'paid_fees': float(student.paid_fees),
+        'remaining_fees': float(student.remaining_fees),
     }
     
     return JsonResponse(data)
@@ -375,7 +356,6 @@ def update_student_admitted(request, student_id):
     if request.method == 'POST':
         student = get_object_or_404(AdmittedStudent, id=student_id)
         
-        # Update fields
         student.student_name = request.POST.get('student_name')
         student.father_name = request.POST.get('father_name')
         student.surname = request.POST.get('surname')
@@ -395,7 +375,6 @@ def update_student_admitted(request, student_id):
         student.district = request.POST.get('district')
         student.pin_code = request.POST.get('pin_code')
         
-        # Handle photo upload
         if request.FILES.get('photo'):
             student.photo = request.FILES['photo']
         
@@ -407,82 +386,185 @@ def update_student_admitted(request, student_id):
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
-# ================= STUDENT DETAIL =================
+# ================= FEES PAYMENT PAGE =================
 @login_required
-def student_detail(request, student_id):
-    student = get_object_or_404(Student, id=student_id)
-    
-    data = {
-        'id': student.id,
-        'name': student.name,
-        'phone': student.phone,
-        'email': student.email or '',
-        'photo': student.photo.url if student.photo else '',
-        'course': student.course.name if student.course else '',
-        'course_id': student.course.id if student.course else '',
-        'admission_date': student.admission_date.strftime('%Y-%m-%d'),
-        'address': student.address or '',
-        'city': student.city or '',
-        'state': student.state or '',
-        'pincode': student.pincode or '',
-        'parent_name': student.parent_name or '',
-        'parent_phone': student.parent_phone or '',
-        'total_fees': str(student.total_fees),
-        'paid_fees': str(student.paid_fees),
-        'remaining_fees': str(student.remaining_fees),
-        'qualification': student.qualification or '',
-        'date_of_birth': student.date_of_birth.strftime('%Y-%m-%d') if student.date_of_birth else '',
-    }
-    
-    return JsonResponse(data)
+def fees_payment(request):
+    return render(request, 'core/fees_payment.html', {
+        'active_page': 'fees_payment'
+    })
 
 
-# ================= UPDATE STUDENT =================
+# ================= SEARCH STUDENTS FOR FEES PAYMENT =================
 @login_required
-def update_student(request, student_id):
+def search_students_for_payment(request):
+    query = request.GET.get('q', '').strip()
+    
+    if len(query) < 2:
+        return JsonResponse({'students': []})
+    
+    students = AdmittedStudent.objects.filter(
+        Q(full_name__icontains=query) |
+        Q(student_name__icontains=query) |
+        Q(mobile_own__icontains=query)
+    ).order_by('full_name')[:10]
+    
+    students_data = []
+    for student in students:
+        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+        students_data.append({
+            'id': student.id,
+            'full_name': student.full_name,
+            'mobile_own': student.mobile_own,
+            'course': course_name
+        })
+    
+    return JsonResponse({'students': students_data})
+
+
+# ================= SUBMIT FEE PAYMENT =================
+@login_required
+def submit_fee_payment(request):
     if request.method == 'POST':
-        student = get_object_or_404(Student, id=student_id)
-        
-        # Update basic info
-        student.name = request.POST.get('name')
-        student.phone = request.POST.get('phone')
-        student.email = request.POST.get('email')
-        student.address = request.POST.get('address')
-        student.city = request.POST.get('city')
-        student.state = request.POST.get('state')
-        student.pincode = request.POST.get('pincode')
-        student.parent_name = request.POST.get('parent_name')
-        student.parent_phone = request.POST.get('parent_phone')
-        student.qualification = request.POST.get('qualification')
-        
-        # Update course
-        course_id = request.POST.get('course')
-        if course_id:
-            student.course_id = course_id
-        
-        # Update dates
-        admission_date = request.POST.get('admission_date')
-        if admission_date:
-            student.admission_date = admission_date
-        
-        date_of_birth = request.POST.get('date_of_birth')
-        if date_of_birth:
-            student.date_of_birth = date_of_birth
-        
-        # Update financial info
-        student.total_fees = request.POST.get('total_fees', 0)
-        student.paid_fees = request.POST.get('paid_fees', 0)
-        
-        # Handle photo upload
-        if request.FILES.get('photo'):
-            student.photo = request.FILES['photo']
-        
-        student.save()
-        
-        messages.success(request, 'Student details updated successfully!')
-        return JsonResponse({'success': True})
+        try:
+            student_id = request.POST.get('student_id')
+            amount = Decimal(request.POST.get('amount'))
+            payment_mode = request.POST.get('payment_mode')
+            remarks = request.POST.get('remarks', '')
+            
+            with transaction.atomic():
+                student = AdmittedStudent.objects.select_for_update().get(id=student_id)
+                
+                # Validate amount
+                if amount <= 0:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Payment amount must be greater than zero'
+                    })
+                
+                if amount > student.remaining_fees:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Payment amount cannot exceed remaining fees (₹{student.remaining_fees})'
+                    })
+                
+                # Create payment record
+                payment = FeePayment.objects.create(
+                    student=student,
+                    amount=amount,
+                    payment_mode=payment_mode,
+                    remarks=remarks,
+                    total_fees_at_payment=student.total_fees,
+                    paid_before_this=student.paid_fees,
+                    remaining_after_this=student.total_fees - (student.paid_fees + amount)
+                )
+                
+                # Update student's paid fees
+                student.paid_fees += amount
+                student.save()
+                
+                # Prepare receipt data
+                course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+                
+                receipt_data = {
+                    'receipt_no': payment.receipt_no,
+                    'date': payment.payment_date.strftime('%d-%m-%Y'),
+                    'time': payment.payment_date.strftime('%I:%M %p'),
+                    'student_name': student.full_name,
+                    'course': course_name,
+                    'mobile': student.mobile_own,
+                    'payment_mode': payment_mode,
+                    'total_fees': f"{float(student.total_fees):.2f}",
+                    'previous_paid': f"{float(payment.paid_before_this):.2f}",
+                    'amount_paid': f"{float(amount):.2f}",
+                    'remaining_fees': f"{float(payment.remaining_after_this):.2f}",
+                    'amount_in_words': number_to_words(float(amount))
+                }
+                
+                return JsonResponse({
+                    'success': True,
+                    'receipt': receipt_data
+                })
+                
+        except AdmittedStudent.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Student not found'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
     
-    return JsonResponse({'success': False, 'error': 'Invalid request'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+# ================= NUMBER TO WORDS CONVERTER =================
+def number_to_words(num):
+    """Convert number to words for Indian currency"""
+    ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+    tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+    teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 
+             'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+    
+    if num == 0:
+        return 'Zero Rupees Only'
+    
+    def convert_less_than_thousand(n):
+        if n == 0:
+            return ''
+        
+        result = ''
+        
+        if n >= 100:
+            result += ones[n // 100] + ' Hundred '
+            n %= 100
+        
+        if n >= 20:
+            result += tens[n // 10] + ' '
+            n %= 10
+        elif n >= 10:
+            result += teens[n - 10] + ' '
+            return result
+        
+        if n > 0:
+            result += ones[n] + ' '
+        
+        return result
+    
+    # Split into integer and decimal parts
+    rupees = int(num)
+    paise = int(round((num - rupees) * 100))
+    
+    result = ''
+    
+    # Convert crores
+    if rupees >= 10000000:
+        result += convert_less_than_thousand(rupees // 10000000) + 'Crore '
+        rupees %= 10000000
+    
+    # Convert lakhs
+    if rupees >= 100000:
+        result += convert_less_than_thousand(rupees // 100000) + 'Lakh '
+        rupees %= 100000
+    
+    # Convert thousands
+    if rupees >= 1000:
+        result += convert_less_than_thousand(rupees // 1000) + 'Thousand '
+        rupees %= 1000
+    
+    # Convert remaining
+    if rupees > 0:
+        result += convert_less_than_thousand(rupees)
+    
+    result += 'Rupees'
+    
+    if paise > 0:
+        result += ' and ' + convert_less_than_thousand(paise) + 'Paise'
+    
+    result += ' Only'
+    
+    return result.strip()
 
 
 # ================= EXPORT STUDENTS TO EXCEL =================
@@ -490,7 +572,6 @@ def update_student(request, student_id):
 def export_students_excel(request):
     students = Student.objects.filter(is_active=True)
     
-    # Apply same filters as the main view
     month = request.GET.get('month', '')
     year = request.GET.get('year', '')
     course_id = request.GET.get('course', '')
@@ -508,23 +589,19 @@ def export_students_excel(request):
     
     students = students.order_by('admission_date', 'name')
     
-    # Create workbook
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Admitted Students"
     
-    # Define headers
     headers = [
         'S.No', 'Name', 'Phone', 'Email', 'Course', 'Admission Date',
         'Address', 'City', 'State', 'Pincode', 'Parent Name', 'Parent Phone',
         'Qualification', 'Date of Birth', 'Total Fees', 'Paid Fees', 'Remaining Fees'
     ]
     
-    # Style for header
     header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
     header_font = Font(bold=True, color="FFFFFF", size=12)
     
-    # Write headers
     for col_num, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col_num)
         cell.value = header
@@ -532,7 +609,6 @@ def export_students_excel(request):
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center", vertical="center")
     
-    # Write data
     for row_num, student in enumerate(students, 2):
         ws.cell(row=row_num, column=1).value = row_num - 1
         ws.cell(row=row_num, column=2).value = student.name
@@ -552,7 +628,6 @@ def export_students_excel(request):
         ws.cell(row=row_num, column=16).value = float(student.paid_fees)
         ws.cell(row=row_num, column=17).value = float(student.remaining_fees)
     
-    # Adjust column widths
     for column in ws.columns:
         max_length = 0
         column_letter = column[0].column_letter
@@ -565,12 +640,10 @@ def export_students_excel(request):
         adjusted_width = min(max_length + 2, 50)
         ws.column_dimensions[column_letter].width = adjusted_width
     
-    # Save to BytesIO
     excel_file = BytesIO()
     wb.save(excel_file)
     excel_file.seek(0)
     
-    # Create response
     response = HttpResponse(
         excel_file.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

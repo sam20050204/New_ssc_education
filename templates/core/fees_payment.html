@@ -1,0 +1,229 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Fees Payment{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/fees_payment.css' %}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">💰</div>
+            <div>
+                <h1 class="page-title">Fees Payment</h1>
+                <p class="page-subtitle">Record student fee payments and generate receipts</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="fees-payment-container">
+    
+    <!-- SEARCH STUDENT SECTION -->
+    <div class="search-section">
+        <h3>🔍 Search Student</h3>
+        <div class="search-box">
+            <input
+                type="text"
+                id="studentSearch"
+                class="search-input"
+                placeholder="Search by name or mobile number..."
+                autocomplete="off"
+            >
+            <span class="search-icon">🔍</span>
+        </div>
+        <div id="searchResults" class="search-results"></div>
+    </div>
+
+    <!-- STUDENT DETAILS SECTION -->
+    <div id="studentDetailsSection" class="student-details-section">
+        <div class="student-header">
+            <div class="student-photo-large" id="studentPhotoLarge"></div>
+            <div class="student-info-large">
+                <h2 class="student-name-large" id="studentNameDisplay">-</h2>
+                <span class="student-course-large" id="studentCourseDisplay">-</span>
+                <p class="student-mobile-large">📞 <span id="studentMobileDisplay">-</span></p>
+            </div>
+        </div>
+
+        <!-- FEES INFO GRID -->
+        <div class="fees-info-grid">
+            <div class="fees-info-card total">
+                <div class="fees-label">Total Fees</div>
+                <div class="fees-amount total">₹<span id="totalFeesDisplay">0.00</span></div>
+            </div>
+            <div class="fees-info-card paid">
+                <div class="fees-label">Paid Fees</div>
+                <div class="fees-amount paid">₹<span id="paidFeesDisplay">0.00</span></div>
+            </div>
+            <div class="fees-info-card remaining">
+                <div class="fees-label">Remaining Fees</div>
+                <div class="fees-amount remaining">₹<span id="remainingFeesDisplay">0.00</span></div>
+            </div>
+        </div>
+
+        <!-- PAYMENT FORM -->
+        <div class="payment-form-section">
+            <h3>💳 Record Payment</h3>
+            <form id="paymentForm">
+                {% csrf_token %}
+                <input type="hidden" id="selectedStudentId" name="student_id">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="paymentAmount">
+                            Payment Amount (₹) <span class="required">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="paymentAmount"
+                            name="amount"
+                            class="form-input payment-amount-input"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0.01"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="paymentMode">
+                            Payment Mode <span class="required">*</span>
+                        </label>
+                        <select id="paymentMode" name="payment_mode" class="form-select" required>
+                            <option value="">-- Select Mode --</option>
+                            <option value="Cash">Cash</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Card">Card</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="remarks">Remarks (Optional)</label>
+                        <textarea
+                            id="remarks"
+                            name="remarks"
+                            class="form-input"
+                            rows="2"
+                            placeholder="Any additional notes..."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">
+                        💾 Submit Payment
+                    </button>
+                    <button type="reset" class="btn-reset">
+                        🔄 Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- RECEIPT MODAL -->
+<div id="receiptModal" class="receipt-modal">
+    <div class="receipt-container" id="receiptContent">
+        <!-- INSTITUTE HEADER -->
+        <div class="receipt-header">
+            <div class="institute-name">Shri Samarth Computer Education Murud</div>
+            <div class="institute-details">
+                Contact No: 9960638066<br>
+                Address: Samarth Road, Behind Bus Stand, Shivaji Nagar, Murud<br>
+                TQ. DIST. Latur - 413510<br>
+                <strong>MKCL Authorized Center Code: 45210017</strong>
+            </div>
+        </div>
+
+        <!-- RECEIPT TITLE -->
+        <h2 class="receipt-title">🧾 FEE PAYMENT RECEIPT</h2>
+
+        <!-- RECEIPT INFO -->
+        <div class="receipt-info">
+            <span class="receipt-label">Receipt No:</span>
+            <span class="receipt-value" id="receiptNo">-</span>
+
+            <span class="receipt-label">Date:</span>
+            <span class="receipt-value" id="receiptDate">-</span>
+
+            <span class="receipt-label">Student Name:</span>
+            <span class="receipt-value" id="receiptStudentName">-</span>
+
+            <span class="receipt-label">Course:</span>
+            <span class="receipt-value" id="receiptCourse">-</span>
+
+            <span class="receipt-label">Mobile:</span>
+            <span class="receipt-value" id="receiptMobile">-</span>
+
+            <span class="receipt-label">Payment Mode:</span>
+            <span class="receipt-value" id="receiptPaymentMode">-</span>
+        </div>
+
+        <hr class="receipt-divider">
+
+        <!-- AMOUNT SECTION -->
+        <div class="amount-section">
+            <div class="amount-row">
+                <span>Total Course Fees:</span>
+                <strong>₹<span id="receiptTotalFees">0.00</span></strong>
+            </div>
+            <div class="amount-row">
+                <span>Previous Paid:</span>
+                <strong>₹<span id="receiptPreviousPaid">0.00</span></strong>
+            </div>
+            <div class="amount-row paid">
+                <span>Amount Paid Now:</span>
+                <strong>₹<span id="receiptAmountPaid">0.00</span></strong>
+            </div>
+            <div class="amount-row">
+                <span>Remaining Fees:</span>
+                <strong>₹<span id="receiptRemainingFees">0.00</span></strong>
+            </div>
+            <div class="amount-in-words">
+                <strong>In Words:</strong> <span id="receiptAmountWords">-</span>
+            </div>
+        </div>
+
+        <hr class="receipt-divider">
+
+        <!-- FOOTER -->
+        <div class="receipt-footer">
+            <div class="thank-you">
+                Thank you for your payment!<br>
+                <small>This is a computer-generated receipt</small>
+            </div>
+            <div class="signature-section">
+                <div class="signature-line"></div>
+                <div class="signature-label">Authorized Signature</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ACTIONS -->
+    <div class="modal-actions">
+        <button class="btn-print" onclick="printReceipt()">
+            🖨️ Print Receipt
+        </button>
+        <button class="btn-close" onclick="closeReceiptModal()">
+            ❌ Close
+        </button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/fees_payment.js' %}"></script>
+{% endblock %}

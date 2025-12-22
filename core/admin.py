@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Enquiry, AdmittedStudent, Course, Student
+from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
 
 @admin.register(Enquiry)
 class EnquiryAdmin(admin.ModelAdmin):
@@ -10,10 +10,10 @@ class EnquiryAdmin(admin.ModelAdmin):
 
 @admin.register(AdmittedStudent)
 class AdmittedStudentAdmin(admin.ModelAdmin):
-    list_display = ("full_name", "course", "mobile_own", "city", "admission_date")
+    list_display = ("full_name", "course", "mobile_own", "city", "admission_date", "remaining_fees")
     search_fields = ("full_name", "student_name", "mobile_own", "city")
     list_filter = ("course", "gender", "marital_status", "admission_date")
-    readonly_fields = ("admission_date", "updated_at")
+    readonly_fields = ("admission_date", "updated_at", "remaining_fees", "fees_percentage_paid")
     
     fieldsets = (
         ('Course Information', {
@@ -36,6 +36,9 @@ class AdmittedStudentAdmin(admin.ModelAdmin):
         }),
         ('Photo', {
             'fields': ('photo',)
+        }),
+        ('Financial Information', {
+            'fields': ('total_fees', 'paid_fees', 'remaining_fees', 'fees_percentage_paid')
         }),
         ('Metadata', {
             'fields': ('admission_date', 'updated_at'),
@@ -81,3 +84,41 @@ class StudentAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(FeePayment)
+class FeePaymentAdmin(admin.ModelAdmin):
+    list_display = ("receipt_no", "student", "amount", "payment_mode", "payment_date", "remaining_after_this")
+    search_fields = ("receipt_no", "student__full_name", "student__mobile_own")
+    list_filter = ("payment_mode", "payment_date")
+    readonly_fields = ("receipt_no", "payment_date", "created_at", "updated_at")
+    
+    fieldsets = (
+        ('Receipt Information', {
+            'fields': ('receipt_no', 'payment_date')
+        }),
+        ('Student Information', {
+            'fields': ('student',)
+        }),
+        ('Payment Details', {
+            'fields': ('amount', 'payment_mode', 'remarks')
+        }),
+        ('Fees Snapshot', {
+            'fields': ('total_fees_at_payment', 'paid_before_this', 'remaining_after_this'),
+            'description': 'Snapshot of fees at the time of payment'
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # Disable adding payments directly from admin
+        # Payments should be added through the fees payment page
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Disable deleting payments
+        # This is to maintain financial integrity
+        return False

@@ -66,7 +66,7 @@ class AdmittedStudent(models.Model):
     # Photo
     photo = models.ImageField(upload_to='student_photos/', blank=True, null=True)
     
-    # Financial Information (NEW FIELDS)
+    # Financial Information
     total_fees = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
