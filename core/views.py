@@ -18,6 +18,10 @@ from decimal import Decimal
 from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
 from django.views.decorators.http import require_http_methods
 import json
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+
 
 # ================= CUSTOM LOGOUT =================
 def custom_logout(request):
@@ -47,36 +51,73 @@ def home(request):
     return render(request, "core/home.html")
 
 
-# ================= DASHBOARD =================
+# ================= DASHBOARD (FIXED VERSION) =================
 @login_required
 def dashboard(request):
     selected_year = request.GET.get('year', '')
     
+    # Get available years from AdmittedStudent model
     available_years = (
-        Enquiry.objects
-        .annotate(year=ExtractYear('created_at'))
+        AdmittedStudent.objects
+        .annotate(year=ExtractYear('admission_date'))
         .values_list('year', flat=True)
         .distinct()
         .order_by('-year')
     )
     
-    enquiries = Enquiry.objects.all()
+    # Base queryset for admitted students
+    students = AdmittedStudent.objects.all()
     
+    # Filter by year if selected
+    if selected_year:
+        students = students.filter(admission_date__year=selected_year)
+    
+    # Total enquiries (from Enquiry model)
+    enquiries = Enquiry.objects.all()
     if selected_year:
         enquiries = enquiries.filter(created_at__year=selected_year)
-    
     enquiry_count = enquiries.count()
-    mscit_count = enquiries.filter(course__icontains='MSCIT').count()
-    klic_count = enquiries.filter(course__icontains='KLIC').count()
     
-    return render(request, "core/dashboard.html", {
+    # MSCIT Students - only MS-CIT course
+    mscit_count = students.filter(course='MS-CIT').count()
+    
+    # KLIC Students - all courses EXCEPT MS-CIT
+    klic_count = students.exclude(course='MS-CIT').count()
+    
+    # Get course distribution for pie chart
+    course_distribution = {}
+    for student in students:
+        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+        course_distribution[course_name] = course_distribution.get(course_name, 0) + 1
+    
+    # Get monthly admission data
+    monthly_data = {str(i): 0 for i in range(1, 13)}  # Initialize all months with 0
+    
+    if selected_year:
+        # Get admissions for selected year
+        year_students = AdmittedStudent.objects.filter(admission_date__year=selected_year)
+    else:
+        # Get admissions for current year
+        from datetime import datetime
+        current_year = datetime.now().year
+        year_students = AdmittedStudent.objects.filter(admission_date__year=current_year)
+    
+    for student in year_students:
+        month = str(student.admission_date.month)
+        monthly_data[month] = monthly_data.get(month, 0) + 1
+    
+    context = {
         "enquiry_count": enquiry_count,
         "mscit_count": mscit_count,
         "klic_count": klic_count,
         "available_years": available_years,
         "selected_year": selected_year,
-        "active_page": "dashboard"
-    })
+        "active_page": "dashboard",
+        "course_distribution": course_distribution,
+        "monthly_data": monthly_data,
+    }
+    
+    return render(request, "core/dashboard.html", context)
 
 
 # ================= ENQUIRY LIST =================
@@ -655,7 +696,7 @@ def export_students_excel(request):
     
     return response
 
-    # ================= RECEIPTS VIEW =================
+# ================= RECEIPTS VIEW =================
 @login_required
 def receipts_view(request):
     """Main receipts page"""
@@ -669,8 +710,43 @@ def receipts_view(request):
 def get_receipts(request):
     """API endpoint to get all receipts with filters"""
     try:
-        # Get all payments
-        payments = FeePayment.objects.select_related('student').all()
+        # Get filter parameters
+        search = request.GET.get('search', '').strip()
+        date_filter = request.GET.get('date', '').strip()
+        month_filter = request.GET.get('month', '').strip()
+        year_filter = request.GET.get('year', '').strip()
+        
+        # Get all payments with related student data
+        payments = FeePayment.objects.select_related('student').all().order_by('-payment_date')
+        
+        # Apply search filter
+        if search:
+            payments = payments.filter(
+                Q(student__full_name__icontains=search) |
+                Q(student__mobile_own__icontains=search) |
+                Q(receipt_no__icontains=search)
+            )
+        
+        # Apply date filter
+        if date_filter:
+            try:
+                filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+                payments = payments.filter(payment_date__date=filter_date)
+            except ValueError:
+                pass
+        
+        # Apply month and year filters
+        if month_filter:
+            try:
+                payments = payments.filter(payment_date__month=int(month_filter))
+            except ValueError:
+                pass
+        
+        if year_filter:
+            try:
+                payments = payments.filter(payment_date__year=int(year_filter))
+            except ValueError:
+                pass
         
         # Build receipts data
         receipts_data = []
@@ -682,7 +758,9 @@ def get_receipts(request):
                 'id': payment.id,
                 'receipt_no': payment.receipt_no,
                 'student_name': payment.student.full_name,
+                'student_id': payment.student.id,
                 'payment_date': payment.payment_date.strftime('%Y-%m-%d'),
+                'payment_time': payment.payment_date.strftime('%I:%M %p'),
                 'paid_fees': float(payment.amount),
                 'remaining_fees': float(payment.remaining_after_this),
                 'total_fees': float(payment.total_fees_at_payment),
@@ -690,14 +768,19 @@ def get_receipts(request):
                 'payment_mode': payment.payment_mode,
                 'course': course_name,
                 'mobile': payment.student.mobile_own,
+                'remarks': payment.remarks or '',
             })
         
         return JsonResponse({
             'success': True,
-            'receipts': receipts_data
+            'receipts': receipts_data,
+            'total_count': len(receipts_data)
         })
         
     except Exception as e:
+        print(f"Error in get_receipts: {str(e)}")  # Debug log
+        import traceback
+        traceback.print_exc()  # Print full traceback
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -716,9 +799,21 @@ def update_receipt(request, receipt_id):
         # Parse JSON data
         data = json.loads(request.body)
         
+        # Store old amount for updating student's paid_fees
+        old_amount = payment.amount
+        
         # Update fields
         if 'payment_date' in data:
-            payment.payment_date = data['payment_date']
+            try:
+                # Parse the date string
+                payment_date_str = data['payment_date']
+                payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d')
+                payment.payment_date = payment_date
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid date format'
+                })
         
         if 'paid_fees' in data:
             new_amount = Decimal(str(data['paid_fees']))
@@ -730,25 +825,22 @@ def update_receipt(request, receipt_id):
                     'error': 'Payment amount must be greater than zero'
                 })
             
-            # Calculate new remaining fees
-            old_amount = payment.amount
+            # Calculate the difference
             difference = new_amount - old_amount
             
             # Update payment amount
             payment.amount = new_amount
             
             # Recalculate remaining fees
-            payment.remaining_after_this = payment.paid_before_this + payment.amount - payment.total_fees_at_payment
-            if payment.remaining_after_this < 0:
-                payment.remaining_after_this = 0
+            payment.remaining_after_this = payment.total_fees_at_payment - (payment.paid_before_this + new_amount)
             
             # Update student's paid fees
-            student = payment.student
-            student.paid_fees = student.paid_fees + difference
-            student.save()
-        
-        if 'remaining_fees' in data:
-            payment.remaining_after_this = Decimal(str(data['remaining_fees']))
+            with transaction.atomic():
+                student = payment.student
+                student.paid_fees = student.paid_fees + difference
+                if student.paid_fees < 0:
+                    student.paid_fees = 0
+                student.save()
         
         payment.save()
         
@@ -763,11 +855,68 @@ def update_receipt(request, receipt_id):
             'error': 'Receipt not found'
         }, status=404)
     except Exception as e:
+        print(f"Error in update_receipt: {str(e)}")  # Debug log
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': str(e)
         }, status=500)
 
+
+# ================= DELETE RECEIPT API (FIXED VERSION) =================
+@login_required
+def delete_receipt(request, receipt_id):
+    """API endpoint to delete a receipt"""
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request method'
+        }, status=405)
+    
+    try:
+        # Get the payment
+        payment = FeePayment.objects.select_related('student').get(id=receipt_id)
+        
+        # Store payment details before deletion
+        payment_amount = payment.amount
+        student = payment.student
+        receipt_no = payment.receipt_no
+        student_name = student.full_name
+        
+        # Debug logging
+        print(f"Deleting receipt {receipt_no} for {student_name}, amount: {payment_amount}")
+        
+        # Update student's paid fees (subtract the deleted payment amount)
+        with transaction.atomic():
+            # Recalculate student's paid fees
+            student.paid_fees = max(0, student.paid_fees - payment_amount)
+            student.save()
+            
+            # Delete the payment record
+            payment.delete()
+            
+            print(f"Receipt deleted successfully. Student's new paid_fees: {student.paid_fees}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Receipt {receipt_no} deleted successfully'
+        })
+        
+    except FeePayment.DoesNotExist:
+        print(f"Receipt with id {receipt_id} not found")
+        return JsonResponse({
+            'success': False,
+            'error': 'Receipt not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error in delete_receipt: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Error deleting receipt: {str(e)}'
+        }, status=500)
 
 # ================= EXPORT RECEIPTS API =================
 @login_required
@@ -776,30 +925,39 @@ def export_receipts(request):
     try:
         # Get filter parameters
         search = request.GET.get('search', '')
-        date = request.GET.get('date', '')
+        date_filter = request.GET.get('date', '')
         month = request.GET.get('month', '')
         year = request.GET.get('year', '')
         
         # Get all payments
-        payments = FeePayment.objects.select_related('student').all()
+        payments = FeePayment.objects.select_related('student').all().order_by('-payment_date')
         
         # Apply filters
         if search:
             payments = payments.filter(
                 Q(student__full_name__icontains=search) |
-                Q(student__mobile_own__icontains=search)
+                Q(student__mobile_own__icontains=search) |
+                Q(receipt_no__icontains=search)
             )
         
-        if date:
-            payments = payments.filter(payment_date__date=date)
+        if date_filter:
+            try:
+                filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+                payments = payments.filter(payment_date__date=filter_date)
+            except ValueError:
+                pass
         
         if month:
-            payments = payments.filter(payment_date__month=month)
+            try:
+                payments = payments.filter(payment_date__month=int(month))
+            except ValueError:
+                pass
         
         if year:
-            payments = payments.filter(payment_date__year=year)
-        
-        payments = payments.order_by('-payment_date')
+            try:
+                payments = payments.filter(payment_date__year=int(year))
+            except ValueError:
+                pass
         
         # Create workbook
         wb = openpyxl.Workbook()
@@ -810,7 +968,7 @@ def export_receipts(request):
         headers = [
             'Receipt No', 'Student Name', 'Mobile', 'Course', 
             'Payment Date', 'Payment Mode', 'Total Fees', 
-            'Paid Before', 'Amount Paid', 'Remaining Fees'
+            'Paid Before', 'Amount Paid', 'Remaining Fees', 'Remarks'
         ]
         
         # Style headers
@@ -832,12 +990,13 @@ def export_receipts(request):
             ws.cell(row=row_num, column=2).value = payment.student.full_name
             ws.cell(row=row_num, column=3).value = payment.student.mobile_own
             ws.cell(row=row_num, column=4).value = course_name
-            ws.cell(row=row_num, column=5).value = payment.payment_date.strftime('%d-%m-%Y')
+            ws.cell(row=row_num, column=5).value = payment.payment_date.strftime('%d-%m-%Y %I:%M %p')
             ws.cell(row=row_num, column=6).value = payment.payment_mode
             ws.cell(row=row_num, column=7).value = float(payment.total_fees_at_payment)
             ws.cell(row=row_num, column=8).value = float(payment.paid_before_this)
             ws.cell(row=row_num, column=9).value = float(payment.amount)
             ws.cell(row=row_num, column=10).value = float(payment.remaining_after_this)
+            ws.cell(row=row_num, column=11).value = payment.remarks or ''
         
         # Adjust column widths
         for column in ws.columns:
@@ -868,6 +1027,9 @@ def export_receipts(request):
         return response
         
     except Exception as e:
+        print(f"Error in export_receipts: {str(e)}")  # Debug log
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': str(e)

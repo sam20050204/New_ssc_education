@@ -803,3 +803,46 @@
         padding: 15px;
     }
 }
+
+/* Add this to your existing receipts.css file - just the new styles for delete button */
+
+/* ===================== DELETE BUTTON STYLES ===================== */
+.btn-delete {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* ===================== ACTIONS CELL - Updated for 3 buttons ===================== */
+.actions-cell {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ===================== RESPONSIVE UPDATES ===================== */
+@media (max-width: 768px) {
+    .actions-cell {
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .actions-cell .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ===================== CONFIRMATION DIALOG STYLE ===================== */
+/* This will style the browser's native confirm dialog */
+/* Note: Native confirm dialogs cannot be styled, but we're adding 
+   visual feedback with the button state */
+.btn-delete:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+}

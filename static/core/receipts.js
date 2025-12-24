@@ -4,6 +4,7 @@ let filteredReceipts = [];
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Receipts page loaded'); // Debug log
     initializePage();
     loadReceipts();
     setupEventListeners();
@@ -20,13 +21,6 @@ function initializePage() {
         option.textContent = year;
         yearFilter.appendChild(option);
     }
-    
-    // Menu toggle for mobile
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.querySelector('.sidebar');
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-    });
 }
 
 // Setup event listeners
@@ -63,23 +57,35 @@ function debounce(func, wait) {
 // Load receipts from backend
 async function loadReceipts() {
     try {
+        console.log('Loading receipts...'); // Debug log
         showLoading(true);
-        const response = await fetch('/api/receipts');
+        
+        const response = await fetch('/api/receipts/');
+        console.log('Response status:', response.status); // Debug log
         
         if (!response.ok) {
-            throw new Error('Failed to load receipts');
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
-        allReceipts = data.receipts || [];
-        filteredReceipts = [...allReceipts];
+        console.log('Received data:', data); // Debug log
         
-        renderReceipts(filteredReceipts);
-        updateSummary(filteredReceipts);
+        if (data.success) {
+            allReceipts = data.receipts || [];
+            filteredReceipts = [...allReceipts];
+            
+            console.log('Total receipts loaded:', allReceipts.length); // Debug log
+            
+            renderReceipts(filteredReceipts);
+            updateSummary(filteredReceipts);
+        } else {
+            throw new Error(data.error || 'Failed to load receipts');
+        }
+        
         showLoading(false);
     } catch (error) {
         console.error('Error loading receipts:', error);
-        showError('Failed to load receipts. Please try again.');
+        showError('Failed to load receipts. Please refresh the page or contact support.');
         showLoading(false);
     }
 }
@@ -91,9 +97,11 @@ function applyFilters() {
     const monthFilter = document.getElementById('monthFilter').value;
     const yearFilter = document.getElementById('yearFilter').value;
     
+    console.log('Applying filters:', { searchTerm, dateFilter, monthFilter, yearFilter }); // Debug log
+    
     filteredReceipts = allReceipts.filter(receipt => {
         // Search filter
-        if (searchTerm && !receipt.student_name.toLowerCase().includes(searchTerm)) {
+        if (searchTerm && !receipt.student_name.toLowerCase().includes(searchTerm) && !receipt.receipt_no.toLowerCase().includes(searchTerm)) {
             return false;
         }
         
@@ -120,6 +128,7 @@ function applyFilters() {
         return true;
     });
     
+    console.log('Filtered receipts:', filteredReceipts.length); // Debug log
     renderReceipts(filteredReceipts);
     updateSummary(filteredReceipts);
 }
@@ -165,10 +174,13 @@ function renderReceipts(receipts) {
             <td>
                 <div class="actions-cell">
                     <button class="btn btn-edit" onclick="openEditModal(${receipt.id})">
-                        <i class="fas fa-edit"></i> Edit
+                        ✏️ Edit
                     </button>
                     <button class="btn btn-print" onclick="showPrintModal(${receipt.id})">
-                        <i class="fas fa-print"></i> Print
+                        🖨️ Print
+                    </button>
+                    <button class="btn btn-delete" onclick="deleteReceipt(${receipt.id})">
+                        🗑️ Delete
                     </button>
                 </div>
             </td>
@@ -191,7 +203,10 @@ function updateSummary(receipts) {
 // Open edit modal
 function openEditModal(receiptId) {
     const receipt = allReceipts.find(r => r.id === receiptId);
-    if (!receipt) return;
+    if (!receipt) {
+        showError('Receipt not found');
+        return;
+    }
     
     document.getElementById('editReceiptId').value = receipt.id;
     document.getElementById('editStudentName').value = receipt.student_name;
@@ -201,12 +216,14 @@ function openEditModal(receiptId) {
     
     const modal = document.getElementById('editModal');
     modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
 }
 
 // Close edit modal
 function closeEditModal() {
     const modal = document.getElementById('editModal');
     modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
     document.getElementById('editForm').reset();
 }
 
@@ -231,10 +248,6 @@ async function handleEditSubmit(e) {
             body: JSON.stringify(formData)
         });
         
-        if (!response.ok) {
-            throw new Error('Failed to update receipt');
-        }
-        
         const data = await response.json();
         
         if (data.success) {
@@ -250,10 +263,60 @@ async function handleEditSubmit(e) {
     }
 }
 
+// Delete receipt function
+async function deleteReceipt(receiptId) {
+    const receipt = allReceipts.find(r => r.id === receiptId);
+    if (!receipt) {
+        showError('Receipt not found');
+        return;
+    }
+    
+    // Confirm deletion
+    const confirmMessage = `Are you sure you want to delete this receipt?\n\n` +
+                          `Receipt No: ${receipt.receipt_no}\n` +
+                          `Student: ${receipt.student_name}\n` +
+                          `Amount: ₹${formatNumber(receipt.paid_fees)}\n\n` +
+                          `⚠️ Warning: This will also update the student's paid fees!`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    try {
+        showLoading(true);
+        
+        const response = await fetch(`/api/receipts/${receiptId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Receipt deleted successfully!', 'success');
+            loadReceipts(); // Reload receipts
+        } else {
+            showNotification(data.error || 'Failed to delete receipt', 'error');
+        }
+        
+        showLoading(false);
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error deleting receipt. Please try again.', 'error');
+        showLoading(false);
+    }
+}
+
 // Show print modal
 function showPrintModal(receiptId) {
     const receipt = allReceipts.find(r => r.id === receiptId);
-    if (!receipt) return;
+    if (!receipt) {
+        showError('Receipt not found');
+        return;
+    }
     
     // Generate receipt HTML
     const receiptHTML = `
@@ -261,8 +324,13 @@ function showPrintModal(receiptId) {
             <h1>Shri Samarth Computer Education</h1>
             <p>Contact: 9960638066</p>
             <p>Address: Samarth Road, Behind Bus Stand, Shivaji Nagar, Murud</p>
+            <p>TQ. DIST. Latur - 413510</p>
             <p><strong>MKCL Code: 45210017</strong></p>
         </div>
+        
+        <h2 style="text-align: center; color: #667eea; margin: 20px 0; text-transform: uppercase;">
+            🧾 Fee Payment Receipt
+        </h2>
         
         <div class="receipt-info">
             <div class="info-group">
@@ -271,7 +339,7 @@ function showPrintModal(receiptId) {
             </div>
             <div class="info-group">
                 <label>Date</label>
-                <span>${formatDate(receipt.payment_date)}</span>
+                <span>${formatDate(receipt.payment_date)} ${receipt.payment_time || ''}</span>
             </div>
             <div class="info-group">
                 <label>Student Name</label>
@@ -280,6 +348,14 @@ function showPrintModal(receiptId) {
             <div class="info-group">
                 <label>Course</label>
                 <span>${receipt.course || 'N/A'}</span>
+            </div>
+            <div class="info-group">
+                <label>Mobile</label>
+                <span>${receipt.mobile}</span>
+            </div>
+            <div class="info-group">
+                <label>Payment Mode</label>
+                <span>${receipt.payment_mode}</span>
             </div>
         </div>
         
@@ -305,18 +381,24 @@ function showPrintModal(receiptId) {
         <div class="receipt-footer">
             <p>Thank you for your payment!</p>
             <small>This is a computer-generated receipt</small>
+            <div style="text-align: right; margin-top: 40px; padding-right: 20px;">
+                <div style="border-top: 2px solid #000; width: 200px; margin-left: auto; margin-bottom: 5px;"></div>
+                <strong>Authorized Signature</strong>
+            </div>
         </div>
     `;
     
     document.getElementById('receiptContent').innerHTML = receiptHTML;
     const modal = document.getElementById('printModal');
     modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
 }
 
 // Close print modal
 function closePrintModal() {
     const modal = document.getElementById('printModal');
     modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
 }
 
 // Print receipt
@@ -346,7 +428,7 @@ async function exportToExcel() {
         window.location.href = `/api/receipts/export/?${params.toString()}`;
         
         showLoading(false);
-        showNotification('Export started!', 'success');
+        showNotification('Export started! Your download will begin shortly.', 'success');
     } catch (error) {
         console.error('Error exporting:', error);
         showError('Failed to export receipts. Please try again.');
@@ -413,3 +495,24 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+// Close modals on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditModal();
+        closePrintModal();
+    }
+});
+
+// Close modals on outside click
+window.addEventListener('click', function(e) {
+    const editModal = document.getElementById('editModal');
+    const printModal = document.getElementById('printModal');
+    
+    if (e.target === editModal) {
+        closeEditModal();
+    }
+    if (e.target === printModal) {
+        closePrintModal();
+    }
+});
