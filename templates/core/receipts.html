@@ -1,0 +1,210 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Receipts History{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/receipts.css' %}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">🧾</div>
+            <div>
+                <h1 class="page-title">Payment Receipts</h1>
+                <p class="page-subtitle">View and manage all fee payment receipts</p>
+            </div>
+        </div>
+        <div class="page-actions">
+            <button id="exportBtn" class="action-btn primary">
+                <span>📥</span> Export to Excel
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- FILTERS SECTION -->
+<div class="filters-container">
+    <form class="filters-form">
+        
+        <div class="filter-group search-group">
+            <label for="searchInput">🔍 Search Student</label>
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search by student name..."
+                class="filter-input"
+            >
+        </div>
+
+        <div class="filter-group">
+            <label for="dateFilter">📅 Date</label>
+            <input
+                type="date"
+                id="dateFilter"
+                class="filter-input"
+            >
+        </div>
+
+        <div class="filter-group">
+            <label for="monthFilter">📆 Month</label>
+            <select id="monthFilter" class="filter-select">
+                <option value="">All Months</option>
+                <option value="01">January</option>
+                <option value="02">February</option>
+                <option value="03">March</option>
+                <option value="04">April</option>
+                <option value="05">May</option>
+                <option value="06">June</option>
+                <option value="07">July</option>
+                <option value="08">August</option>
+                <option value="09">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="yearFilter">📅 Year</label>
+            <select id="yearFilter" class="filter-select">
+                <option value="">All Years</option>
+            </select>
+        </div>
+
+        <div class="filter-buttons">
+            <button type="button" id="applyFilterBtn" class="filter-btn apply">
+                🔍 Apply Filters
+            </button>
+            <button type="button" id="clearFilterBtn" class="filter-btn reset">
+                🔄 Clear
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- SUMMARY CARDS -->
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-icon">📝</div>
+        <div class="summary-info">
+            <div class="summary-value" id="totalReceipts">0</div>
+            <div class="summary-label">Total Receipts</div>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon">💰</div>
+        <div class="summary-info">
+            <div class="summary-value" id="totalPaid">₹0</div>
+            <div class="summary-label">Total Paid</div>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon">💵</div>
+        <div class="summary-info">
+            <div class="summary-value" id="totalRemaining">₹0</div>
+            <div class="summary-label">Total Remaining</div>
+        </div>
+    </div>
+</div>
+
+<!-- RECEIPTS TABLE -->
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Receipt No.</th>
+                <th>Student Name</th>
+                <th>Payment Date</th>
+                <th>Paid Fees</th>
+                <th>Remaining Fees</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="receiptsTableBody">
+            <!-- Receipts will be loaded dynamically -->
+        </tbody>
+    </table>
+    
+    <div id="noResults" class="empty-state" style="display: none;">
+        <div class="empty-icon">📭</div>
+        <p>No receipts found</p>
+        <small>Try adjusting your filters</small>
+    </div>
+</div>
+
+<!-- LOADING SPINNER -->
+<div id="loadingSpinner" class="loading-spinner" style="display: none;">
+    <div class="spinner"></div>
+    <p>Loading receipts...</p>
+</div>
+
+<!-- EDIT MODAL -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h2>✏️ Edit Receipt</h2>
+        
+        <form id="editForm">
+            <input type="hidden" id="editReceiptId">
+            
+            <div class="form-section">
+                <div class="form-group">
+                    <label>Student Name</label>
+                    <input type="text" id="editStudentName" readonly class="readonly">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Payment Date <span class="required">*</span></label>
+                        <input type="date" id="editPaymentDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Paid Fees (₹) <span class="required">*</span></label>
+                        <input type="number" id="editPaidFees" step="0.01" min="0.01" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Remaining Fees (₹) <span class="required">*</span></label>
+                    <input type="number" id="editRemainingFees" step="0.01" min="0" required>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="submit" class="save-btn">💾 Save Changes</button>
+                <button type="button" class="cancel-btn" onclick="closeEditModal()">❌ Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- PRINT MODAL -->
+<div id="printModal" class="receipt-modal">
+    <div class="print-wrapper">
+        <div class="receipt-container" id="receiptContent">
+            <!-- Receipt content will be loaded dynamically -->
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn-print" onclick="printReceipt()">
+                🖨️ Print Receipt
+            </button>
+            <button class="btn-close" onclick="closePrintModal()">
+                ❌ Close
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/receipts.js' %}"></script>
+{% endblock %}

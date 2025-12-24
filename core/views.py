@@ -16,7 +16,8 @@ from datetime import datetime
 from decimal import Decimal
 
 from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
-
+from django.views.decorators.http import require_http_methods
+import json
 
 # ================= CUSTOM LOGOUT =================
 def custom_logout(request):
@@ -654,4 +655,220 @@ def export_students_excel(request):
     
     return response
 
-    
+    # ================= RECEIPTS VIEW =================
+@login_required
+def receipts_view(request):
+    """Main receipts page"""
+    return render(request, 'core/receipts.html', {
+        'active_page': 'receipts'
+    })
+
+
+# ================= GET RECEIPTS API =================
+@login_required
+def get_receipts(request):
+    """API endpoint to get all receipts with filters"""
+    try:
+        # Get all payments
+        payments = FeePayment.objects.select_related('student').all()
+        
+        # Build receipts data
+        receipts_data = []
+        for payment in payments:
+            # Get course name
+            course_name = payment.student.custom_course if payment.student.course == 'Other' and payment.student.custom_course else payment.student.course
+            
+            receipts_data.append({
+                'id': payment.id,
+                'receipt_no': payment.receipt_no,
+                'student_name': payment.student.full_name,
+                'payment_date': payment.payment_date.strftime('%Y-%m-%d'),
+                'paid_fees': float(payment.amount),
+                'remaining_fees': float(payment.remaining_after_this),
+                'total_fees': float(payment.total_fees_at_payment),
+                'paid_before_this': float(payment.paid_before_this),
+                'payment_mode': payment.payment_mode,
+                'course': course_name,
+                'mobile': payment.student.mobile_own,
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'receipts': receipts_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ================= UPDATE RECEIPT API =================
+@login_required
+@require_http_methods(["POST"])
+def update_receipt(request, receipt_id):
+    """API endpoint to update receipt details"""
+    try:
+        # Get the payment
+        payment = get_object_or_404(FeePayment, id=receipt_id)
+        
+        # Parse JSON data
+        data = json.loads(request.body)
+        
+        # Update fields
+        if 'payment_date' in data:
+            payment.payment_date = data['payment_date']
+        
+        if 'paid_fees' in data:
+            new_amount = Decimal(str(data['paid_fees']))
+            
+            # Validate amount
+            if new_amount <= 0:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Payment amount must be greater than zero'
+                })
+            
+            # Calculate new remaining fees
+            old_amount = payment.amount
+            difference = new_amount - old_amount
+            
+            # Update payment amount
+            payment.amount = new_amount
+            
+            # Recalculate remaining fees
+            payment.remaining_after_this = payment.paid_before_this + payment.amount - payment.total_fees_at_payment
+            if payment.remaining_after_this < 0:
+                payment.remaining_after_this = 0
+            
+            # Update student's paid fees
+            student = payment.student
+            student.paid_fees = student.paid_fees + difference
+            student.save()
+        
+        if 'remaining_fees' in data:
+            payment.remaining_after_this = Decimal(str(data['remaining_fees']))
+        
+        payment.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Receipt updated successfully'
+        })
+        
+    except FeePayment.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Receipt not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ================= EXPORT RECEIPTS API =================
+@login_required
+def export_receipts(request):
+    """Export receipts to Excel"""
+    try:
+        # Get filter parameters
+        search = request.GET.get('search', '')
+        date = request.GET.get('date', '')
+        month = request.GET.get('month', '')
+        year = request.GET.get('year', '')
+        
+        # Get all payments
+        payments = FeePayment.objects.select_related('student').all()
+        
+        # Apply filters
+        if search:
+            payments = payments.filter(
+                Q(student__full_name__icontains=search) |
+                Q(student__mobile_own__icontains=search)
+            )
+        
+        if date:
+            payments = payments.filter(payment_date__date=date)
+        
+        if month:
+            payments = payments.filter(payment_date__month=month)
+        
+        if year:
+            payments = payments.filter(payment_date__year=year)
+        
+        payments = payments.order_by('-payment_date')
+        
+        # Create workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Payment Receipts"
+        
+        # Headers
+        headers = [
+            'Receipt No', 'Student Name', 'Mobile', 'Course', 
+            'Payment Date', 'Payment Mode', 'Total Fees', 
+            'Paid Before', 'Amount Paid', 'Remaining Fees'
+        ]
+        
+        # Style headers
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Add data
+        for row_num, payment in enumerate(payments, 2):
+            course_name = payment.student.custom_course if payment.student.course == 'Other' and payment.student.custom_course else payment.student.course
+            
+            ws.cell(row=row_num, column=1).value = payment.receipt_no
+            ws.cell(row=row_num, column=2).value = payment.student.full_name
+            ws.cell(row=row_num, column=3).value = payment.student.mobile_own
+            ws.cell(row=row_num, column=4).value = course_name
+            ws.cell(row=row_num, column=5).value = payment.payment_date.strftime('%d-%m-%Y')
+            ws.cell(row=row_num, column=6).value = payment.payment_mode
+            ws.cell(row=row_num, column=7).value = float(payment.total_fees_at_payment)
+            ws.cell(row=row_num, column=8).value = float(payment.paid_before_this)
+            ws.cell(row=row_num, column=9).value = float(payment.amount)
+            ws.cell(row=row_num, column=10).value = float(payment.remaining_after_this)
+        
+        # Adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Create response
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        response = HttpResponse(
+            excel_file.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+        filename = f'receipts_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -19,10 +19,15 @@
         🎓 Admitted Students
     </a>
 
-    <!-- NEW: Fees Payment Link -->
     <a href="{% url 'fees_payment' %}"
        class="menu-item {% if active_page == 'fees_payment' %}active{% endif %}">
         💰 Fees Payment
+    </a>
+
+    <!-- NEW: Receipts Link -->
+    <a href="{% url 'receipts_view' %}"
+       class="menu-item {% if active_page == 'receipts' %}active{% endif %}">
+        🧾 Receipts
     </a>
 
     <!-- Logout as a form to handle POST request properly -->

@@ -25,6 +25,7 @@ urlpatterns = [
     # Export Students
     path('export-students-excel/', views.export_students_excel, name='export_students_excel'),
 
+    # NEW: Receipts URLs
     path('receipts/', views.receipts_view, name='receipts_view'),
     path('api/receipts/', views.get_receipts, name='get_receipts'),
     path('api/receipts/<int:receipt_id>/update/', views.update_receipt, name='update_receipt'),
