@@ -76,6 +76,18 @@
     </div>
 </div>
 
+<!-- Pass data to JavaScript -->
+<script>
+    // Course distribution data from Django
+    const courseDistribution = {{ course_distribution|safe }};
+    
+    // Monthly admissions data from Django
+    const monthlyData = {{ monthly_data|safe }};
+    
+    // Selected year (if any)
+    const selectedYear = "{{ selected_year|default:'' }}";
+</script>
+
 {% endblock %}
 
 {% block extra_js %}

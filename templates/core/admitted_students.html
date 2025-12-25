@@ -18,6 +18,12 @@
             </div>
         </div>
         <div class="page-actions">
+            <button id="deleteSelectedBtn" class="action-btn danger" style="display: none;" onclick="deleteSelectedStudents()">
+                <span>🗑️</span> Delete Selected (<span id="selectedCount">0</span>)
+            </button>
+            <a href="{% url 'export_admitted_students_excel' %}?search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}" class="action-btn primary">
+                <span>📥</span> Export to Excel
+            </a>
             <a href="{% url 'new_admission' %}" class="action-btn primary">
                 <span>➕</span> Add New Student
             </a>
@@ -117,9 +123,14 @@
     <div class="students-grid">
         {% if students %}
             {% for student in students %}
-            <div class="student-card" onclick="openStudentModal({{ student.id }})">
+            <div class="student-card" data-student-id="{{ student.id }}">
+                <!-- Selection Checkbox -->
+                <div class="student-select">
+                    <input type="checkbox" class="student-checkbox" value="{{ student.id }}" onclick="event.stopPropagation(); updateSelectedCount();">
+                </div>
+                
                 <!-- Photo -->
-                <div class="student-photo">
+                <div class="student-photo" onclick="openStudentModal({{ student.id }})">
                     {% if student.photo %}
                         <img src="{{ student.photo.url }}" alt="{{ student.full_name }}">
                     {% else %}
@@ -130,7 +141,7 @@
                 </div>
                 
                 <!-- Student Info -->
-                <div class="student-info">
+                <div class="student-info" onclick="openStudentModal({{ student.id }})">
                     <h3 class="student-name">{{ student.full_name }}</h3>
                     
                     <div class="student-details">
@@ -141,7 +152,7 @@
                         
                         <div class="detail-item fees">
                             <span class="detail-icon">💰</span>
-                            <span>Remaining: ₹5,000</span>
+                            <span>Remaining: ₹{{ student.remaining_fees|floatformat:2 }}</span>
                         </div>
                     </div>
                 </div>
@@ -165,7 +176,7 @@
     </div>
 </div>
 
-<!-- STUDENT DETAIL MODAL (same as before) -->
+<!-- STUDENT DETAIL MODAL -->
 <div id="studentModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">&times;</span>
@@ -357,4 +368,104 @@
 
 {% block extra_js %}
 <script src="{% static 'core/admitted_students.js' %}"></script>
+<script>
+// ===================== SELECTION AND DELETION FUNCTIONS =====================
+
+// Update selected count
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+    const count = checkboxes.length;
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    countSpan.textContent = count;
+    
+    if (count > 0) {
+        deleteBtn.style.display = 'inline-flex';
+    } else {
+        deleteBtn.style.display = 'none';
+    }
+}
+
+// Delete selected students
+function deleteSelectedStudents() {
+    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+    const studentIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (studentIds.length === 0) {
+        alert('⚠️ Please select at least one student to delete');
+        return;
+    }
+    
+    const confirmMessage = `⚠️ Are you sure you want to delete ${studentIds.length} student${studentIds.length > 1 ? 's' : ''}?\n\n` +
+                          `This action cannot be undone and will also delete:\n` +
+                          `• All fee payment records\n` +
+                          `• Student photos and documents\n\n` +
+                          `Type "DELETE" to confirm:`;
+    
+    const userInput = prompt(confirmMessage);
+    
+    if (userInput !== 'DELETE') {
+        if (userInput !== null) {
+            alert('❌ Deletion cancelled. You must type "DELETE" to confirm.');
+        }
+        return;
+    }
+    
+    // Show loading
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const originalText = deleteBtn.innerHTML;
+    deleteBtn.innerHTML = '<span>⏳</span> Deleting...';
+    deleteBtn.disabled = true;
+    
+    // Send delete request
+    fetch('{% url "delete_admitted_students" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            student_ids: studentIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`✅ Successfully deleted ${data.deleted_count} student${data.deleted_count > 1 ? 's' : ''}!`, 'success');
+            
+            // Reload page after 1 second
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            alert('❌ Error: ' + (data.error || 'Failed to delete students'));
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error deleting students. Please try again.');
+        deleteBtn.innerHTML = originalText;
+        deleteBtn.disabled = false;
+    });
+}
+
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
 {% endblock %}

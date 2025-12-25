@@ -17,6 +17,9 @@ urlpatterns = [
     path('student-detail-admitted/<int:student_id>/', views.student_detail_admitted, name='student_detail_admitted'),
     path('update-student-admitted/<int:student_id>/', views.update_student_admitted, name='update_student_admitted'),
     
+    # Delete Admitted Students
+    path('delete-admitted-students/', views.delete_admitted_students, name='delete_admitted_students'),
+    
     # Fees Payment URLs
     path('fees-payment/', views.fees_payment, name='fees_payment'),
     path('fees-payment/search/', views.search_students_for_payment, name='search_students_for_payment'),
@@ -24,12 +27,14 @@ urlpatterns = [
     
     # Export Students
     path('export-students-excel/', views.export_students_excel, name='export_students_excel'),
+    
+    # NEW: Export Admitted Students
+    path('export-admitted-students-excel/', views.export_admitted_students_excel, name='export_admitted_students_excel'),
 
-    # NEW: Receipts URLs
+    # Receipts URLs
     path('receipts/', views.receipts_view, name='receipts_view'),
     path('api/receipts/', views.get_receipts, name='get_receipts'),
     path('api/receipts/<int:receipt_id>/update/', views.update_receipt, name='update_receipt'),
     path('api/receipts/export/', views.export_receipts, name='export_receipts'),
     path('api/receipts/<int:receipt_id>/delete/', views.delete_receipt, name='delete_receipt'),
-    path('api/receipts/export/', views.export_receipts, name='export_receipts'),
 ]

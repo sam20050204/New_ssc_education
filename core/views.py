@@ -51,7 +51,7 @@ def home(request):
     return render(request, "core/home.html")
 
 
-# ================= DASHBOARD (FIXED VERSION) =================
+# ================= DASHBOARD (UPDATED VERSION) =================
 @login_required
 def dashboard(request):
     selected_year = request.GET.get('year', '')
@@ -106,6 +106,10 @@ def dashboard(request):
         month = str(student.admission_date.month)
         monthly_data[month] = monthly_data.get(month, 0) + 1
     
+    # Convert to JSON for JavaScript
+    course_distribution_json = json.dumps(course_distribution)
+    monthly_data_json = json.dumps(monthly_data)
+    
     context = {
         "enquiry_count": enquiry_count,
         "mscit_count": mscit_count,
@@ -113,8 +117,8 @@ def dashboard(request):
         "available_years": available_years,
         "selected_year": selected_year,
         "active_page": "dashboard",
-        "course_distribution": course_distribution,
-        "monthly_data": monthly_data,
+        "course_distribution": course_distribution_json,
+        "monthly_data": monthly_data_json,
     }
     
     return render(request, "core/dashboard.html", context)
@@ -1033,4 +1037,211 @@ def export_receipts(request):
         return JsonResponse({
             'success': False,
             'error': str(e)
+        }, status=500)
+    
+# ================= EXPORT ADMITTED STUDENTS TO EXCEL =================
+@login_required
+def export_admitted_students_excel(request):
+    # Get filter parameters
+    search = request.GET.get('search', '')
+    month = request.GET.get('month', '')
+    year = request.GET.get('year', '')
+    course = request.GET.get('course', '')
+    
+    # Base queryset
+    students = AdmittedStudent.objects.all()
+    
+    # Apply filters
+    if search:
+        students = students.filter(
+            Q(full_name__icontains=search) |
+            Q(student_name__icontains=search) |
+            Q(mobile_own__icontains=search)
+        )
+    
+    if month:
+        students = students.filter(admission_date__month=month)
+    
+    if year:
+        students = students.filter(admission_date__year=year)
+    
+    if course:
+        students = students.filter(course=course)
+    
+    # Order by admission date
+    students = students.order_by('-admission_date')
+    
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Admitted Students"
+    
+    # Headers
+    headers = [
+        'S.No', 'Full Name', 'Student Name', 'Father Name', 'Surname', 'Mother Name',
+        'Date of Birth', 'Mobile (Own)', 'Parent Mobile', 'Gender', 'Marital Status',
+        'Course', 'Custom Course', 'Educational Qualification',
+        'Address', 'City', 'Tehsil/Block', 'District', 'Pin Code',
+        'Total Fees (₹)', 'Paid Fees (₹)', 'Remaining Fees (₹)', 'Fees % Paid',
+        'Admission Date'
+    ]
+    
+    # Style headers
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    
+    # Add data
+    for row_num, student in enumerate(students, 2):
+        ws.cell(row=row_num, column=1).value = row_num - 1  # S.No
+        ws.cell(row=row_num, column=2).value = student.full_name
+        ws.cell(row=row_num, column=3).value = student.student_name
+        ws.cell(row=row_num, column=4).value = student.father_name
+        ws.cell(row=row_num, column=5).value = student.surname
+        ws.cell(row=row_num, column=6).value = student.mother_name
+        ws.cell(row=row_num, column=7).value = student.date_of_birth.strftime('%d-%m-%Y') if student.date_of_birth else ''
+        ws.cell(row=row_num, column=8).value = student.mobile_own
+        ws.cell(row=row_num, column=9).value = student.parent_mobile or ''
+        ws.cell(row=row_num, column=10).value = student.gender
+        ws.cell(row=row_num, column=11).value = student.marital_status
+        ws.cell(row=row_num, column=12).value = student.course
+        ws.cell(row=row_num, column=13).value = student.custom_course or ''
+        ws.cell(row=row_num, column=14).value = student.educational_qualification
+        ws.cell(row=row_num, column=15).value = student.address
+        ws.cell(row=row_num, column=16).value = student.city
+        ws.cell(row=row_num, column=17).value = student.tehsil_block
+        ws.cell(row=row_num, column=18).value = student.district
+        ws.cell(row=row_num, column=19).value = student.pin_code
+        ws.cell(row=row_num, column=20).value = float(student.total_fees)
+        ws.cell(row=row_num, column=21).value = float(student.paid_fees)
+        ws.cell(row=row_num, column=22).value = float(student.remaining_fees)
+        ws.cell(row=row_num, column=23).value = f"{student.fees_percentage_paid:.2f}%"
+        ws.cell(row=row_num, column=24).value = student.admission_date.strftime('%d-%m-%Y %I:%M %p')
+    
+    # Adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+    
+    # Create response
+    excel_file = BytesIO()
+    wb.save(excel_file)
+    excel_file.seek(0)
+    
+    response = HttpResponse(
+        excel_file.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    # Generate filename with timestamp and filters
+    filename_parts = ['admitted_students']
+    if search:
+        filename_parts.append(f'search_{search[:20]}')
+    if course:
+        filename_parts.append(f'{course}')
+    if month:
+        filename_parts.append(f'month_{month}')
+    if year:
+        filename_parts.append(f'{year}')
+    filename_parts.append(datetime.now().strftime("%Y%m%d_%H%M%S"))
+    
+    filename = '_'.join(filename_parts) + '.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+# ================= DELETE ADMITTED STUDENTS (BULK DELETE) =================
+from django.views.decorators.http import require_http_methods
+import json
+
+@login_required
+@require_http_methods(["POST"])
+def delete_admitted_students(request):
+    """
+    Delete multiple admitted students at once
+    This will also delete all related fee payment records
+    """
+    try:
+        # Parse JSON data
+        data = json.loads(request.body)
+        student_ids = data.get('student_ids', [])
+        
+        if not student_ids:
+            return JsonResponse({
+                'success': False,
+                'error': 'No students selected'
+            })
+        
+        # Validate that all IDs are integers
+        try:
+            student_ids = [int(id) for id in student_ids]
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid student IDs'
+            })
+        
+        # Get students to delete
+        students_to_delete = AdmittedStudent.objects.filter(id__in=student_ids)
+        
+        if not students_to_delete.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'No students found with the given IDs'
+            })
+        
+        # Count students
+        delete_count = students_to_delete.count()
+        
+        # Delete students (this will also delete related FeePayment records due to CASCADE)
+        with transaction.atomic():
+            # Delete photos first (optional - to clean up media files)
+            for student in students_to_delete:
+                if student.photo:
+                    try:
+                        # Delete the physical file
+                        if student.photo.path:
+                            import os
+                            if os.path.isfile(student.photo.path):
+                                os.remove(student.photo.path)
+                    except Exception as e:
+                        # Log error but don't fail the deletion
+                        print(f"Error deleting photo for student {student.id}: {str(e)}")
+            
+            # Delete all students (and related fee payments via CASCADE)
+            students_to_delete.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'deleted_count': delete_count,
+            'message': f'Successfully deleted {delete_count} student(s)'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        print(f"Error in delete_admitted_students: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}'
         }, status=500)

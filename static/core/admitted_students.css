@@ -769,3 +769,252 @@
         height: 150px;
     }
 }
+/* ===================== PAGE ACTIONS ===================== */
+.page-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.action-btn.primary {
+    background: white;
+    color: #667eea;
+}
+
+.action-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+}
+
+.action-btn.primary:first-child {
+    background: #10b981;
+    color: white;
+}
+
+.action-btn.primary:first-child:hover {
+    background: #059669;
+    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+}
+
+/* ===================== RESPONSIVE PAGE ACTIONS ===================== */
+@media (max-width: 768px) {
+    .page-actions {
+        width: 100%;
+    }
+    
+    .action-btn {
+        flex: 1;
+        min-width: 150px;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .page-actions {
+        flex-direction: column;
+    }
+    
+    .action-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ===================== STUDENT CARD WITH CHECKBOX ===================== */
+.student-card {
+    background: white;
+    border: 2px solid #2c3e50;
+    border-radius: 10px;
+    padding: 8px 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    width: 8cm;
+    height: 2.5cm;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.student-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+    border-color: #667eea;
+}
+
+/* ===================== SELECTION CHECKBOX ===================== */
+.student-select {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+}
+
+.student-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #667eea;
+    border: 2px solid #667eea;
+    border-radius: 4px;
+}
+
+.student-checkbox:checked {
+    background: #667eea;
+}
+
+/* Highlight selected cards */
+.student-card:has(.student-checkbox:checked) {
+    border-color: #ef4444;
+    background: #fef2f2;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+/* ===================== DELETE BUTTON ===================== */
+.action-btn.danger {
+    background: #ef4444;
+    color: white;
+    animation: fadeIn 0.3s ease;
+}
+
+.action-btn.danger:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+}
+
+.action-btn.danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===================== EXISTING STYLES - KEEP THESE ===================== */
+.student-photo {
+    width: 1.8cm;
+    height: 2.1cm;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid #667eea;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+    cursor: pointer;
+}
+
+.student-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* ===================== PAGE ACTIONS WITH DELETE BUTTON ===================== */
+.page-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.action-btn.primary {
+    background: white;
+    color: #667eea;
+}
+
+.action-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+}
+
+.action-btn.primary:nth-child(2) {
+    background: #10b981;
+    color: white;
+}
+
+.action-btn.primary:nth-child(2):hover {
+    background: #059669;
+    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+}
+
+/* ===================== RESPONSIVE UPDATES ===================== */
+@media (max-width: 768px) {
+    .page-actions {
+        width: 100%;
+    }
+    
+    .action-btn {
+        flex: 1;
+        min-width: 150px;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .page-actions {
+        flex-direction: column;
+    }
+    
+    .action-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .student-card {
+        width: 100%;
+        height: auto;
+        min-height: 2.5cm;
+    }
+    
+    .student-select {
+        top: 6px;
+        left: 6px;
+    }
+    
+    .student-checkbox {
+        width: 18px;
+        height: 18px;
+    }
+}
