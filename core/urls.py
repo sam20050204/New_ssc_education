@@ -37,9 +37,5 @@ urlpatterns = [
     path('api/receipts/<int:receipt_id>/update/', views.update_receipt, name='update_receipt'),
     path('api/receipts/export/', views.export_receipts, name='export_receipts'),
     path('api/receipts/<int:receipt_id>/delete/', views.delete_receipt, name='delete_receipt'),
-
-    # SMS Messaging URLs
-    path('sms/', views.sms_messaging, name='sms_messaging'),
-    path('api/sms/get-students/', views.get_students_for_sms, name='get_students_for_sms'),
-    path('api/sms/send/', views.send_custom_sms_view, name='send_custom_sms'),
+    
 ]
