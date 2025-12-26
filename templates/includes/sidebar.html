@@ -24,10 +24,15 @@
         💰 Fees Payment
     </a>
 
-    <!-- NEW: Receipts Link -->
     <a href="{% url 'receipts_view' %}"
        class="menu-item {% if active_page == 'receipts' %}active{% endif %}">
         🧾 Receipts
+    </a>
+
+    <!-- NEW: SMS Messaging Link -->
+    <a href="{% url 'sms_messaging' %}"
+       class="menu-item {% if active_page == 'sms_messaging' %}active{% endif %}">
+        💬 SMS Messaging
     </a>
 
     <!-- Logout as a form to handle POST request properly -->

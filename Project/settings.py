@@ -145,3 +145,32 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # DEFAULT FIELD
 # =====================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# =====================
+# SMS CONFIGURATION
+# =====================
+
+# Fast2SMS Configuration
+FAST2SMS_API_KEY = 'B241cdxK3XQJZDWOkqy9gVbMwGLFfCmhnUtrzNATRiEHYae5oSSFONagMsptcy6wuHn2kbq47fz3omh0'  # Replace with your key
+
+# SMS Templates
+SMS_TEMPLATES = {
+    'fee_payment': '''Hello {student_name},
+Your fee payment of Rs.{amount} has been received successfully.
+
+Receipt No: {receipt_no}
+Date: {date}
+Total Fees: Rs.{total_fees}
+Paid: Rs.{paid_fees}
+Remaining: Rs.{remaining_fees}
+
+Thank you!
+- Shri Samarth Computer Education
+Contact: 9960638066''',
+    
+    'custom': '{message}'
+}
+
+# SMS Settings
+SMS_ENABLED = True  # Set to False to disable SMS sending
+SMS_SENDER_ID = 'SSCEDU'  # Your 6-character sender ID
