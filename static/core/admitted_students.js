@@ -15,6 +15,7 @@ function getCookie(name) {
 }
 
 // ===================== OPEN STUDENT MODAL =====================
+// ===================== OPEN STUDENT MODAL =====================
 function openStudentModal(studentId) {
     const modal = document.getElementById('studentModal');
     
@@ -73,12 +74,81 @@ function openStudentModal(studentId) {
             document.getElementById('totalFees').value = data.total_fees || 5000;
             document.getElementById('paidFees').value = data.paid_fees || 0;
             calculateRemainingFees();
+            
+            // ===================== NEW: Display Payment History =====================
+            displayPaymentHistory(data.payment_history || []);
         })
         .catch(error => {
             console.error('Error:', error);
             alert('❌ Error loading student details. Please try again.');
             closeModal();
         });
+}
+
+// ===================== NEW FUNCTION: Display Payment History =====================
+function displayPaymentHistory(payments) {
+    const paymentHistoryContainer = document.getElementById('paymentHistoryContainer');
+    
+    if (!paymentHistoryContainer) {
+        console.error('Payment history container not found');
+        return;
+    }
+    
+    if (payments.length === 0) {
+        paymentHistoryContainer.innerHTML = `
+            <div class="no-payments">
+                <div class="no-payments-icon">💸</div>
+                <p>No payment history available</p>
+                <small>Payments will appear here once recorded</small>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="payment-timeline">';
+    
+    payments.forEach((payment, index) => {
+        html += `
+            <div class="payment-item">
+                <div class="payment-header">
+                    <div class="installment-number">
+                        <span>📌 Installment ${index + 1}</span>
+                    </div>
+                    <span class="receipt-badge">${payment.receipt_no}</span>
+                </div>
+                
+                <div class="payment-details">
+                    <div class="payment-detail-row">
+                        <span class="detail-label">📅 Date:</span>
+                        <span class="detail-value">${payment.payment_date}</span>
+                    </div>
+                    
+                    <div class="payment-detail-row">
+                        <span class="detail-label">⏰ Time:</span>
+                        <span class="detail-value">${payment.payment_time}</span>
+                    </div>
+                    
+                    <div class="payment-detail-row">
+                        <span class="detail-label">💳 Mode:</span>
+                        <span class="payment-mode-badge">${payment.payment_mode}</span>
+                    </div>
+                    
+                    <div class="payment-detail-row">
+                        <span class="detail-label">💰 Amount:</span>
+                        <span class="detail-value amount">₹${parseFloat(payment.amount).toFixed(2)}</span>
+                    </div>
+                    
+                    <div class="payment-detail-row highlight">
+                        <span class="detail-label">📊 Remaining After:</span>
+                        <span class="detail-value remaining">₹${parseFloat(payment.remaining_after).toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    paymentHistoryContainer.innerHTML = html;
 }
 
 // ===================== CLOSE MODAL =====================

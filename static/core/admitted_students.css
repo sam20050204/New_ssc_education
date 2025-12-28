@@ -333,10 +333,13 @@
     max-width: 900px;
     margin: 40px auto;
     padding: 30px;
+    padding-bottom: 100px; /* ← ADD THIS: Extra space for sticky buttons */
     border-radius: 16px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     position: relative;
     animation: slideDown 0.3s ease;
+    max-height: 90vh; /* ← ADD THIS: Limit height */
+    overflow-y: auto; /* ← ADD THIS: Enable scrolling */
 }
 
 @keyframes slideDown {
@@ -556,7 +559,13 @@
     justify-content: center;
     margin-top: 30px;
     padding-top: 25px;
+    padding-bottom: 20px; /* ← ADD THIS */
     border-top: 2px solid #e8e8e8;
+    position: sticky; /* ← ADD THIS */
+    bottom: 0; /* ← ADD THIS */
+    background: white; /* ← ADD THIS */
+    z-index: 10; /* ← ADD THIS */
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1); /* ← ADD THIS: Shadow on top */
 }
 
 .save-btn,
@@ -1016,5 +1025,180 @@
     .student-checkbox {
         width: 18px;
         height: 18px;
+    }
+}
+
+/* ===================== PAYMENT HISTORY SECTION ===================== */
+.payment-history-section {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid #10b981;
+    margin-top: 20px;
+}
+
+.payment-history-section h3 {
+    color: #1b5e20;
+    margin-bottom: 20px;
+}
+
+.payment-timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.payment-timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+}
+
+.payment-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+    transition: all 0.3s ease;
+}
+
+.payment-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.payment-item::before {
+    content: '💰';
+    position: absolute;
+    left: -28px;
+    top: 15px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 3px solid #10b981;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.payment-item:last-child {
+    margin-bottom: 0;
+}
+
+.payment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e8f5e9;
+}
+
+.installment-number {
+    font-size: 14px;
+    font-weight: 700;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.receipt-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.payment-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    font-size: 13px;
+}
+
+.payment-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.payment-detail-row.highlight {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 10px;
+    border: 2px solid #f59e0b;
+    grid-column: 1 / -1;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.detail-value {
+    color: #495057;
+    font-weight: 600;
+}
+
+.detail-value.amount {
+    color: #10b981;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.detail-value.remaining {
+    color: #f59e0b;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.no-payments {
+    text-align: center;
+    padding: 30px;
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.no-payments-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+/* Payment mode badge */
+.payment-mode-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 768px) {
+    .payment-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .payment-timeline {
+        padding-left: 25px;
+    }
+    
+    .payment-item::before {
+        left: -23px;
     }
 }

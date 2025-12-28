@@ -367,6 +367,21 @@ def admitted_students(request):
 def student_detail_admitted(request, student_id):
     student = get_object_or_404(AdmittedStudent, id=student_id)
     
+    # Get all fee payments for this student
+    fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
+    
+    # Prepare payment history
+    payment_history = []
+    for payment in fee_payments:
+        payment_history.append({
+            'receipt_no': payment.receipt_no,
+            'amount': float(payment.amount),
+            'payment_mode': payment.payment_mode,
+            'payment_date': payment.payment_date.strftime('%d-%m-%Y'),
+            'payment_time': payment.payment_date.strftime('%I:%M %p'),
+            'remaining_after': float(payment.remaining_after_this),
+        })
+    
     data = {
         'id': student.id,
         'student_name': student.student_name,
@@ -391,6 +406,7 @@ def student_detail_admitted(request, student_id):
         'total_fees': float(student.total_fees),
         'paid_fees': float(student.paid_fees),
         'remaining_fees': float(student.remaining_fees),
+        'payment_history': payment_history,  # ← NEW: Add payment history
     }
     
     return JsonResponse(data)
