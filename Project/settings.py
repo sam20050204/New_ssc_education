@@ -146,3 +146,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # =====================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# For local server
+DEBUG = False
+ALLOWED_HOSTS = ['your-public-ip', 'localhost', '127.0.0.1']
+
+# For security
+SECRET_KEY = 'generate-new-secret-key-here'  # Use django.core.management.utils.get_random_secret_key()
