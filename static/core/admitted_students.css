@@ -305,6 +305,7 @@
 }
 
 /* ===================== MODAL STYLES ===================== */
+/* ===================== MODAL STYLES ===================== */
 .modal {
     display: none;
     position: fixed;
@@ -332,14 +333,13 @@
     width: 95%;
     max-width: 900px;
     margin: 40px auto;
-    padding: 30px;
-    padding-bottom: 100px; /* ← ADD THIS: Extra space for sticky buttons */
     border-radius: 16px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     position: relative;
     animation: slideDown 0.3s ease;
-    max-height: 90vh; /* ← ADD THIS: Limit height */
-    overflow-y: auto; /* ← ADD THIS: Enable scrolling */
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 80px); /* Leave space for margins */
 }
 
 @keyframes slideDown {
@@ -357,9 +357,10 @@
     font-size: 28px;
     font-weight: 700;
     color: #2c3e50;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
+    margin: 0;
+    padding: 30px 30px 20px 30px;
     border-bottom: 3px solid #667eea;
+    flex-shrink: 0; /* Don't shrink header */
 }
 
 .close {
@@ -372,6 +373,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     line-height: 1;
+    z-index: 10;
 }
 
 .close:hover {
@@ -379,12 +381,102 @@
     transform: rotate(90deg);
 }
 
-/* ===================== MODAL FORM GRID ===================== */
+/* ===================== SCROLLABLE FORM CONTENT ===================== */
+#studentForm {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
 .form-grid {
-    display: grid;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 30px;
+    flex: 1; /* Take remaining space */
+    display: flex;
+    flex-direction: column;
     gap: 25px;
 }
 
+/* Custom scrollbar for form grid */
+.form-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.form-grid::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.form-grid::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.form-grid::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+}
+
+/* ===================== MODAL ACTIONS - STICKY AT BOTTOM ===================== */
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 20px 30px;
+    border-top: 2px solid #e8e8e8;
+    background: white;
+    border-radius: 0 0 16px 16px;
+    flex-shrink: 0; /* Don't shrink footer */
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.save-btn,
+.cancel-btn {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.save-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.save-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.save-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.cancel-btn {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.cancel-btn:hover {
+    background: #dee2e6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ===================== PHOTO SECTION ===================== */
 .photo-section {
     display: flex;
     flex-direction: column;
@@ -552,230 +644,225 @@
     font-size: 16px;
 }
 
-/* ===================== MODAL ACTIONS ===================== */
-.modal-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    margin-top: 30px;
-    padding-top: 25px;
-    padding-bottom: 20px; /* ← ADD THIS */
-    border-top: 2px solid #e8e8e8;
-    position: sticky; /* ← ADD THIS */
-    bottom: 0; /* ← ADD THIS */
-    background: white; /* ← ADD THIS */
-    z-index: 10; /* ← ADD THIS */
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1); /* ← ADD THIS: Shadow on top */
+/* ===================== PAYMENT HISTORY SECTION ===================== */
+.payment-history-section {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid #10b981;
 }
 
-.save-btn,
-.cancel-btn {
-    padding: 12px 30px;
-    border: none;
+.payment-history-section h3 {
+    color: #1b5e20;
+    margin-bottom: 20px;
+}
+
+.payment-timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.payment-timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+}
+
+.payment-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
     border-radius: 8px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
     transition: all 0.3s ease;
-    display: inline-flex;
+}
+
+.payment-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.payment-item::before {
+    content: '💰';
+    position: absolute;
+    left: -28px;
+    top: 15px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 3px solid #10b981;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.payment-item:last-child {
+    margin-bottom: 0;
+}
+
+.payment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e8f5e9;
+}
+
+.installment-number {
+    font-size: 14px;
+    font-weight: 700;
+    color: #10b981;
+    display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.save-btn {
+.receipt-badge {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-}
-
-.save-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.save-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.cancel-btn {
-    background: #e9ecef;
-    color: #495057;
-}
-
-.cancel-btn:hover {
-    background: #dee2e6;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* ===================== NOTIFICATION STYLES ===================== */
-.notification {
-    position: fixed;
-    top: 90px;
-    right: 20px;
-    padding: 15px 25px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    z-index: 10000;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
     font-weight: 600;
-    animation: slideIn 0.5s ease;
 }
 
-.notification-success {
-    background: #10b981;
-    color: white;
+.payment-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    font-size: 13px;
 }
 
-.notification-error {
-    background: #ef4444;
-    color: white;
+.payment-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.payment-detail-row.highlight {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 10px;
+    border: 2px solid #f59e0b;
+    grid-column: 1 / -1;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.detail-value {
+    color: #495057;
+    font-weight: 600;
+}
+
+.detail-value.amount {
+    color: #10b981;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.detail-value.remaining {
+    color: #f59e0b;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.no-payments {
+    text-align: center;
+    padding: 30px;
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.no-payments-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+/* Payment mode badge */
+.payment-mode-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 /* ===================== RESPONSIVE ===================== */
-@media (max-width: 1024px) {
-    .filters-form {
-        flex-wrap: wrap;
-    }
-    
-    .filter-group {
-        min-width: 150px;
-    }
-    
-    .filter-buttons {
-        width: 100%;
-        margin-top: 5px;
-    }
-    
-    .filter-btn {
-        flex: 1;
-    }
-    
-    .modal-content {
-        width: 90%;
-        padding: 25px;
-    }
-}
-
 @media (max-width: 768px) {
-    .student-card {
-        width: 100%;
-        height: auto;
-        min-height: 2.5cm;
-    }
-    
-    .page-actions {
-        width: 100%;
-    }
-    
-    .action-btn {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .filters-form {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .filter-group,
-    .filter-group.search-group {
-        width: 100%;
-        min-width: auto;
-    }
-    
-    .filter-buttons {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .filter-btn {
-        width: 100%;
-        justify-content: center;
-    }
-    
     .modal-content {
-        width: 95%;
-        margin: 20px auto;
-        padding: 20px;
+        width: 100%;
+        margin: 0;
+        max-height: 100vh;
+        border-radius: 0;
     }
-    
+
     .modal-content h2 {
         font-size: 22px;
+        padding: 20px;
     }
-    
+
     .close {
         top: 15px;
         right: 15px;
         font-size: 28px;
     }
-    
+
+    .form-grid {
+        padding: 20px;
+    }
+
     .form-row {
         grid-template-columns: 1fr;
     }
-    
+
     .modal-actions {
         flex-direction: column;
+        padding: 15px 20px;
     }
-    
+
     .save-btn,
     .cancel-btn {
         width: 100%;
         justify-content: center;
     }
+
+    .payment-details {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-timeline {
+        padding-left: 25px;
+    }
+
+    .payment-item::before {
+        left: -23px;
+    }
 }
 
 @media (max-width: 576px) {
-    .student-card {
-        width: 100%;
-        height: auto;
-        min-height: 2.5cm;
-        padding: 8px;
-    }
-    
-    .student-photo {
-        width: 1.5cm;
-        height: 1.8cm;
-    }
-    
-    .photo-placeholder {
-        font-size: 16px;
-    }
-    
-    .student-name {
-        font-size: 11px;
-    }
-    
-    .detail-item {
-        font-size: 9px;
-    }
-    
-    .detail-icon {
-        font-size: 9px;
-        width: 10px;
-    }
-    
-    .filters-container {
-        padding: 15px;
-    }
-    
-    .results-summary {
-        font-size: 13px;
-        text-align: center;
-    }
-    
-    .modal-content {
-        padding: 15px;
-    }
-    
-    .form-section {
-        padding: 15px;
-    }
-    
     .modal-photo {
         width: 120px;
         height: 150px;
+    }
+
+    .form-section {
+        padding: 15px;
     }
 }
 /* ===================== PAGE ACTIONS ===================== */

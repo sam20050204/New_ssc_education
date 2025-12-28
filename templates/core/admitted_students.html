@@ -355,17 +355,31 @@
                     </div>
                 </div>
 
-                <!-- ===================== NEW: PAYMENT HISTORY SECTION ===================== -->
+                <!-- Payment History Section -->
                 <div class="payment-history-section">
                     <h3>📜 Payment History (Installments)</h3>
                     <div id="paymentHistoryContainer">
-                        <!-- Payment history will be loaded dynamically -->
                         <div class="no-payments">
                             <div class="no-payments-icon">⏳</div>
                             <p>Loading payment history...</p>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- MODAL ACTIONS - THIS WAS MISSING! -->
+            <div class="modal-actions">
+                <button type="submit" class="save-btn">
+                    💾 Save Changes
+                </button>
+                <button type="button" class="cancel-btn" onclick="closeModal()">
+                    ❌ Close
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
