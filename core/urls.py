@@ -8,6 +8,7 @@ urlpatterns = [
     path('enquiries/export/', views.export_enquiries, name='export_enquiries'),
     path('enquiries/delete/<int:id>/', views.delete_enquiry, name='delete_enquiry'),
     path('enquiries/convert/<int:id>/', views.convert_enquiry, name='convert_enquiry'),
+    path('enquiries/detail/<int:id>/', views.enquiry_detail, name='enquiry_detail'),
     
     # Admission URLs
     path('admission/new/', views.new_admission, name='new_admission'),

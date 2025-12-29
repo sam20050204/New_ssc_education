@@ -166,3 +166,17 @@ section.show{
     from{opacity:0}
     to{opacity:1}
 }
+.modal-content textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.modal-content textarea:focus {
+    outline: none;
+    border-color: #1b1b8f;
+}

@@ -14,6 +14,9 @@
             </div>
         </div>
         <div class="page-actions-enq">
+            <button onclick="openNewEnquiryModal()" class="action-btn-enq primary">
+                <span>➕</span> Add New Enquiry
+            </button>
             <a href="{% url 'export_enquiries' %}?{{ request.GET.urlencode }}" class="action-btn-enq primary">
                 <span>📥</span> Export to Excel
             </a>
@@ -24,6 +27,277 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/enquiries.css' %}">
+<style>
+    /* Modal Styles */
+    .enquiry-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 10000;
+        overflow-y: auto;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .enquiry-modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .enquiry-modal-content {
+        background: white;
+        width: 95%;
+        max-width: 600px;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        position: relative;
+        animation: slideDown 0.3s ease;
+    }
+
+    .enquiry-modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px 30px;
+        border-radius: 16px 16px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .enquiry-modal-header h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    .modal-close {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        font-size: 28px;
+        cursor: pointer;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: rotate(90deg);
+    }
+
+    .enquiry-modal-body {
+        padding: 30px;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .detail-section {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .detail-section:last-child {
+        border-bottom: none;
+    }
+
+    .detail-section h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .detail-row {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 15px;
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .detail-value {
+        color: #495057;
+    }
+
+    .detail-value.empty {
+        color: #95a5a6;
+        font-style: italic;
+    }
+
+    .course-badge-modal {
+        display: inline-block;
+        padding: 6px 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    /* New Enquiry Form Styles */
+    .enquiry-form-section {
+        margin-bottom: 20px;
+    }
+
+    .enquiry-form-section h4 {
+        color: #667eea;
+        font-size: 15px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #f0f0f0;
+        font-weight: 700;
+    }
+
+    .enquiry-form-section input,
+    .enquiry-form-section select,
+    .enquiry-form-section textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e8e8e8;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 12px;
+        transition: all 0.3s ease;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .enquiry-form-section input:focus,
+    .enquiry-form-section select:focus,
+    .enquiry-form-section textarea:focus {
+        border-color: #667eea;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .enquiry-form-section textarea {
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    .form-row-modal {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .form-note {
+        font-size: 12px;
+        color: #7f8c8d;
+        margin-top: -8px;
+        margin-bottom: 12px;
+        font-style: italic;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        padding: 20px 30px;
+        border-top: 2px solid #e8e8e8;
+        background: #f8f9fa;
+        border-radius: 0 0 16px 16px;
+    }
+
+    .btn-submit,
+    .btn-cancel {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-cancel {
+        background: #e9ecef;
+        color: #495057;
+    }
+
+    .btn-cancel:hover {
+        background: #dee2e6;
+        transform: translateY(-2px);
+    }
+
+    .student-name-link {
+        color: #667eea;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .student-name-link:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .form-row-modal {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-row {
+            grid-template-columns: 1fr;
+            gap: 5px;
+        }
+
+        .modal-actions {
+            flex-direction: column;
+        }
+
+        .btn-submit,
+        .btn-cancel {
+            width: 100%;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -117,6 +391,7 @@
                 <th>Mobile</th>
                 <th>Education</th>
                 <th>Course</th>
+                <th>City</th>
                 <th>Date</th>
                 <th>Actions</th>
             </tr>
@@ -127,7 +402,9 @@
                 <td>
                     <div class="name-cell">
                         <span class="avatar">{{ e.name.0|upper }}</span>
-                        {{ e.name }}
+                        <a href="javascript:void(0)" class="student-name-link" onclick="viewEnquiry({{ e.id }})">
+                            {{ e.name }}
+                        </a>
                     </div>
                 </td>
                 <td>{{ e.mobile }}</td>
@@ -135,6 +412,7 @@
                 <td>
                     <span class="course-badge">{{ e.course }}</span>
                 </td>
+                <td>{{ e.city|default:"-" }}</td>
                 <td>{{ e.created_at|date:"d M Y, h:i A" }}</td>
                 <td>
                     <button
@@ -148,7 +426,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6" class="empty-state">
+                <td colspan="7" class="empty-state">
                     <div class="empty-icon">📭</div>
                     <p>No enquiries found</p>
                     <small>Try adjusting your filters</small>
@@ -186,8 +464,235 @@
 </div>
 {% endif %}
 
+<!-- VIEW ENQUIRY DETAILS MODAL -->
+<div id="viewEnquiryModal" class="enquiry-modal">
+    <div class="enquiry-modal-content">
+        <div class="enquiry-modal-header">
+            <h2>📋 Enquiry Details</h2>
+            <button class="modal-close" onclick="closeViewModal()">&times;</button>
+        </div>
+        
+        <div class="enquiry-modal-body" id="enquiryDetailsContent">
+            <!-- Content will be loaded dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- ADD NEW ENQUIRY MODAL -->
+<div id="newEnquiryModal" class="enquiry-modal">
+    <div class="enquiry-modal-content">
+        <div class="enquiry-modal-header">
+            <h2>➕ Add New Enquiry</h2>
+            <button class="modal-close" onclick="closeNewEnquiryModal()">&times;</button>
+        </div>
+        
+        <form method="post" id="newEnquiryForm">
+            {% csrf_token %}
+            
+            <div class="enquiry-modal-body">
+                <!-- Personal Information -->
+                <div class="enquiry-form-section">
+                    <h4>👤 Personal Information</h4>
+                    <input type="text" name="name" placeholder="Full Name *" required>
+                    <input type="text" name="mobile" placeholder="Mobile Number (10 digits) *" 
+                           pattern="[0-9]{10}" maxlength="10" required>
+                    <input type="text" name="education" placeholder="Education Qualification *" required>
+                </div>
+
+                <!-- Course Selection -->
+                <div class="enquiry-form-section">
+                    <h4>📚 Course Selection</h4>
+                    <select name="course" required>
+                        <option value="">-- Select Course --</option>
+                        <option value="MS-CIT">MS-CIT</option>
+                        <option value="Tally">Tally</option>
+                        <option value="Advance Excel">Advance Excel</option>
+                        <option value="IOT">IOT</option>
+                        <option value="Scratch">Scratch</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Address Information -->
+                <div class="enquiry-form-section">
+                    <h4>🏠 Address Information</h4>
+                    <p class="form-note">All address fields are optional</p>
+                    
+                    <textarea name="address" placeholder="Full Address (Optional)" rows="2"></textarea>
+                    
+                    <div class="form-row-modal">
+                        <input type="text" name="city" placeholder="City (Optional)">
+                        <input type="text" name="taluka" placeholder="Taluka (Optional)">
+                    </div>
+                    
+                    <input type="text" name="district" placeholder="District (Optional)">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn-submit">✅ Submit Enquiry</button>
+                <button type="button" class="btn-cancel" onclick="closeNewEnquiryModal()">❌ Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'core/enquiries.js' %}"></script>
+<script>
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// View Enquiry Details
+function viewEnquiry(enquiryId) {
+    fetch(`/enquiries/detail/${enquiryId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const content = `
+                <div class="detail-section">
+                    <h3>👤 Personal Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Name:</span>
+                        <span class="detail-value">${data.name}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Mobile:</span>
+                        <span class="detail-value">${data.mobile}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Education:</span>
+                        <span class="detail-value">${data.education}</span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>📚 Course Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Course:</span>
+                        <span class="course-badge-modal">${data.course}</span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>🏠 Address Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Address:</span>
+                        <span class="detail-value ${!data.address ? 'empty' : ''}">${data.address || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">City:</span>
+                        <span class="detail-value ${!data.city ? 'empty' : ''}">${data.city || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Taluka:</span>
+                        <span class="detail-value ${!data.taluka ? 'empty' : ''}">${data.taluka || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">District:</span>
+                        <span class="detail-value ${!data.district ? 'empty' : ''}">${data.district || 'Not provided'}</span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>📅 Date Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Enquiry Date:</span>
+                        <span class="detail-value">${data.created_at}</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('enquiryDetailsContent').innerHTML = content;
+            document.getElementById('viewEnquiryModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading enquiry details');
+        });
+}
+
+// Close View Modal
+function closeViewModal() {
+    document.getElementById('viewEnquiryModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
+
+// Open New Enquiry Modal
+function openNewEnquiryModal() {
+    document.getElementById('newEnquiryModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// Close New Enquiry Modal
+function closeNewEnquiryModal() {
+    document.getElementById('newEnquiryModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+    document.getElementById('newEnquiryForm').reset();
+}
+
+// Handle New Enquiry Form Submission
+document.getElementById('newEnquiryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('{% url "enquiry_list" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('✅ Enquiry added successfully!');
+            closeNewEnquiryModal();
+            window.location.reload();
+        } else {
+            alert('❌ Error adding enquiry. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error adding enquiry. Please try again.');
+    });
+});
+
+// Close modals on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeViewModal();
+        closeNewEnquiryModal();
+    }
+});
+
+// Close modals on outside click
+window.addEventListener('click', function(e) {
+    const viewModal = document.getElementById('viewEnquiryModal');
+    const newModal = document.getElementById('newEnquiryModal');
+    
+    if (e.target === viewModal) {
+        closeViewModal();
+    }
+    if (e.target === newModal) {
+        closeNewEnquiryModal();
+    }
+});
+</script>
 {% endblock %}
