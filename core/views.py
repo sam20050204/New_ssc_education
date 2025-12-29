@@ -37,19 +37,28 @@ def home(request):
         mobile = request.POST.get("mobile")
         education = request.POST.get("education")
         course = request.POST.get("course")
+        
+        # NEW: Get address fields
+        address = request.POST.get("address", "")
+        city = request.POST.get("city", "")
+        taluka = request.POST.get("taluka", "")
+        district = request.POST.get("district", "")
 
         Enquiry.objects.create(
             name=name,
             mobile=mobile,
             education=education,
-            course=course
+            course=course,
+            address=address,
+            city=city,
+            taluka=taluka,
+            district=district
         )
 
         messages.success(request, "Enquiry submitted successfully!")
         return redirect("home")
 
     return render(request, "core/home.html")
-
 
 # ================= DASHBOARD (UPDATED VERSION) =================
 @login_required
@@ -127,6 +136,32 @@ def dashboard(request):
 # ================= ENQUIRY LIST =================
 @login_required
 def enquiry_list(request):
+    # Handle POST request for adding new enquiry
+    if request.method == "POST":
+        name = request.POST.get("name")
+        mobile = request.POST.get("mobile")
+        education = request.POST.get("education")
+        course = request.POST.get("course")
+        address = request.POST.get("address", "")
+        city = request.POST.get("city", "")
+        taluka = request.POST.get("taluka", "")
+        district = request.POST.get("district", "")
+
+        Enquiry.objects.create(
+            name=name,
+            mobile=mobile,
+            education=education,
+            course=course,
+            address=address,
+            city=city,
+            taluka=taluka,
+            district=district
+        )
+
+        messages.success(request, "Enquiry added successfully!")
+        return redirect("enquiry_list")
+    
+    # Rest of your existing GET logic
     search = request.GET.get("search", "")
     month = request.GET.get("month", "")
     year = request.GET.get("year", "")
@@ -232,7 +267,7 @@ def export_enquiries(request):
     response["Content-Disposition"] = f'attachment; filename="enquiries_{timestamp}.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(["ID", "Name", "Mobile", "Education", "Course", "Date & Time"])
+    writer.writerow(["ID", "Name", "Mobile", "Education", "Course", "Address", "City", "Taluka", "District", "Date & Time"])
 
     for e in enquiries:
         writer.writerow([
@@ -241,11 +276,34 @@ def export_enquiries(request):
             e.mobile,
             e.education,
             e.course,
+            e.address or "",
+            e.city or "",
+            e.taluka or "",
+            e.district or "",
             e.created_at.strftime("%d-%m-%Y %I:%M %p")
         ])
 
     return response
 
+@login_required
+def enquiry_detail(request, id):
+    """Return enquiry details as JSON"""
+    enquiry = get_object_or_404(Enquiry, id=id)
+    
+    data = {
+        'id': enquiry.id,
+        'name': enquiry.name,
+        'mobile': enquiry.mobile,
+        'education': enquiry.education,
+        'course': enquiry.course,
+        'address': enquiry.address or '',
+        'city': enquiry.city or '',
+        'taluka': enquiry.taluka or '',
+        'district': enquiry.district or '',
+        'created_at': enquiry.created_at.strftime('%d %B %Y, %I:%M %p'),
+    }
+    
+    return JsonResponse(data)
 
 # ================= CONVERT ENQUIRY TO ADMISSION =================
 @login_required

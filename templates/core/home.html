@@ -8,6 +8,57 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'core/style.css' %}">
 
+<style>
+    /* Additional styles for the enhanced modal */
+    .modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .form-section {
+        margin-bottom: 20px;
+    }
+    
+    .form-section h4 {
+        color: #0a014f;
+        font-size: 16px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .modal-content textarea {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 12px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 60px;
+    }
+    
+    .modal-content textarea:focus {
+        outline: none;
+        border-color: #1b1b8f;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    
+    .form-note {
+        font-size: 12px;
+        color: #666;
+        margin-top: -8px;
+        margin-bottom: 12px;
+        font-style: italic;
+    }
+</style>
+
 </head>
 
 <body>
@@ -55,6 +106,14 @@
             <h3>Advance Excel</h3>
             <p>Data analysis, dashboards, automation.</p>
         </div>
+        <div class="box">
+            <h3>IOT</h3>
+            <p>Internet of Things programming and projects.</p>
+        </div>
+        <div class="box">
+            <h3>Scratch</h3>
+            <p>Creative coding for beginners and kids.</p>
+        </div>
     </div>
 </section>
 
@@ -67,24 +126,50 @@
 <div class="modal" id="enquiryModal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">&times;</span>
-        <h3>Enquiry Form</h3>
+        <h3>📝 Enquiry Form</h3>
 
-        <!-- IMPORTANT: POST goes to same home view -->
         <form method="post">
             {% csrf_token %}
 
-            <input type="text" name="name" placeholder="Full Name" required>
-            <input type="text" name="mobile" placeholder="Mobile Number" required>
-            <input type="text" name="education" placeholder="Education" required>
+            <!-- Personal Information -->
+            <div class="form-section">
+                <h4>👤 Personal Information</h4>
+                <input type="text" name="name" placeholder="Full Name *" required>
+                <input type="text" name="mobile" placeholder="Mobile Number (10 digits) *" 
+                       pattern="[0-9]{10}" maxlength="10" required>
+                <input type="text" name="education" placeholder="Education Qualification *" required>
+            </div>
 
-            <select name="course" required>
-                <option value="">Select Course</option>
-                <option value="MS-CIT">MS-CIT</option>
-                <option value="Tally">Tally</option>
-                <option value="Advance Excel">Advance Excel</option>
-            </select>
+            <!-- Course Selection -->
+            <div class="form-section">
+                <h4>📚 Course Selection</h4>
+                <select name="course" required>
+                    <option value="">-- Select Course --</option>
+                    <option value="MS-CIT">MS-CIT</option>
+                    <option value="Tally">Tally</option>
+                    <option value="Advance Excel">Advance Excel</option>
+                    <option value="IOT">IOT</option>
+                    <option value="Scratch">Scratch</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
 
-            <button type="submit" class="btn">Submit Enquiry</button>
+            <!-- Address Information -->
+            <div class="form-section">
+                <h4>🏠 Address Information</h4>
+                <p class="form-note">All address fields are optional</p>
+                
+                <textarea name="address" placeholder="Full Address (Optional)" rows="2"></textarea>
+                
+                <div class="form-row">
+                    <input type="text" name="city" placeholder="City (Optional)">
+                    <input type="text" name="taluka" placeholder="Taluka (Optional)">
+                </div>
+                
+                <input type="text" name="district" placeholder="District (Optional)">
+            </div>
+
+            <button type="submit" class="btn">✅ Submit Enquiry</button>
         </form>
     </div>
 </div>
