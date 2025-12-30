@@ -39,4 +39,14 @@ urlpatterns = [
     path('api/receipts/export/', views.export_receipts, name='export_receipts'),
     path('api/receipts/<int:receipt_id>/delete/', views.delete_receipt, name='delete_receipt'),
     
+
+     # Receipts URLs
+    path('receipts/', views.receipts_view, name='receipts_view'),
+    path('api/receipts/', views.get_receipts, name='get_receipts'),
+    path('api/receipts/<int:receipt_id>/update/', views.update_receipt, name='update_receipt'),
+    path('api/receipts/export/', views.export_receipts, name='export_receipts'),
+    path('api/receipts/<int:receipt_id>/delete/', views.delete_receipt, name='delete_receipt'),
+    
+    # Database Backup
+    path('backup-database/', views.backup_database, name='backup_database'),
 ]

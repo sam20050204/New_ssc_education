@@ -1,3 +1,5 @@
+# Make sure these imports are at the TOP of your core/views.py file
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -8,19 +10,21 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db.models.functions import ExtractYear
 from django.db import transaction
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings  # ← ADD THIS LINE
+
 import csv
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from io import BytesIO
 from datetime import datetime
 from decimal import Decimal
+import json
+import shutil  # ← ADD THIS LINE
+import os      # ← ADD THIS LINE
 
 from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
-from django.views.decorators.http import require_http_methods
-import json
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from django.db import transaction
 
 
 # ================= CUSTOM LOGOUT =================
@@ -1319,3 +1323,46 @@ def delete_admitted_students(request):
             'success': False,
             'error': f'An error occurred: {str(e)}'
         }, status=500)
+    
+    # ================= DATABASE BACKUP =================
+# ================= DATABASE BACKUP =================
+# Add this at the END of your core/views.py file
+
+from django.conf import settings
+
+@login_required
+def backup_database(request):
+    """
+    Create a backup of the SQLite database and download it
+    """
+    try:
+        # Get the database path from settings
+        db_path = settings.DATABASES['default']['NAME']
+        
+        # Create backup filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_filename = f'database_backup_{timestamp}.db'
+        
+        # Create a temporary backup file
+        backup_path = os.path.join(settings.BASE_DIR, 'temp_backup.db')
+        
+        # Copy the database file
+        shutil.copy2(db_path, backup_path)
+        
+        # Read the backup file
+        with open(backup_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/x-sqlite3')
+            response['Content-Disposition'] = f'attachment; filename="{backup_filename}"'
+        
+        # Clean up temporary file
+        try:
+            os.remove(backup_path)
+        except:
+            pass
+        
+        messages.success(request, f'✅ Database backup created successfully: {backup_filename}')
+        return response
+        
+    except Exception as e:
+        messages.error(request, f'❌ Error creating backup: {str(e)}')
+        return redirect('dashboard')

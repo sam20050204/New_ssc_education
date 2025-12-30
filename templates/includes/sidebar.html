@@ -24,10 +24,17 @@
         💰 Fees Payment
     </a>
 
-    <!-- NEW: Receipts Link -->
+    <!-- Receipts Link -->
     <a href="{% url 'receipts_view' %}"
        class="menu-item {% if active_page == 'receipts' %}active{% endif %}">
         🧾 Receipts
+    </a>
+
+    <!-- NEW: Database Backup Button -->
+    <a href="{% url 'backup_database' %}"
+       class="menu-item backup-item"
+       onclick="return confirm('📦 Create database backup?\n\nThis will download a copy of your entire database.')">
+        💾 Backup Database
     </a>
 
     <!-- Logout as a form to handle POST request properly -->
@@ -38,3 +45,23 @@
         </button>
     </form>
 </nav>
+
+<style>
+/* Backup button styling */
+.backup-item {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white !important;
+    margin: 10px 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent !important;
+}
+
+.backup-item:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+</style>
