@@ -305,7 +305,9 @@ def enquiry_detail(request, id):
         'name': enquiry.name,
         'mobile': enquiry.mobile,
         'education': enquiry.education,
-        'course': display_course,
+        'course': enquiry.course,  # Original course selection
+        'custom_course': enquiry.custom_course or '',  # Custom course if "Other" selected
+        'display_course': display_course,  # For display purposes
         'address': enquiry.address or '',
         'city': enquiry.city or '',
         'taluka': enquiry.taluka or '',
@@ -314,7 +316,6 @@ def enquiry_detail(request, id):
     }
     
     return JsonResponse(data)
-
 # ================= CONVERT ENQUIRY TO ADMISSION =================
 # ================= CONVERT ENQUIRY TO ADMISSION =================
 @login_required
