@@ -28,7 +28,102 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/enquiries.css' %}">
 <style>
-    /* Modal Styles */
+    /* Enhanced modal styles for landscape orientation */
+    .enquiry-modal-content {
+        max-width: 900px; /* Increased width for landscape */
+        width: 95%;
+    }
+
+    .enquiry-form-section input,
+    .enquiry-form-section select,
+    .enquiry-form-section textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e8e8e8;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 12px;
+        transition: all 0.3s ease;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .enquiry-form-section input:focus,
+    .enquiry-form-section select:focus,
+    .enquiry-form-section textarea:focus {
+        border-color: #667eea;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .enquiry-form-section textarea {
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    /* Landscape form layout */
+    .form-row-modal {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .form-row-modal.triple {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .form-note {
+        font-size: 12px;
+        color: #7f8c8d;
+        margin-top: -8px;
+        margin-bottom: 12px;
+        font-style: italic;
+    }
+
+    /* Success message styling */
+    .success-message {
+        background: #d4edda;
+        color: #155724;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #c3e6cb;
+        display: none;
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .form-row-modal,
+        .form-row-modal.triple {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-row {
+            grid-template-columns: 1fr;
+            gap: 5px;
+        }
+
+        .modal-actions {
+            flex-direction: column;
+        }
+
+        .btn-submit,
+        .btn-cancel {
+            width: 100%;
+        }
+    }
+
+    /* Other existing styles... */
     .enquiry-modal {
         display: none;
         position: fixed;
@@ -47,16 +142,6 @@
         align-items: center;
         justify-content: center;
         padding: 20px;
-    }
-
-    .enquiry-modal-content {
-        background: white;
-        width: 95%;
-        max-width: 600px;
-        border-radius: 16px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        position: relative;
-        animation: slideDown 0.3s ease;
     }
 
     .enquiry-modal-header {
@@ -153,60 +238,6 @@
         font-weight: 600;
     }
 
-    /* New Enquiry Form Styles */
-    .enquiry-form-section {
-        margin-bottom: 20px;
-    }
-
-    .enquiry-form-section h4 {
-        color: #667eea;
-        font-size: 15px;
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid #f0f0f0;
-        font-weight: 700;
-    }
-
-    .enquiry-form-section input,
-    .enquiry-form-section select,
-    .enquiry-form-section textarea {
-        width: 100%;
-        padding: 12px 16px;
-        border: 2px solid #e8e8e8;
-        border-radius: 8px;
-        font-size: 14px;
-        margin-bottom: 12px;
-        transition: all 0.3s ease;
-        font-family: 'Segoe UI', sans-serif;
-    }
-
-    .enquiry-form-section input:focus,
-    .enquiry-form-section select:focus,
-    .enquiry-form-section textarea:focus {
-        border-color: #667eea;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-
-    .enquiry-form-section textarea {
-        resize: vertical;
-        min-height: 60px;
-    }
-
-    .form-row-modal {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
-    .form-note {
-        font-size: 12px;
-        color: #7f8c8d;
-        margin-top: -8px;
-        margin-bottom: 12px;
-        font-style: italic;
-    }
-
     .modal-actions {
         display: flex;
         gap: 12px;
@@ -265,37 +296,6 @@
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
-    }
-
-    @keyframes slideDown {
-        from {
-            transform: translateY(-50px);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .form-row-modal {
-            grid-template-columns: 1fr;
-        }
-
-        .detail-row {
-            grid-template-columns: 1fr;
-            gap: 5px;
-        }
-
-        .modal-actions {
-            flex-direction: column;
-        }
-
-        .btn-submit,
-        .btn-cancel {
-            width: 100%;
-        }
     }
 </style>
 {% endblock %}
@@ -490,19 +490,24 @@
             {% csrf_token %}
             
             <div class="enquiry-modal-body">
+                <!-- Success message -->
+                <div id="successMessageEnquiry" class="success-message"></div>
+
                 <!-- Personal Information -->
                 <div class="enquiry-form-section">
                     <h4>👤 Personal Information</h4>
-                    <input type="text" name="name" placeholder="Full Name *" required>
-                    <input type="text" name="mobile" placeholder="Mobile Number (10 digits) *" 
-                           pattern="[0-9]{10}" maxlength="10" required>
-                    <input type="text" name="education" placeholder="Education Qualification *" required>
+                    <div class="form-row-modal">
+                        <input type="text" name="name" id="nameEnquiry" placeholder="Full Name *" required>
+                        <input type="text" name="mobile" id="mobileEnquiry" placeholder="Mobile Number (10 digits) *" 
+                               pattern="[0-9]{10}" maxlength="10" required>
+                    </div>
+                    <input type="text" name="education" id="educationEnquiry" placeholder="Education Qualification *" required>
                 </div>
 
                 <!-- Course Selection -->
                 <div class="enquiry-form-section">
                     <h4>📚 Course Selection</h4>
-                    <select name="course" required>
+                    <select name="course" id="courseEnquiry" required>
                         <option value="">-- Select Course --</option>
                         <option value="MS-CIT">MS-CIT</option>
                         <option value="Tally">Tally</option>
@@ -511,6 +516,11 @@
                         <option value="Scratch">Scratch</option>
                         <option value="Other">Other</option>
                     </select>
+                    
+                    <!-- Custom course field (hidden by default) -->
+                    <input type="text" name="other_course" id="otherCourseEnquiry" 
+                           placeholder="Please specify course name *" 
+                           style="display: none;">
                 </div>
 
                 <!-- Address Information -->
@@ -518,14 +528,13 @@
                     <h4>🏠 Address Information</h4>
                     <p class="form-note">All address fields are optional</p>
                     
-                    <textarea name="address" placeholder="Full Address (Optional)" rows="2"></textarea>
+                    <textarea name="address" id="addressEnquiry" placeholder="Full Address (Optional)" rows="2"></textarea>
                     
-                    <div class="form-row-modal">
-                        <input type="text" name="city" placeholder="City (Optional)">
-                        <input type="text" name="taluka" placeholder="Taluka (Optional)">
+                    <div class="form-row-modal triple">
+                        <input type="text" name="city" id="cityEnquiry" placeholder="City (Optional)">
+                        <input type="text" name="taluka" id="talukaEnquiry" placeholder="Taluka (Optional)">
+                        <input type="text" name="district" id="districtEnquiry" placeholder="District (Optional)">
                     </div>
-                    
-                    <input type="text" name="district" placeholder="District (Optional)">
                 </div>
             </div>
 
@@ -557,6 +566,19 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+// Course selection - show/hide other course field
+document.getElementById('courseEnquiry').addEventListener('change', function() {
+    const otherCourseField = document.getElementById('otherCourseEnquiry');
+    if (this.value === 'Other') {
+        otherCourseField.style.display = 'block';
+        otherCourseField.required = true;
+    } else {
+        otherCourseField.style.display = 'none';
+        otherCourseField.required = false;
+        otherCourseField.value = '';
+    }
+});
 
 // View Enquiry Details
 function viewEnquiry(enquiryId) {
@@ -639,38 +661,66 @@ function openNewEnquiryModal() {
     document.body.style.overflow = 'hidden';
 }
 
-// Close New Enquiry Modal
+// Close New Enquiry Modal (but keep it open if submission is successful)
 function closeNewEnquiryModal() {
     document.getElementById('newEnquiryModal').classList.remove('active');
     document.body.style.overflow = 'auto';
     document.getElementById('newEnquiryForm').reset();
+    document.getElementById('successMessageEnquiry').style.display = 'none';
 }
 
-// Handle New Enquiry Form Submission
+// Handle New Enquiry Form Submission with AJAX
 document.getElementById('newEnquiryForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
+    const submitBtn = this.querySelector('.btn-submit');
+    const originalText = submitBtn.textContent;
+    
+    // Show loading state
+    submitBtn.textContent = '⏳ Submitting...';
+    submitBtn.disabled = true;
     
     fetch('{% url "enquiry_list" %}', {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': getCookie('csrftoken')
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
         }
     })
     .then(response => {
         if (response.ok) {
-            alert('✅ Enquiry added successfully!');
-            closeNewEnquiryModal();
-            window.location.reload();
+            // Show success message
+            const successMsg = document.getElementById('successMessageEnquiry');
+            successMsg.textContent = '✅ Enquiry added successfully!';
+            successMsg.style.display = 'block';
+            
+            // Clear form fields
+            document.getElementById('newEnquiryForm').reset();
+            
+            // Hide "Other" course field if shown
+            document.getElementById('otherCourseEnquiry').style.display = 'none';
+            
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                successMsg.style.display = 'none';
+            }, 3000);
+            
+            // Reset submit button
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            
+            // Note: Modal stays open for next entry
         } else {
-            alert('❌ Error adding enquiry. Please try again.');
+            throw new Error('Submission failed');
         }
     })
     .catch(error => {
         console.error('Error:', error);
         alert('❌ Error adding enquiry. Please try again.');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     });
 });
 

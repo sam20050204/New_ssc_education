@@ -9,10 +9,12 @@
 <link rel="stylesheet" href="{% static 'core/style.css' %}">
 
 <style>
-    /* Additional styles for the enhanced modal */
+    /* Enhanced modal styles for landscape orientation */
     .modal-content {
         max-height: 90vh;
         overflow-y: auto;
+        max-width: 900px; /* Increased width for landscape */
+        width: 95%;
     }
     
     .form-section {
@@ -43,11 +45,16 @@
         border-color: #1b1b8f;
     }
     
+    /* Landscape form layout */
     .form-row {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
         margin-bottom: 12px;
+    }
+    
+    .form-row.triple {
+        grid-template-columns: repeat(3, 1fr);
     }
     
     .form-note {
@@ -56,6 +63,42 @@
         margin-top: -8px;
         margin-bottom: 12px;
         font-style: italic;
+    }
+    
+    .modal-content input[type="text"],
+    .modal-content select {
+        width: 100%;
+    }
+    
+    /* Success message styling */
+    .success-message {
+        background: #d4edda;
+        color: #155724;
+        padding: 12px 16px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        border: 1px solid #c3e6cb;
+        display: none;
+        animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .form-row,
+        .form-row.triple {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
@@ -128,22 +171,27 @@
         <span class="close" onclick="closeModal()">&times;</span>
         <h3>📝 Enquiry Form</h3>
 
-        <form method="post">
+        <!-- Success message -->
+        <div id="successMessage" class="success-message"></div>
+
+        <form method="post" id="enquiryForm">
             {% csrf_token %}
 
             <!-- Personal Information -->
             <div class="form-section">
                 <h4>👤 Personal Information</h4>
-                <input type="text" name="name" placeholder="Full Name *" required>
-                <input type="text" name="mobile" placeholder="Mobile Number (10 digits) *" 
-                       pattern="[0-9]{10}" maxlength="10" required>
-                <input type="text" name="education" placeholder="Education Qualification *" required>
+                <div class="form-row">
+                    <input type="text" name="name" id="name" placeholder="Full Name *" required>
+                    <input type="text" name="mobile" id="mobile" placeholder="Mobile Number (10 digits) *" 
+                           pattern="[0-9]{10}" maxlength="10" required>
+                </div>
+                <input type="text" name="education" id="education" placeholder="Education Qualification *" required>
             </div>
 
             <!-- Course Selection -->
             <div class="form-section">
                 <h4>📚 Course Selection</h4>
-                <select name="course" required>
+                <select name="course" id="course" required>
                     <option value="">-- Select Course --</option>
                     <option value="MS-CIT">MS-CIT</option>
                     <option value="Tally">Tally</option>
@@ -152,6 +200,11 @@
                     <option value="Scratch">Scratch</option>
                     <option value="Other">Other</option>
                 </select>
+                
+                <!-- Custom course field (hidden by default) -->
+                <input type="text" name="other_course" id="otherCourse" 
+                       placeholder="Please specify course name *" 
+                       style="display: none; margin-top: 12px;">
             </div>
 
             <!-- Address Information -->
@@ -159,14 +212,13 @@
                 <h4>🏠 Address Information</h4>
                 <p class="form-note">All address fields are optional</p>
                 
-                <textarea name="address" placeholder="Full Address (Optional)" rows="2"></textarea>
+                <textarea name="address" id="address" placeholder="Full Address (Optional)" rows="2"></textarea>
                 
-                <div class="form-row">
-                    <input type="text" name="city" placeholder="City (Optional)">
-                    <input type="text" name="taluka" placeholder="Taluka (Optional)">
+                <div class="form-row triple">
+                    <input type="text" name="city" id="city" placeholder="City (Optional)">
+                    <input type="text" name="taluka" id="taluka" placeholder="Taluka (Optional)">
+                    <input type="text" name="district" id="district" placeholder="District (Optional)">
                 </div>
-                
-                <input type="text" name="district" placeholder="District (Optional)">
             </div>
 
             <button type="submit" class="btn">✅ Submit Enquiry</button>
@@ -175,6 +227,70 @@
 </div>
 
 <script src="{% static 'core/main.js' %}"></script>
+
+<script>
+// Course selection - show/hide other course field
+document.getElementById('course').addEventListener('change', function() {
+    const otherCourseField = document.getElementById('otherCourse');
+    if (this.value === 'Other') {
+        otherCourseField.style.display = 'block';
+        otherCourseField.required = true;
+    } else {
+        otherCourseField.style.display = 'none';
+        otherCourseField.required = false;
+        otherCourseField.value = '';
+    }
+});
+
+// Handle form submission with AJAX
+document.getElementById('enquiryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    // Show loading state
+    submitBtn.textContent = '⏳ Submitting...';
+    submitBtn.disabled = true;
+    
+    fetch('{% url "home" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Show success message
+            const successMsg = document.getElementById('successMessage');
+            successMsg.textContent = '✅ Enquiry submitted successfully!';
+            successMsg.style.display = 'block';
+            
+            // Clear form fields
+            document.getElementById('enquiryForm').reset();
+            
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                successMsg.style.display = 'none';
+            }, 3000);
+            
+            // Reset submit button
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        } else {
+            throw new Error('Submission failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error submitting enquiry. Please try again.');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    });
+});
+</script>
 
 {% if messages %}
   <div id="toast-container">
