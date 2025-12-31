@@ -1,7 +1,7 @@
 {% extends 'base/base.html' %}
 {% load static %}
 
-{% block title %}New Admission{% endblock %}
+{% block title %}Convert Enquiry to Admission{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/admission.css' %}">
@@ -13,8 +13,8 @@
         <div class="page-title-wrapper">
             <div class="page-icon">🎓</div>
             <div>
-                <h1 class="page-title">New Admission</h1>
-                <p class="page-subtitle">Add new student admission details</p>
+                <h1 class="page-title">Convert Enquiry to Admission</h1>
+                <p class="page-subtitle">Complete the admission form for {{ enquiry.name }}</p>
             </div>
         </div>
     </div>
@@ -24,10 +24,19 @@
 {% block content %}
 
 <div class="admission-container">
-    <form method="post" enctype="multipart/form-data" class="admission-form" id="admissionForm">
+    <!-- INFO BOX -->
+    <div style="background: linear-gradient(135deg, #e8f4f8 0%, #d4e9f5 100%); padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #667eea;">
+        <h3 style="color: #667eea; margin-bottom: 10px;">📋 Enquiry Details</h3>
+        <p style="margin: 5px 0;"><strong>Name:</strong> {{ enquiry.name }}</p>
+        <p style="margin: 5px 0;"><strong>Mobile:</strong> {{ enquiry.mobile }}</p>
+        <p style="margin: 5px 0;"><strong>Education:</strong> {{ enquiry.education }}</p>
+        <p style="margin: 5px 0;"><strong>Course:</strong> {{ enquiry.get_display_course }}</p>
+    </div>
+
+    <form method="post" action="{% url 'new_admission' %}" enctype="multipart/form-data" class="admission-form" id="admissionForm">
         {% csrf_token %}
         
-        <!-- Course Selection -->
+        <!-- Course Selection (Pre-filled) -->
         <div class="form-section">
             <h3 class="section-title">📚 Course Information</h3>
             
@@ -35,18 +44,18 @@
                 <label for="course">Course *</label>
                 <select name="course" id="course" required>
                     <option value="">-- Select Course --</option>
-                    <option value="MS-CIT">MS-CIT</option>
-                    <option value="Tally">Tally</option>
-                    <option value="Advance Excel">Advance Excel</option>
-                    <option value="IOT">IOT</option>
-                    <option value="Scratch">Scratch</option>
-                    <option value="Other">Other (Specify below)</option>
+                    <option value="MS-CIT" {% if initial_data.course == "MS-CIT" %}selected{% endif %}>MS-CIT</option>
+                    <option value="Tally" {% if initial_data.course == "Tally" %}selected{% endif %}>Tally</option>
+                    <option value="Advance Excel" {% if initial_data.course == "Advance Excel" %}selected{% endif %}>Advance Excel</option>
+                    <option value="IOT" {% if initial_data.course == "IOT" %}selected{% endif %}>IOT</option>
+                    <option value="Scratch" {% if initial_data.course == "Scratch" %}selected{% endif %}>Scratch</option>
+                    <option value="Other" {% if initial_data.course == "Other" %}selected{% endif %}>Other (Specify below)</option>
                 </select>
             </div>
             
-            <div class="form-group full-width" id="customCourseGroup" style="display: none;">
+            <div class="form-group full-width" id="customCourseGroup" style="display: {% if initial_data.course == 'Other' %}block{% else %}none{% endif %};">
                 <label for="custom_course">Specify Course Name *</label>
-                <input type="text" name="custom_course" id="custom_course" placeholder="Enter course name">
+                <input type="text" name="custom_course" id="custom_course" value="{{ initial_data.custom_course }}" placeholder="Enter course name">
             </div>
         </div>
 
@@ -59,7 +68,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="student_name">Student Name *</label>
-                            <input type="text" name="student_name" id="student_name" required>
+                            <input type="text" name="student_name" id="student_name" value="{{ initial_data.name }}" required>
                         </div>
                         
                         <div class="form-group">
@@ -121,13 +130,13 @@
             </div>
         </div>
 
-        <!-- Contact Information -->
+        <!-- Contact Information (Pre-filled) -->
         <div class="form-section">
             <h3 class="section-title">📞 Contact Information</h3>
             
             <div class="form-group">
                 <label for="mobile_own">Mobile No. (Own) *</label>
-                <input type="tel" name="mobile_own" id="mobile_own" pattern="[0-9]{10}" placeholder="10-digit mobile number" required>
+                <input type="tel" name="mobile_own" id="mobile_own" value="{{ initial_data.mobile }}" pattern="[0-9]{10}" placeholder="10-digit mobile number" required>
             </div>
             
             <div class="form-group">
@@ -136,28 +145,28 @@
             </div>
         </div>
 
-        <!-- Address Information -->
+        <!-- Address Information (Pre-filled) -->
         <div class="form-section">
             <h3 class="section-title">🏠 Address Information</h3>
             
             <div class="form-group full-width">
                 <label for="address">Address *</label>
-                <textarea name="address" id="address" rows="3" required></textarea>
+                <textarea name="address" id="address" rows="3" required>{{ initial_data.address }}</textarea>
             </div>
             
             <div class="form-group">
                 <label for="city">City *</label>
-                <input type="text" name="city" id="city" required>
+                <input type="text" name="city" id="city" value="{{ initial_data.city }}" required>
             </div>
             
             <div class="form-group">
                 <label for="tehsil_block">Tehsil/Block *</label>
-                <input type="text" name="tehsil_block" id="tehsil_block" required>
+                <input type="text" name="tehsil_block" id="tehsil_block" value="{{ initial_data.tehsil_block }}" required>
             </div>
             
             <div class="form-group">
                 <label for="district">District *</label>
-                <input type="text" name="district" id="district" required>
+                <input type="text" name="district" id="district" value="{{ initial_data.district }}" required>
             </div>
             
             <div class="form-group">
@@ -166,13 +175,13 @@
             </div>
         </div>
 
-        <!-- Educational Information -->
+        <!-- Educational Information (Pre-filled) -->
         <div class="form-section">
             <h3 class="section-title">🎯 Educational Information</h3>
             
             <div class="form-group full-width">
                 <label for="educational_qualification">Educational Qualification *</label>
-                <input type="text" name="educational_qualification" id="educational_qualification" placeholder="e.g., 12th Pass, Graduate, etc." required>
+                <input type="text" name="educational_qualification" id="educational_qualification" value="{{ initial_data.education }}" placeholder="e.g., 12th Pass, Graduate, etc." required>
             </div>
         </div>
 
@@ -192,12 +201,12 @@
         <!-- Form Actions -->
         <div class="form-actions">
             <button type="submit" class="btn-submit">
-                ✅ Submit Admission
+                ✅ Complete Admission
             </button>
             <button type="reset" class="btn-reset" onclick="return confirm('Are you sure you want to reset the form?')">
                 🔄 Reset Form
             </button>
-            <a href="{% url 'admitted_students' %}" class="btn-cancel">
+            <a href="{% url 'enquiry_list' %}" class="btn-cancel">
                 ❌ Cancel
             </a>
         </div>

@@ -3,6 +3,7 @@ html{scroll-behavior:smooth;}
 body{background:#f4f6f8;color:#333}
 
 /* NAVBAR */
+
 nav{
     background:#0a014f;
     color:#fff;
@@ -12,8 +13,9 @@ nav{
     align-items:center;
     position:sticky;
     top:0;
-    z-index:1000;
+    z-index:1000; /* Make sure navbar is on top */
 }
+
 nav h2{font-size:22px}
 nav ul{list-style:none;display:flex;gap:20px;align-items:center;}
 nav ul li a{color:#fff;text-decoration:none;font-weight:500}

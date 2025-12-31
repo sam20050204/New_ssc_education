@@ -41,8 +41,9 @@ def home(request):
         mobile = request.POST.get("mobile")
         education = request.POST.get("education")
         course = request.POST.get("course")
+        custom_course = request.POST.get("other_course", "")  # NEW
         
-        # NEW: Get address fields
+        # Get address fields
         address = request.POST.get("address", "")
         city = request.POST.get("city", "")
         taluka = request.POST.get("taluka", "")
@@ -53,6 +54,7 @@ def home(request):
             mobile=mobile,
             education=education,
             course=course,
+            custom_course=custom_course if course == "Other" else "",  # NEW
             address=address,
             city=city,
             taluka=taluka,
@@ -146,6 +148,7 @@ def enquiry_list(request):
         mobile = request.POST.get("mobile")
         education = request.POST.get("education")
         course = request.POST.get("course")
+        custom_course = request.POST.get("other_course", "")  # NEW
         address = request.POST.get("address", "")
         city = request.POST.get("city", "")
         taluka = request.POST.get("taluka", "")
@@ -156,6 +159,7 @@ def enquiry_list(request):
             mobile=mobile,
             education=education,
             course=course,
+            custom_course=custom_course if course == "Other" else "",  # NEW
             address=address,
             city=city,
             taluka=taluka,
@@ -165,7 +169,7 @@ def enquiry_list(request):
         messages.success(request, "Enquiry added successfully!")
         return redirect("enquiry_list")
     
-    # Rest of your existing GET logic
+    # Rest of your existing GET logic...
     search = request.GET.get("search", "")
     month = request.GET.get("month", "")
     year = request.GET.get("year", "")
@@ -229,7 +233,6 @@ def enquiry_list(request):
         "filters_query": filters_query,
         "active_page": "enquiries"
     })
-
 
 # ================= DELETE ENQUIRY =================
 @login_required
@@ -317,11 +320,25 @@ def enquiry_detail(request, id):
 @login_required
 def convert_enquiry(request, id):
     enquiry = get_object_or_404(Enquiry, id=id)
-    return render(request, "core/admission_form.html", {
+    
+    # Prepare initial data
+    initial_data = {
+        'name': enquiry.name,
+        'mobile': enquiry.mobile,
+        'education': enquiry.education,
+        'course': enquiry.course,
+        'custom_course': enquiry.custom_course or '',
+        'address': enquiry.address or '',
+        'city': enquiry.city or '',
+        'tehsil_block': enquiry.taluka or '',
+        'district': enquiry.district or '',
+    }
+    
+    return render(request, "core/admission_from_enquiry.html", {
         "enquiry": enquiry,
+        "initial_data": initial_data,
         "active_page": "enquiries"
     })
-
 
 # ================= NEW ADMISSION =================
 @login_required

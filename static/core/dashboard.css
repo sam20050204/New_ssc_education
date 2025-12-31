@@ -12,6 +12,7 @@ html, body {
 }
 
 /* ===================== TOP HEADER ===================== */
+/* ===================== TOP HEADER ===================== */
 .top-header {
     height: 70px;
     background: linear-gradient(135deg, #2c3e50, #3498db);
@@ -24,7 +25,7 @@ html, body {
     top: 0;
     left: 0;
     right: 0;
-    z-index: 1000;
+    z-index: 1000; /* Make sure header is on top */
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 

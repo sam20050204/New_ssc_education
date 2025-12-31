@@ -8,6 +8,7 @@ class Enquiry(models.Model):
     mobile = models.CharField(max_length=15)
     education = models.CharField(max_length=100)
     course = models.CharField(max_length=50)
+    custom_course = models.CharField(max_length=100, blank=True, null=True)  # NEW FIELD
     
     # Address fields
     address = models.TextField(blank=True, null=True)
@@ -19,7 +20,13 @@ class Enquiry(models.Model):
 
     def __str__(self):
         return self.name
-
+    
+    def get_display_course(self):
+        """Return the display course name"""
+        if self.course == 'Other' and self.custom_course:
+            return self.custom_course
+        return self.course
+    
 class AdmittedStudent(models.Model):
     COURSE_CHOICES = [
         ('MS-CIT', 'MS-CIT'),

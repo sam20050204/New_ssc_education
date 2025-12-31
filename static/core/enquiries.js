@@ -3,19 +3,123 @@ function confirmDelete(id){
         window.location.href = `/enquiries/delete/${id}/`;
     }
 }
-document.getElementById('courseEnquiry').addEventListener('change', function() {
-    const otherCourseField = document.getElementById('otherCourseEnquiry');
-    if (this.value === 'Other') {
-        otherCourseField.style.display = 'block';
-        otherCourseField.required = true;
-    } else {
-        otherCourseField.style.display = 'none';
-        otherCourseField.required = false;
-        otherCourseField.value = '';
+
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Course selection - show/hide other course field
+document.addEventListener('DOMContentLoaded', function() {
+    const courseEnquiry = document.getElementById('courseEnquiry');
+    if (courseEnquiry) {
+        courseEnquiry.addEventListener('change', function() {
+            const otherCourseField = document.getElementById('otherCourseEnquiry');
+            if (this.value === 'Other') {
+                otherCourseField.style.display = 'block';
+                otherCourseField.required = true;
+            } else {
+                otherCourseField.style.display = 'none';
+                otherCourseField.required = false;
+                otherCourseField.value = '';
+            }
+        });
     }
 });
 
-// ... (keep existing viewEnquiry function)
+// View Enquiry Details
+function viewEnquiry(enquiryId) {
+    fetch(`/enquiries/detail/${enquiryId}/`)
+        .then(response => response.json())
+        .then(data => {
+            // Determine display course
+            let displayCourse = data.course;
+            // Note: Since Enquiry model doesn't have custom_course field,
+            // we just show "Other" if that's the course
+            
+            const content = `
+                <div class="detail-section">
+                    <h3>👤 Personal Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Name:</span>
+                        <span class="detail-value">${data.name}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Mobile:</span>
+                        <span class="detail-value">${data.mobile}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Education:</span>
+                        <span class="detail-value">${data.education}</span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>📚 Course Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Course:</span>
+                        <span class="course-badge-modal">${displayCourse}</span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>🏠 Address Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Address:</span>
+                        <span class="detail-value ${!data.address ? 'empty' : ''}">${data.address || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">City:</span>
+                        <span class="detail-value ${!data.city ? 'empty' : ''}">${data.city || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Taluka:</span>
+                        <span class="detail-value ${!data.taluka ? 'empty' : ''}">${data.taluka || 'Not provided'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">District:</span>
+                        <span class="detail-value ${!data.district ? 'empty' : ''}">${data.district || 'Not provided'}</span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>📅 Date Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Enquiry Date:</span>
+                        <span class="detail-value">${data.created_at}</span>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e8e8e8;">
+                    <a href="/enquiries/convert/${enquiryId}/" class="btn-submit">
+                        🎓 Convert to Admission
+                    </a>
+                    <button type="button" class="btn-cancel" onclick="closeViewModal()">
+                        ❌ Close
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('enquiryDetailsContent').innerHTML = content;
+            document.getElementById('viewEnquiryModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading enquiry details');
+        });
+}
 
 // Close View Modal
 function closeViewModal() {
@@ -36,64 +140,75 @@ function closeNewEnquiryModal() {
     document.getElementById('newEnquiryForm').reset();
     document.getElementById('successMessageEnquiry').classList.remove('show');
     // Hide "Other" course field if shown
-    document.getElementById('otherCourseEnquiry').style.display = 'none';
-    document.getElementById('otherCourseEnquiry').required = false;
+    const otherField = document.getElementById('otherCourseEnquiry');
+    if (otherField) {
+        otherField.style.display = 'none';
+        otherField.required = false;
+    }
 }
 
 // Handle New Enquiry Form Submission with AJAX
-document.getElementById('newEnquiryForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const submitBtn = this.querySelector('.btn-submit');
-    const originalText = submitBtn.innerHTML;
-    
-    // Show loading state
-    submitBtn.innerHTML = '⏳ Submitting...';
-    submitBtn.disabled = true;
-    
-    fetch('{% url "enquiry_list" %}', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            // Show success message
-            const successMsg = document.getElementById('successMessageEnquiry');
-            successMsg.textContent = '✅ Enquiry added successfully!';
-            successMsg.classList.add('show');
+document.addEventListener('DOMContentLoaded', function() {
+    const newEnquiryForm = document.getElementById('newEnquiryForm');
+    if (newEnquiryForm) {
+        newEnquiryForm.addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            // Clear form fields
-            document.getElementById('newEnquiryForm').reset();
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('.btn-submit');
+            const originalText = submitBtn.textContent;
             
-            // Hide "Other" course field if shown
-            document.getElementById('otherCourseEnquiry').style.display = 'none';
-            document.getElementById('otherCourseEnquiry').required = false;
+            // Show loading state
+            submitBtn.textContent = '⏳ Submitting...';
+            submitBtn.disabled = true;
             
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                successMsg.classList.remove('show');
-            }, 3000);
-            
-            // Reset submit button
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-            
-            // Note: Modal stays open for next entry
-        } else {
-            throw new Error('Submission failed');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('❌ Error adding enquiry. Please try again.');
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    });
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Show success message
+                    const successMsg = document.getElementById('successMessageEnquiry');
+                    successMsg.textContent = '✅ Enquiry added successfully!';
+                    successMsg.classList.add('show');
+                    
+                    // Clear form fields
+                    newEnquiryForm.reset();
+                    
+                    // Hide "Other" course field if shown
+                    const otherField = document.getElementById('otherCourseEnquiry');
+                    if (otherField) {
+                        otherField.style.display = 'none';
+                        otherField.required = false;
+                    }
+                    
+                    // Hide success message after 3 seconds
+                    setTimeout(() => {
+                        successMsg.classList.remove('show');
+                    }, 3000);
+                    
+                    // Reset submit button
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    
+                    // Note: Modal stays open for next entry
+                } else {
+                    throw new Error('Submission failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Error adding enquiry. Please try again.');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+    }
 });
 
 // Close modals on ESC key
