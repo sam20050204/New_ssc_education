@@ -469,7 +469,7 @@
     <div class="enquiry-modal-content">
         <div class="enquiry-modal-header">
             <h2>📋 Enquiry Details</h2>
-            <button class="modal-close" onclick="closeViewModal()">&times;</button>
+            <button class="modal-close" onclick="closeViewModal()" type="button">&times;</button>
         </div>
         
         <div class="enquiry-modal-body" id="enquiryDetailsContent">
@@ -483,7 +483,7 @@
     <div class="enquiry-modal-content">
         <div class="enquiry-modal-header">
             <h2>➕ Add New Enquiry</h2>
-            <button class="modal-close" onclick="closeNewEnquiryModal()">&times;</button>
+            <button class="modal-close" onclick="closeNewEnquiryModal()" type="button">&times;</button>
         </div>
         
         <form method="post" id="newEnquiryForm">
@@ -491,56 +491,53 @@
             
             <div class="enquiry-modal-body">
                 <!-- Success message -->
-                <div id="successMessageEnquiry" class="success-message"></div>
+                <div id="successMessageEnquiry" class="success-message-enq"></div>
 
-                <!-- Personal Information -->
-                <div class="enquiry-form-section">
-                    <h4>👤 Personal Information</h4>
-                    <div class="form-row-modal">
+                <!-- Horizontal Two-Column Layout -->
+                <div class="form-grid-horizontal">
+                    <!-- LEFT SECTION: Personal Information -->
+                    <div class="form-section-left">
+                        <h4>👤 Personal Information</h4>
                         <input type="text" name="name" id="nameEnquiry" placeholder="Full Name *" required>
                         <input type="text" name="mobile" id="mobileEnquiry" placeholder="Mobile Number (10 digits) *" 
                                pattern="[0-9]{10}" maxlength="10" required>
+                        <input type="text" name="education" id="educationEnquiry" placeholder="Education Qualification *" required>
                     </div>
-                    <input type="text" name="education" id="educationEnquiry" placeholder="Education Qualification *" required>
-                </div>
 
-                <!-- Course Selection -->
-                <div class="enquiry-form-section">
-                    <h4>📚 Course Selection</h4>
-                    <select name="course" id="courseEnquiry" required>
-                        <option value="">-- Select Course --</option>
-                        <option value="MS-CIT">MS-CIT</option>
-                        <option value="Tally">Tally</option>
-                        <option value="Advance Excel">Advance Excel</option>
-                        <option value="IOT">IOT</option>
-                        <option value="Scratch">Scratch</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    
-                    <!-- Custom course field (hidden by default) -->
-                    <input type="text" name="other_course" id="otherCourseEnquiry" 
-                           placeholder="Please specify course name *" 
-                           style="display: none;">
-                </div>
-
-                <!-- Address Information -->
-                <div class="enquiry-form-section">
-                    <h4>🏠 Address Information</h4>
-                    <p class="form-note">All address fields are optional</p>
-                    
-                    <textarea name="address" id="addressEnquiry" placeholder="Full Address (Optional)" rows="2"></textarea>
-                    
-                    <div class="form-row-modal triple">
+                    <!-- RIGHT SECTION: Address Information -->
+                    <div class="form-section-right">
+                        <h4>🏠 Address Information</h4>
+                        <p class="form-note">All address fields are optional</p>
+                        <textarea name="address" id="addressEnquiry" placeholder="Full Address (Optional)" rows="2"></textarea>
                         <input type="text" name="city" id="cityEnquiry" placeholder="City (Optional)">
                         <input type="text" name="taluka" id="talukaEnquiry" placeholder="Taluka (Optional)">
                         <input type="text" name="district" id="districtEnquiry" placeholder="District (Optional)">
+                    </div>
+
+                    <!-- BOTTOM: Course Selection (Full Width) -->
+                    <div class="course-section-full">
+                        <h4>📚 Course Selection</h4>
+                        <select name="course" id="courseEnquiry" required>
+                            <option value="">-- Select Course --</option>
+                            <option value="MS-CIT">MS-CIT</option>
+                            <option value="Tally">Tally</option>
+                            <option value="Advance Excel">Advance Excel</option>
+                            <option value="IOT">IOT</option>
+                            <option value="Scratch">Scratch</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        
+                        <!-- Custom course field (hidden by default) -->
+                        <input type="text" name="other_course" id="otherCourseEnquiry" 
+                               placeholder="Please specify course name *" 
+                               style="display: none;">
                     </div>
                 </div>
             </div>
 
             <div class="modal-actions">
                 <button type="submit" class="btn-submit">✅ Submit Enquiry</button>
-                <button type="button" class="btn-cancel" onclick="closeNewEnquiryModal()">❌ Cancel</button>
+                <button type="button" class="btn-cancel" onclick="closeNewEnquiryModal()">❌ Close</button>
             </div>
         </form>
     </div>
@@ -746,3 +743,4 @@ window.addEventListener('click', function(e) {
 });
 </script>
 {% endblock %}
+
