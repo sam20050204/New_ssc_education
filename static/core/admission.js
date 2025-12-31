@@ -1,3 +1,5 @@
+// REPLACE the entire static/core/admission.js file with this:
+
 document.addEventListener('DOMContentLoaded', function() {
     
     // ===================== AUTO-GENERATE FULL NAME =====================
@@ -123,8 +125,76 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     
+    // ===================== RESET FORM - COMPLETE CLEAR =====================
+    const resetBtn = document.querySelector('.btn-reset');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (confirm('⚠️ Are you sure you want to reset the form?\n\nAll entered data will be cleared.')) {
+                // Reset the form
+                form.reset();
+                
+                // Clear photo preview
+                previewImage.src = '';
+                previewImage.style.display = 'none';
+                photoPlaceholder.style.display = 'flex';
+                
+                // Hide custom course field
+                customCourseGroup.style.display = 'none';
+                customCourseInput.required = false;
+                
+                // Clear full name
+                fullName.value = '';
+                
+                // Reset to first field
+                courseSelect.focus();
+                
+                // Show success message
+                showNotification('✅ Form cleared successfully!', 'success');
+            }
+        });
+    }
+    
+    
     // ===================== AUTO-FOCUS FIRST FIELD =====================
     setTimeout(function() {
         courseSelect.focus();
     }, 100);
 });
+
+// ===================== NOTIFICATION FUNCTION =====================
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 90px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        z-index: 10000;
+        animation: slideIn 0.5s ease;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    `;
+    
+    if (type === 'success') {
+        notification.style.background = '#10b981';
+        notification.style.color = 'white';
+    } else {
+        notification.style.background = '#ef4444';
+        notification.style.color = 'white';
+    }
+    
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.5s ease';
+        setTimeout(() => {
+            notification.remove();
+        }, 500);
+    }, 3000);
+}
+

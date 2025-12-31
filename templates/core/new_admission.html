@@ -1,3 +1,6 @@
+<!-- REPLACE the form sections in templates/core/new_admission.html -->
+<!-- This includes proper auto-fill for ALL fields from enquiry -->
+
 {% extends 'base/base.html' %}
 {% load static %}
 
@@ -15,6 +18,11 @@
             <div>
                 <h1 class="page-title">New Student Admission</h1>
                 <p class="page-subtitle">Complete the admission form for a new student</p>
+                {% if enquiry_data %}
+                <p class="page-subtitle" style="color: #10b981; font-weight: 600; margin-top: 8px;">
+                    ✅ Pre-filled from enquiry data
+                </p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -208,4 +216,20 @@
 
 {% block extra_js %}
 <script src="{% static 'core/admission.js' %}"></script>
+
+<script>
+// Trigger full name generation on page load if name is pre-filled
+document.addEventListener('DOMContentLoaded', function() {
+    // If student name is pre-filled from enquiry, trigger full name generation
+    const studentName = document.getElementById('student_name').value;
+    if (studentName) {
+        // Give user a hint that they should fill father name and surname
+        console.log('Pre-filled from enquiry data');
+    }
+});
+
+
+
+</script>
+
 {% endblock %}

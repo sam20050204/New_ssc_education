@@ -592,6 +592,9 @@ function viewEnquiry(enquiryId) {
     fetch(`/enquiries/detail/${enquiryId}/`)
         .then(response => response.json())
         .then(data => {
+            // Determine display course
+            let displayCourse = data.display_course || data.course;
+            
             const content = `
                 <div class="detail-section">
                     <h3>👤 Personal Information</h3>
@@ -613,8 +616,14 @@ function viewEnquiry(enquiryId) {
                     <h3>📚 Course Information</h3>
                     <div class="detail-row">
                         <span class="detail-label">Course:</span>
-                        <span class="course-badge-modal">${data.course}</span>
+                        <span class="course-badge-modal">${displayCourse}</span>
                     </div>
+                    ${data.course === 'Other' && data.custom_course ? `
+                    <div class="detail-row">
+                        <span class="detail-label">Course Type:</span>
+                        <span class="detail-value" style="font-style: italic; color: #7f8c8d;">Custom Course</span>
+                    </div>
+                    ` : ''}
                 </div>
 
                 <div class="detail-section">
@@ -644,6 +653,15 @@ function viewEnquiry(enquiryId) {
                         <span class="detail-value">${data.created_at}</span>
                     </div>
                 </div>
+
+                <div class="modal-actions" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e8e8e8;">
+                    <a href="/enquiries/convert/${enquiryId}/" class="btn-submit">
+                        🎓 Convert to Admission
+                    </a>
+                    <button type="button" class="btn-cancel" onclick="closeViewModal()">
+                        ❌ Close
+                    </button>
+                </div>
             `;
             
             document.getElementById('enquiryDetailsContent').innerHTML = content;
@@ -655,7 +673,6 @@ function viewEnquiry(enquiryId) {
             alert('Error loading enquiry details');
         });
 }
-
 // Close View Modal
 function closeViewModal() {
     document.getElementById('viewEnquiryModal').classList.remove('active');

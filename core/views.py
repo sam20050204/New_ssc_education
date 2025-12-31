@@ -298,7 +298,10 @@ def enquiry_detail(request, id):
     enquiry = get_object_or_404(Enquiry, id=id)
     
     # Get the display course name (handle "Other" course case)
-    display_course = enquiry.custom_course if enquiry.course == "Other" and enquiry.custom_course else enquiry.course
+    if enquiry.course == "Other" and enquiry.custom_course:
+        display_course = enquiry.custom_course
+    else:
+        display_course = enquiry.course
     
     data = {
         'id': enquiry.id,
@@ -317,19 +320,27 @@ def enquiry_detail(request, id):
     
     return JsonResponse(data)
 # ================= CONVERT ENQUIRY TO ADMISSION =================
-# ================= CONVERT ENQUIRY TO ADMISSION =================
 @login_required
 def convert_enquiry(request, id):
+    """Convert enquiry to admission with pre-filled data"""
     enquiry = get_object_or_404(Enquiry, id=id)
     
-    # Store enquiry data in session
+    # Determine the course to display
+    if enquiry.course == 'Other' and enquiry.custom_course:
+        course_value = 'Other'
+        custom_course_value = enquiry.custom_course
+    else:
+        course_value = enquiry.course
+        custom_course_value = ''
+    
+    # Store enquiry data in session for pre-filling
     request.session['enquiry_conversion'] = {
         'enquiry_id': enquiry.id,
         'name': enquiry.name,
         'mobile': enquiry.mobile,
         'education': enquiry.education,
-        'course': enquiry.course,
-        'custom_course': enquiry.custom_course or '',
+        'course': course_value,
+        'custom_course': custom_course_value,
         'address': enquiry.address or '',
         'city': enquiry.city or '',
         'tehsil_block': enquiry.taluka or '',
@@ -340,6 +351,8 @@ def convert_enquiry(request, id):
     return redirect('new_admission')
 
 # ================= NEW ADMISSION =================
+# REPLACE the new_admission function in core/views.py with this:
+
 @login_required
 def new_admission(request):
     if request.method == "POST":
@@ -388,14 +401,22 @@ def new_admission(request):
                 photo=photo
             )
             
+            # Clear session data after successful admission
+            if 'enquiry_conversion' in request.session:
+                del request.session['enquiry_conversion']
+            
             messages.success(request, f"Admission for {full_name} has been successfully recorded! Total Fees: ₹{total_fees}")
             return redirect("new_admission")
             
         except Exception as e:
             messages.error(request, f"Error: {str(e)}")
     
+    # Get enquiry data from session if available
+    enquiry_data = request.session.get('enquiry_conversion', {})
+    
     return render(request, "core/new_admission.html", {
-        "active_page": "new_admission"
+        "active_page": "new_admission",
+        "enquiry_data": enquiry_data  # Pass to template
     })
 
 
