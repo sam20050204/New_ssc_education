@@ -420,7 +420,11 @@
                 </td>
                 <td>{{ e.city|default:"-" }}</td>
                 <td>{{ e.created_at|date:"d M Y, h:i A" }}</td>
+                
                 <td>
+                    <a href="{% url 'convert_enquiry' e.id %}" class="btn" style="background: #10b981; margin-right: 5px;">
+                        🎓 Convert
+                    </a>
                     <button
                         type="button"
                         class="btn red"

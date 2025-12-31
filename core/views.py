@@ -298,8 +298,7 @@ def enquiry_detail(request, id):
     enquiry = get_object_or_404(Enquiry, id=id)
     
     # Get the display course name (handle "Other" course case)
-    display_course = enquiry.course
-    # Note: Enquiry model doesn't have custom_course field, so we just show "Other"
+    display_course = enquiry.custom_course if enquiry.course == "Other" and enquiry.custom_course else enquiry.course
     
     data = {
         'id': enquiry.id,
@@ -317,12 +316,14 @@ def enquiry_detail(request, id):
     return JsonResponse(data)
 
 # ================= CONVERT ENQUIRY TO ADMISSION =================
+# ================= CONVERT ENQUIRY TO ADMISSION =================
 @login_required
 def convert_enquiry(request, id):
     enquiry = get_object_or_404(Enquiry, id=id)
     
-    # Prepare initial data
-    initial_data = {
+    # Store enquiry data in session
+    request.session['enquiry_conversion'] = {
+        'enquiry_id': enquiry.id,
         'name': enquiry.name,
         'mobile': enquiry.mobile,
         'education': enquiry.education,
@@ -334,11 +335,8 @@ def convert_enquiry(request, id):
         'district': enquiry.district or '',
     }
     
-    return render(request, "core/admission_from_enquiry.html", {
-        "enquiry": enquiry,
-        "initial_data": initial_data,
-        "active_page": "enquiries"
-    })
+    # Redirect to new admission page
+    return redirect('new_admission')
 
 # ================= NEW ADMISSION =================
 @login_required

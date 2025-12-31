@@ -1,7 +1,7 @@
 {% extends 'base/base.html' %}
 {% load static %}
 
-{% block title %}Convert Enquiry to Admission{% endblock %}
+{% block title %}New Admission{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/admission.css' %}">
@@ -13,8 +13,8 @@
         <div class="page-title-wrapper">
             <div class="page-icon">🎓</div>
             <div>
-                <h1 class="page-title">Convert Enquiry to Admission</h1>
-                <p class="page-subtitle">Complete the admission form for {{ enquiry.name }}</p>
+                <h1 class="page-title">New Student Admission</h1>
+                <p class="page-subtitle">Complete the admission form for a new student</p>
             </div>
         </div>
     </div>
@@ -24,38 +24,29 @@
 {% block content %}
 
 <div class="admission-container">
-    <!-- INFO BOX -->
-    <div style="background: linear-gradient(135deg, #e8f4f8 0%, #d4e9f5 100%); padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #667eea;">
-        <h3 style="color: #667eea; margin-bottom: 10px;">📋 Enquiry Details</h3>
-        <p style="margin: 5px 0;"><strong>Name:</strong> {{ enquiry.name }}</p>
-        <p style="margin: 5px 0;"><strong>Mobile:</strong> {{ enquiry.mobile }}</p>
-        <p style="margin: 5px 0;"><strong>Education:</strong> {{ enquiry.education }}</p>
-        <p style="margin: 5px 0;"><strong>Course:</strong> {{ enquiry.get_display_course }}</p>
-    </div>
-
     <form method="post" action="{% url 'new_admission' %}" enctype="multipart/form-data" class="admission-form" id="admissionForm">
         {% csrf_token %}
         
-        <!-- Course Selection (Pre-filled) -->
+        <!-- Course Selection -->
         <div class="form-section">
             <h3 class="section-title">📚 Course Information</h3>
             
             <div class="form-group full-width">
-                <label for="course">Course *</label>
+                <label for="course">Course <span class="required">*</span></label>
                 <select name="course" id="course" required>
                     <option value="">-- Select Course --</option>
-                    <option value="MS-CIT" {% if initial_data.course == "MS-CIT" %}selected{% endif %}>MS-CIT</option>
-                    <option value="Tally" {% if initial_data.course == "Tally" %}selected{% endif %}>Tally</option>
-                    <option value="Advance Excel" {% if initial_data.course == "Advance Excel" %}selected{% endif %}>Advance Excel</option>
-                    <option value="IOT" {% if initial_data.course == "IOT" %}selected{% endif %}>IOT</option>
-                    <option value="Scratch" {% if initial_data.course == "Scratch" %}selected{% endif %}>Scratch</option>
-                    <option value="Other" {% if initial_data.course == "Other" %}selected{% endif %}>Other (Specify below)</option>
+                    <option value="MS-CIT" {% if enquiry_data.course == "MS-CIT" %}selected{% endif %}>MS-CIT</option>
+                    <option value="Tally" {% if enquiry_data.course == "Tally" %}selected{% endif %}>Tally</option>
+                    <option value="Advance Excel" {% if enquiry_data.course == "Advance Excel" %}selected{% endif %}>Advance Excel</option>
+                    <option value="IOT" {% if enquiry_data.course == "IOT" %}selected{% endif %}>IOT</option>
+                    <option value="Scratch" {% if enquiry_data.course == "Scratch" %}selected{% endif %}>Scratch</option>
+                    <option value="Other" {% if enquiry_data.course == "Other" %}selected{% endif %}>Other (Specify below)</option>
                 </select>
             </div>
             
-            <div class="form-group full-width" id="customCourseGroup" style="display: {% if initial_data.course == 'Other' %}block{% else %}none{% endif %};">
-                <label for="custom_course">Specify Course Name *</label>
-                <input type="text" name="custom_course" id="custom_course" value="{{ initial_data.custom_course }}" placeholder="Enter course name">
+            <div class="form-group full-width" id="customCourseGroup" style="display: {% if enquiry_data.course == 'Other' %}block{% else %}none{% endif %};">
+                <label for="custom_course">Specify Course Name <span class="required">*</span></label>
+                <input type="text" name="custom_course" id="custom_course" value="{{ enquiry_data.custom_course|default:'' }}" placeholder="Enter course name">
             </div>
         </div>
 
@@ -67,23 +58,23 @@
                 <div class="name-fields">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="student_name">Student Name *</label>
-                            <input type="text" name="student_name" id="student_name" value="{{ initial_data.name }}" required>
+                            <label for="student_name">Student Name <span class="required">*</span></label>
+                            <input type="text" name="student_name" id="student_name" value="{{ enquiry_data.name|default:'' }}" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="father_name">Father Name *</label>
+                            <label for="father_name">Father Name <span class="required">*</span></label>
                             <input type="text" name="father_name" id="father_name" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="surname">Surname *</label>
+                            <label for="surname">Surname <span class="required">*</span></label>
                             <input type="text" name="surname" id="surname" required>
                         </div>
                     </div>
                     
                     <div class="form-group full-width">
-                        <label for="full_name">Full Name (Auto-generated) *</label>
+                        <label for="full_name">Full Name (Auto-generated) <span class="required">*</span></label>
                         <input type="text" name="full_name" id="full_name" readonly required>
                     </div>
                 </div>
@@ -101,17 +92,17 @@
             </div>
             
             <div class="form-group full-width">
-                <label for="mother_name">Mother Name *</label>
+                <label for="mother_name">Mother Name <span class="required">*</span></label>
                 <input type="text" name="mother_name" id="mother_name" required>
             </div>
             
             <div class="form-group">
-                <label for="date_of_birth">Date of Birth *</label>
+                <label for="date_of_birth">Date of Birth <span class="required">*</span></label>
                 <input type="date" name="date_of_birth" id="date_of_birth" required>
             </div>
             
             <div class="form-group">
-                <label for="gender">Gender *</label>
+                <label for="gender">Gender <span class="required">*</span></label>
                 <select name="gender" id="gender" required>
                     <option value="">-- Select Gender --</option>
                     <option value="Male">Male</option>
@@ -121,7 +112,7 @@
             </div>
             
             <div class="form-group">
-                <label for="marital_status">Marital Status *</label>
+                <label for="marital_status">Marital Status <span class="required">*</span></label>
                 <select name="marital_status" id="marital_status" required>
                     <option value="">-- Select Status --</option>
                     <option value="Single">Single</option>
@@ -130,13 +121,13 @@
             </div>
         </div>
 
-        <!-- Contact Information (Pre-filled) -->
+        <!-- Contact Information -->
         <div class="form-section">
             <h3 class="section-title">📞 Contact Information</h3>
             
             <div class="form-group">
-                <label for="mobile_own">Mobile No. (Own) *</label>
-                <input type="tel" name="mobile_own" id="mobile_own" value="{{ initial_data.mobile }}" pattern="[0-9]{10}" placeholder="10-digit mobile number" required>
+                <label for="mobile_own">Mobile No. (Own) <span class="required">*</span></label>
+                <input type="tel" name="mobile_own" id="mobile_own" value="{{ enquiry_data.mobile|default:'' }}" pattern="[0-9]{10}" placeholder="10-digit mobile number" required>
             </div>
             
             <div class="form-group">
@@ -145,43 +136,43 @@
             </div>
         </div>
 
-        <!-- Address Information (Pre-filled) -->
+        <!-- Address Information -->
         <div class="form-section">
             <h3 class="section-title">🏠 Address Information</h3>
             
             <div class="form-group full-width">
-                <label for="address">Address *</label>
-                <textarea name="address" id="address" rows="3" required>{{ initial_data.address }}</textarea>
+                <label for="address">Address <span class="required">*</span></label>
+                <textarea name="address" id="address" rows="3" required>{{ enquiry_data.address|default:'' }}</textarea>
             </div>
             
             <div class="form-group">
-                <label for="city">City *</label>
-                <input type="text" name="city" id="city" value="{{ initial_data.city }}" required>
+                <label for="city">City <span class="required">*</span></label>
+                <input type="text" name="city" id="city" value="{{ enquiry_data.city|default:'' }}" required>
             </div>
             
             <div class="form-group">
-                <label for="tehsil_block">Tehsil/Block *</label>
-                <input type="text" name="tehsil_block" id="tehsil_block" value="{{ initial_data.tehsil_block }}" required>
+                <label for="tehsil_block">Tehsil/Block <span class="required">*</span></label>
+                <input type="text" name="tehsil_block" id="tehsil_block" value="{{ enquiry_data.tehsil_block|default:'' }}" required>
             </div>
             
             <div class="form-group">
-                <label for="district">District *</label>
-                <input type="text" name="district" id="district" value="{{ initial_data.district }}" required>
+                <label for="district">District <span class="required">*</span></label>
+                <input type="text" name="district" id="district" value="{{ enquiry_data.district|default:'' }}" required>
             </div>
             
             <div class="form-group">
-                <label for="pin_code">Pin Code *</label>
+                <label for="pin_code">Pin Code <span class="required">*</span></label>
                 <input type="text" name="pin_code" id="pin_code" pattern="[0-9]{6}" placeholder="6-digit pin code" required>
             </div>
         </div>
 
-        <!-- Educational Information (Pre-filled) -->
+        <!-- Educational Information -->
         <div class="form-section">
             <h3 class="section-title">🎯 Educational Information</h3>
             
             <div class="form-group full-width">
-                <label for="educational_qualification">Educational Qualification *</label>
-                <input type="text" name="educational_qualification" id="educational_qualification" value="{{ initial_data.education }}" placeholder="e.g., 12th Pass, Graduate, etc." required>
+                <label for="educational_qualification">Educational Qualification <span class="required">*</span></label>
+                <input type="text" name="educational_qualification" id="educational_qualification" value="{{ enquiry_data.education|default:'' }}" placeholder="e.g., 12th Pass, Graduate, etc." required>
             </div>
         </div>
 
@@ -190,7 +181,7 @@
             <h3 class="section-title">💰 Fee Information</h3>
             
             <div class="form-group full-width">
-                <label for="total_fees">Total Course Fees (₹) *</label>
+                <label for="total_fees">Total Course Fees (₹) <span class="required">*</span></label>
                 <input type="number" name="total_fees" id="total_fees" value="5000" min="0" step="0.01" required>
                 <small style="color: #92400e; font-size: 13px; margin-top: 5px; display: block; font-weight: 600;">
                     💡 Default: ₹5,000 (You can edit this amount)
@@ -206,7 +197,7 @@
             <button type="reset" class="btn-reset" onclick="return confirm('Are you sure you want to reset the form?')">
                 🔄 Reset Form
             </button>
-            <a href="{% url 'enquiry_list' %}" class="btn-cancel">
+            <a href="{% url 'dashboard' %}" class="btn-cancel">
                 ❌ Cancel
             </a>
         </div>
