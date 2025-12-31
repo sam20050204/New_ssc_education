@@ -314,7 +314,7 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.6);
-    z-index: 10000;
+    z-index: 999; /* FIXED: Changed from 10000 to 999 to be below navbar */
     overflow-y: auto;
     animation: fadeIn 0.3s ease;
 }

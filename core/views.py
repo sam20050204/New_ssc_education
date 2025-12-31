@@ -294,12 +294,16 @@ def enquiry_detail(request, id):
     """Return enquiry details as JSON"""
     enquiry = get_object_or_404(Enquiry, id=id)
     
+    # Get the display course name (handle "Other" course case)
+    display_course = enquiry.course
+    # Note: Enquiry model doesn't have custom_course field, so we just show "Other"
+    
     data = {
         'id': enquiry.id,
         'name': enquiry.name,
         'mobile': enquiry.mobile,
         'education': enquiry.education,
-        'course': enquiry.course,
+        'course': display_course,
         'address': enquiry.address or '',
         'city': enquiry.city or '',
         'taluka': enquiry.taluka or '',
