@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
-
-from django.db import models
+from decimal import Decimal
 
 class Enquiry(models.Model):
     name = models.CharField(max_length=100)
@@ -104,13 +103,13 @@ class AdmittedStudent(models.Model):
     
     @property
     def remaining_fees(self):
-        return self.total_fees - self.paid_fees
+        return (self.total_fees or Decimal('0')) - (self.paid_fees or Decimal('0'))
     
     @property
     def fees_percentage_paid(self):
-        if self.total_fees > 0:
-            return (self.paid_fees / self.total_fees) * 100
-        return 0
+        if self.total_fees and self.total_fees > 0:
+            return (self.paid_fees / self.total_fees) * Decimal('100')
+        return Decimal('0')
     
     class Meta:
         ordering = ['-admission_date']
@@ -175,7 +174,7 @@ class Student(models.Model):
         ordering = ['admission_date', 'name']
     
     def __str__(self):
-        return f"{self.name} - {self.course}"
+        return f"{self.name} - {self.course.name if self.course else 'No Course'}"
     
     @property
     def remaining_fees(self):
@@ -238,16 +237,14 @@ class FeePayment(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.receipt_no:
-            # Generate receipt number
-            last_payment = FeePayment.objects.order_by('-id').first()
-            if last_payment and last_payment.receipt_no:
-                try:
+            with transaction.atomic():
+                last_payment = FeePayment.objects.select_for_update().order_by('-id').first()
+                if last_payment and last_payment.receipt_no:
                     last_number = int(last_payment.receipt_no.split('-')[1])
                     new_number = last_number + 1
-                except:
+                else:
                     new_number = 1
-            else:
-                new_number = 1
-            self.receipt_no = f"RCP-{new_number:06d}"
-        
+
+                self.receipt_no = f"RCP-{new_number:06d}"
+
         super().save(*args, **kwargs)

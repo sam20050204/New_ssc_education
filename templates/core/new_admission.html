@@ -1,6 +1,3 @@
-<!-- REPLACE the form sections in templates/core/new_admission.html -->
-<!-- This includes proper auto-fill for ALL fields from enquiry -->
-
 {% extends 'base/base.html' %}
 {% load static %}
 
@@ -8,6 +5,120 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/admission.css' %}">
+<style>
+/* Add Course Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 999;
+    overflow-y: auto;
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    width: 95%;
+    max-width: 500px;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideDown 0.3s ease;
+    position: relative;
+}
+
+.modal-content h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #667eea;
+}
+
+.modal-close {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    font-size: 32px;
+    font-weight: 700;
+    color: #95a5a6;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    line-height: 1;
+    background: none;
+    border: none;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: #e74c3c;
+    transform: rotate(90deg);
+}
+
+.modal-close:focus {
+    outline: 2px solid rgba(102, 126, 234, 0.5);
+    outline-offset: 2px;
+}
+
+.add-course-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.add-course-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.add-course-btn:focus {
+    outline: 2px solid rgba(16, 185, 129, 0.5);
+    outline-offset: 2px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+</style>
 {% endblock %}
 
 {% block page_heading %}
@@ -48,8 +159,23 @@
                     <option value="Advance Excel" {% if enquiry_data.course == "Advance Excel" %}selected{% endif %}>Advance Excel</option>
                     <option value="IOT" {% if enquiry_data.course == "IOT" %}selected{% endif %}>IOT</option>
                     <option value="Scratch" {% if enquiry_data.course == "Scratch" %}selected{% endif %}>Scratch</option>
+                    
+                    <!-- Dynamic Courses from Database -->
+                    {% for course in all_courses %}
+                        {% if course.name not in "MS-CIT,Tally,Advance Excel,IOT,Scratch" %}
+                            <option value="{{ course.name }}" {% if enquiry_data.course == course.name %}selected{% endif %}>
+                                {{ course.name }}
+                            </option>
+                        {% endif %}
+                    {% endfor %}
+                    
                     <option value="Other" {% if enquiry_data.course == "Other" %}selected{% endif %}>Other (Specify below)</option>
                 </select>
+                
+                <!-- Add New Course Button -->
+                <button type="button" class="add-course-btn" onclick="openAddCourseModal()">
+                    ➕ Add New Course to Database
+                </button>
             </div>
             
             <div class="form-group full-width" id="customCourseGroup" style="display: {% if enquiry_data.course == 'Other' %}block{% else %}none{% endif %};">
@@ -89,7 +215,7 @@
                 
                 <div class="photo-upload-container">
                     <label class="photo-label">Student Photo</label>
-                    <div class="photo-preview" id="photoPreview">
+                    <div class="photo-preview">
                         <span class="photo-placeholder">📷</span>
                         <img id="previewImage" style="display: none;">
                     </div>
@@ -104,19 +230,21 @@
                 <input type="text" name="mother_name" id="mother_name" required>
             </div>
             
-            <div class="form-group">
-                <label for="date_of_birth">Date of Birth <span class="required">*</span></label>
-                <input type="date" name="date_of_birth" id="date_of_birth" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="gender">Gender <span class="required">*</span></label>
-                <select name="gender" id="gender" required>
-                    <option value="">-- Select Gender --</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                </select>
+            <div class="form-row double">
+                <div class="form-group">
+                    <label for="date_of_birth">Date of Birth <span class="required">*</span></label>
+                    <input type="date" name="date_of_birth" id="date_of_birth" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="gender">Gender <span class="required">*</span></label>
+                    <select name="gender" id="gender" required>
+                        <option value="">-- Select Gender --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
             </div>
             
             <div class="form-group">
@@ -133,14 +261,18 @@
         <div class="form-section">
             <h3 class="section-title">📞 Contact Information</h3>
             
-            <div class="form-group">
-                <label for="mobile_own">Mobile No. (Own) <span class="required">*</span></label>
-                <input type="tel" name="mobile_own" id="mobile_own" value="{{ enquiry_data.mobile|default:'' }}" pattern="[0-9]{10}" placeholder="10-digit mobile number" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="parent_mobile">Parent Mobile No. (Optional)</label>
-                <input type="tel" name="parent_mobile" id="parent_mobile" pattern="[0-9]{10}" placeholder="10-digit mobile number">
+            <div class="form-row double">
+                <div class="form-group">
+                    <label for="mobile_own">Mobile No. (Own) <span class="required">*</span></label>
+                    <input type="tel" name="mobile_own" id="mobile_own" value="{{ enquiry_data.mobile|default:'' }}" pattern="[0-9]{10}" placeholder="10-digit mobile number" required>
+                    <span class="error-message"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="parent_mobile">Parent Mobile No. (Optional)</label>
+                    <input type="tel" name="parent_mobile" id="parent_mobile" pattern="[0-9]{10}" placeholder="10-digit mobile number">
+                    <span class="error-message"></span>
+                </div>
             </div>
         </div>
 
@@ -153,24 +285,27 @@
                 <textarea name="address" id="address" rows="3" required>{{ enquiry_data.address|default:'' }}</textarea>
             </div>
             
-            <div class="form-group">
-                <label for="city">City <span class="required">*</span></label>
-                <input type="text" name="city" id="city" value="{{ enquiry_data.city|default:'' }}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="tehsil_block">Tehsil/Block <span class="required">*</span></label>
-                <input type="text" name="tehsil_block" id="tehsil_block" value="{{ enquiry_data.tehsil_block|default:'' }}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="district">District <span class="required">*</span></label>
-                <input type="text" name="district" id="district" value="{{ enquiry_data.district|default:'' }}" required>
+            <div class="form-row triple">
+                <div class="form-group">
+                    <label for="city">City <span class="required">*</span></label>
+                    <input type="text" name="city" id="city" value="{{ enquiry_data.city|default:'' }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tehsil_block">Tehsil/Block <span class="required">*</span></label>
+                    <input type="text" name="tehsil_block" id="tehsil_block" value="{{ enquiry_data.tehsil_block|default:'' }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="district">District <span class="required">*</span></label>
+                    <input type="text" name="district" id="district" value="{{ enquiry_data.district|default:'' }}" required>
+                </div>
             </div>
             
             <div class="form-group">
                 <label for="pin_code">Pin Code <span class="required">*</span></label>
                 <input type="text" name="pin_code" id="pin_code" pattern="[0-9]{6}" placeholder="6-digit pin code" required>
+                <span class="error-message"></span>
             </div>
         </div>
 
@@ -202,7 +337,7 @@
             <button type="submit" class="btn-submit">
                 ✅ Complete Admission
             </button>
-            <button type="reset" class="btn-reset" onclick="return confirm('Are you sure you want to reset the form?')">
+            <button type="button" class="btn-reset">
                 🔄 Reset Form
             </button>
             <a href="{% url 'dashboard' %}" class="btn-cancel">
@@ -212,24 +347,96 @@
     </form>
 </div>
 
+<!-- ADD COURSE MODAL -->
+<div id="addCourseModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeAddCourseModal()" type="button" aria-label="Close modal">&times;</button>
+        <h2>➕ Add New Course</h2>
+        
+        <form id="addCourseForm">
+            <div class="form-group full-width">
+                <label for="newCourseName">Course Name <span class="required">*</span></label>
+                <input type="text" id="newCourseName" name="course_name" placeholder="Enter course name" required>
+                <small style="color: #7f8c8d; font-size: 12px; margin-top: 5px; display: block;">
+                    This course will be added to the database and available for all future admissions
+                </small>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="submit" class="btn-submit">
+                    ✅ Add Course
+                </button>
+                <button type="button" class="btn-cancel" onclick="closeAddCourseModal()">
+                    ❌ Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ADD COURSE MODAL -->
+<div id="addCourseModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeAddCourseModal()" type="button" aria-label="Close modal">&times;</button>
+        <h2>➕ Add New Course to Database</h2>
+        
+        <form id="addCourseForm">
+            {% csrf_token %}
+            <div class="form-group full-width">
+                <label for="newCourseName">Course Name <span class="required">*</span></label>
+                <input type="text" id="newCourseName" name="course_name" placeholder="Enter course name" required>
+                <small style="color: #7f8c8d; font-size: 12px; margin-top: 5px; display: block;">
+                    This course will be saved to database permanently
+                </small>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="submit" class="btn-submit">
+                    ✅ Add to Database
+                </button>
+                <button type="button" class="btn-cancel" onclick="closeAddCourseModal()">
+                    ❌ Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'core/admission.js' %}"></script>
-
 <script>
-// Trigger full name generation on page load if name is pre-filled
+// Add Course Modal Form Handler
 document.addEventListener('DOMContentLoaded', function() {
-    // If student name is pre-filled from enquiry, trigger full name generation
-    const studentName = document.getElementById('student_name').value;
-    if (studentName) {
-        // Give user a hint that they should fill father name and surname
-        console.log('Pre-filled from enquiry data');
+    const addCourseForm = document.getElementById('addCourseForm');
+    const courseSelect = document.getElementById('course');
+    
+    if (addCourseForm) {
+        addCourseForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const courseName = document.getElementById('newCourseName').value.trim();
+            
+            if (!courseName) {
+                alert('Please enter a course name');
+                return;
+            }
+            
+            // Add course to select dropdown
+            const option = document.createElement('option');
+            option.value = courseName;
+            option.textContent = courseName;
+            option.selected = true;
+            courseSelect.appendChild(option);
+            
+            // Show success message
+            alert('✅ Course added successfully!');
+            
+            // Reset form and close modal
+            addCourseForm.reset();
+            closeAddCourseModal();
+        });
     }
 });
-
-
-
 </script>
-
 {% endblock %}

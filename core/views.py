@@ -1,5 +1,3 @@
-# Make sure these imports are at the TOP of your core/views.py file
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -11,9 +9,8 @@ from django.utils import timezone
 from django.db.models.functions import ExtractYear
 from django.db import transaction
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings  # ← ADD THIS LINE
-
+from django.views.decorators.csrf import csrf_protect  # ADD THIS LINE
+from django.conf import settings
 import csv
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
@@ -21,8 +18,8 @@ from io import BytesIO
 from datetime import datetime
 from decimal import Decimal
 import json
-import shutil  # ← ADD THIS LINE
-import os      # ← ADD THIS LINE
+import shutil
+import os
 
 from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
 
@@ -414,11 +411,76 @@ def new_admission(request):
     # Get enquiry data from session if available
     enquiry_data = request.session.get('enquiry_conversion', {})
     
+    # Get all courses from database
+    all_courses = Course.objects.all().order_by('name')
+    
     return render(request, "core/new_admission.html", {
         "active_page": "new_admission",
-        "enquiry_data": enquiry_data  # Pass to template
+        "enquiry_data": enquiry_data,
+        "all_courses": all_courses  # Pass courses to template
     })
+# ================= NEW: ADD COURSE TO DATABASE =================
+@login_required
+@require_http_methods(["POST"])
+def add_course(request):
+    """Add a new course to the database"""
+    try:
+        data = json.loads(request.body)
+        course_name = data.get('course_name', '').strip()
+        
+        if not course_name:
+            return JsonResponse({
+                'success': False,
+                'error': 'Course name is required'
+            })
+        
+        # Check if course already exists
+        if Course.objects.filter(name__iexact=course_name).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'This course already exists'
+            })
+        
+        # Create new course
+        course = Course.objects.create(
+            name=course_name,
+            duration='To be defined'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'course': {
+                'id': course.id,
+                'name': course.name
+            },
+            'message': f'Course "{course_name}" added successfully!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
+
+# ================= NEW: GET ALL COURSES =================
+@login_required
+def get_courses(request):
+    """Get all courses from database"""
+    try:
+        courses = Course.objects.all().order_by('name')
+        courses_list = [{'id': c.id, 'name': c.name} for c in courses]
+        
+        return JsonResponse({
+            'success': True,
+            'courses': courses_list
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 # ================= ADMITTED STUDENTS LIST =================
 @login_required
@@ -735,88 +797,34 @@ def number_to_words(num):
 # ================= EXPORT STUDENTS TO EXCEL =================
 @login_required
 def export_students_excel(request):
-    students = Student.objects.filter(is_active=True)
-    
-    month = request.GET.get('month', '')
-    year = request.GET.get('year', '')
-    course_id = request.GET.get('course', '')
-    
-    if month and year:
-        students = students.filter(
-            admission_date__month=month,
-            admission_date__year=year
-        )
-    elif year:
-        students = students.filter(admission_date__year=year)
-    
-    if course_id:
-        students = students.filter(course_id=course_id)
-    
-    students = students.order_by('admission_date', 'name')
-    
+    students = AdmittedStudent.objects.all().order_by('-admission_date')
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Admitted Students"
-    
-    headers = [
-        'S.No', 'Name', 'Phone', 'Email', 'Course', 'Admission Date',
-        'Address', 'City', 'State', 'Pincode', 'Parent Name', 'Parent Phone',
-        'Qualification', 'Date of Birth', 'Total Fees', 'Paid Fees', 'Remaining Fees'
-    ]
-    
-    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    header_font = Font(bold=True, color="FFFFFF", size=12)
-    
-    for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col_num)
-        cell.value = header
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    for row_num, student in enumerate(students, 2):
-        ws.cell(row=row_num, column=1).value = row_num - 1
-        ws.cell(row=row_num, column=2).value = student.name
-        ws.cell(row=row_num, column=3).value = student.phone
-        ws.cell(row=row_num, column=4).value = student.email or ''
-        ws.cell(row=row_num, column=5).value = student.course.name if student.course else ''
-        ws.cell(row=row_num, column=6).value = student.admission_date.strftime('%d-%m-%Y')
-        ws.cell(row=row_num, column=7).value = student.address or ''
-        ws.cell(row=row_num, column=8).value = student.city or ''
-        ws.cell(row=row_num, column=9).value = student.state or ''
-        ws.cell(row=row_num, column=10).value = student.pincode or ''
-        ws.cell(row=row_num, column=11).value = student.parent_name or ''
-        ws.cell(row=row_num, column=12).value = student.parent_phone or ''
-        ws.cell(row=row_num, column=13).value = student.qualification or ''
-        ws.cell(row=row_num, column=14).value = student.date_of_birth.strftime('%d-%m-%Y') if student.date_of_birth else ''
-        ws.cell(row=row_num, column=15).value = float(student.total_fees)
-        ws.cell(row=row_num, column=16).value = float(student.paid_fees)
-        ws.cell(row=row_num, column=17).value = float(student.remaining_fees)
-    
-    for column in ws.columns:
-        max_length = 0
-        column_letter = column[0].column_letter
-        for cell in column:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        adjusted_width = min(max_length + 2, 50)
-        ws.column_dimensions[column_letter].width = adjusted_width
-    
-    excel_file = BytesIO()
-    wb.save(excel_file)
-    excel_file.seek(0)
-    
-    response = HttpResponse(
-        excel_file.read(),
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    
-    filename = f'admitted_students_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    
+
+    headers = ['S.No','Full Name','Mobile','Course','Total Fees','Paid Fees','Remaining Fees','Admission Date']
+    ws.append(headers)
+
+    for i, s in enumerate(students,1):
+        course = s.custom_course if s.course == 'Other' else s.course
+        ws.append([
+            i,
+            s.full_name,
+            s.mobile_own,
+            course,
+            float(s.total_fees),
+            float(s.paid_fees),
+            float(s.remaining_fees),
+            s.admission_date.strftime('%d-%m-%Y')
+        ])
+
+    file = BytesIO()
+    wb.save(file)
+    file.seek(0)
+
+    response = HttpResponse(file.read(),content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=students_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
     return response
 
 # ================= RECEIPTS VIEW =================
@@ -959,8 +967,8 @@ def update_receipt(request, receipt_id):
             
             # Update student's paid fees
             with transaction.atomic():
-                student = payment.student
-                student.paid_fees = student.paid_fees + difference
+                student = AdmittedStudent.objects.select_for_update().get(id=payment.student.id)
+                student.paid_fees += difference
                 if student.paid_fees < 0:
                     student.paid_fees = 0
                 student.save()
@@ -1240,7 +1248,9 @@ def export_admitted_students_excel(request):
         ws.cell(row=row_num, column=20).value = float(student.total_fees)
         ws.cell(row=row_num, column=21).value = float(student.paid_fees)
         ws.cell(row=row_num, column=22).value = float(student.remaining_fees)
-        ws.cell(row=row_num, column=23).value = f"{student.fees_percentage_paid:.2f}%"
+        percentage = (student.paid_fees / student.total_fees * 100) if student.total_fees else 0
+        ws.cell(row=row_num, column=23).value = f"{percentage:.2f}%"
+
         ws.cell(row=row_num, column=24).value = student.admission_date.strftime('%d-%m-%Y %I:%M %p')
     
     # Adjust column widths
@@ -1284,9 +1294,7 @@ def export_admitted_students_excel(request):
     return response
 
 
-# ================= DELETE ADMITTED STUDENTS (BULK DELETE) =================
-from django.views.decorators.http import require_http_methods
-import json
+
 
 @login_required
 @require_http_methods(["POST"])
@@ -1373,37 +1381,64 @@ from django.conf import settings
 
 @login_required
 def backup_database(request):
-    """
-    Create a backup of the SQLite database and download it
-    """
     try:
-        # Get the database path from settings
         db_path = settings.DATABASES['default']['NAME']
-        
-        # Create backup filename with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_filename = f'database_backup_{timestamp}.db'
-        
-        # Create a temporary backup file
-        backup_path = os.path.join(settings.BASE_DIR, 'temp_backup.db')
-        
-        # Copy the database file
+        backup_name = f'database_backup_{timestamp}.db'
+        backup_path = os.path.join(settings.BASE_DIR, backup_name)
+
         shutil.copy2(db_path, backup_path)
-        
-        # Read the backup file
+
         with open(backup_path, 'rb') as f:
             response = HttpResponse(f.read(), content_type='application/x-sqlite3')
-            response['Content-Disposition'] = f'attachment; filename="{backup_filename}"'
-        
-        # Clean up temporary file
-        try:
-            os.remove(backup_path)
-        except:
-            pass
-        
-        messages.success(request, f'✅ Database backup created successfully: {backup_filename}')
+            response['Content-Disposition'] = f'attachment; filename="{backup_name}"'
+
+        os.remove(backup_path)
         return response
-        
+
     except Exception as e:
-        messages.error(request, f'❌ Error creating backup: {str(e)}')
-        return redirect('dashboard')
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def add_course_ajax(request):
+    """Add a new course via AJAX"""
+    try:
+        data = json.loads(request.body)
+        course_name = data.get('course_name', '').strip()
+        
+        if not course_name:
+            return JsonResponse({
+                'success': False,
+                'message': 'Course name cannot be empty'
+            }, status=400)
+        
+        # Check if course already exists
+        if Course.objects.filter(name__iexact=course_name).exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'This course already exists in database!'
+            }, status=400)
+        
+        # Create new course
+        course = Course.objects.create(name=course_name)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Course "{course_name}" added successfully!',
+            'course_id': course.id,
+            'course_name': course.name
+        }, status=201)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
