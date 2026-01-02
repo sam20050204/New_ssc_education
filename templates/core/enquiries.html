@@ -612,8 +612,22 @@ function viewEnquiry(enquiryId) {
     fetch(`/enquiries/detail/${enquiryId}/`)
         .then(response => response.json())
         .then(data => {
-            // Determine display course
+            // Determine display course - prioritize custom_course if "Other" was selected
             let displayCourse = data.display_course || data.course;
+            let courseLabel = displayCourse;
+            
+            // If it's a custom course, add a badge
+            let courseBadgeHTML = '';
+            if (data.course === 'Other' && data.custom_course) {
+                courseBadgeHTML = `
+                    <span class="course-badge-modal">${data.custom_course}</span>
+                    <small style="color: #7f8c8d; font-style: italic; display: block; margin-top: 5px;">
+                        (Custom Course)
+                    </small>
+                `;
+            } else {
+                courseBadgeHTML = `<span class="course-badge-modal">${displayCourse}</span>`;
+            }
             
             const content = `
                 <div class="detail-section">
@@ -636,14 +650,8 @@ function viewEnquiry(enquiryId) {
                     <h3>📚 Course Information</h3>
                     <div class="detail-row">
                         <span class="detail-label">Course:</span>
-                        <span class="course-badge-modal">${displayCourse}</span>
+                        <div>${courseBadgeHTML}</div>
                     </div>
-                    ${data.course === 'Other' && data.custom_course ? `
-                    <div class="detail-row">
-                        <span class="detail-label">Course Type:</span>
-                        <span class="detail-value" style="font-style: italic; color: #7f8c8d;">Custom Course</span>
-                    </div>
-                    ` : ''}
                 </div>
 
                 <div class="detail-section">

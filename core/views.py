@@ -325,6 +325,7 @@ def enquiry_detail(request, id):
     }
     
     return JsonResponse(data)
+
 # ================= CONVERT ENQUIRY TO ADMISSION =================
 @login_required
 def convert_enquiry(request, id):
