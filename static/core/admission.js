@@ -1,3 +1,19 @@
+/* MODAL CONTROLS - MUST BE OUTSIDE DOMContentLoaded */
+function openAddCourseModal() {
+    const modal = document.getElementById('addCourseModal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeAddCourseModal() {
+    const modal = document.getElementById('addCourseModal');
+    if (modal) {
+        modal.classList.remove('active');
+        const form = document.getElementById('addCourseForm');
+        if (form) form.reset();
+    }
+}
+
+/* MAIN CODE */
 document.addEventListener('DOMContentLoaded', function() {
     
     const studentName = document.getElementById('student_name');
@@ -46,13 +62,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!file) return;
 
             if (file.size > 2 * 1024 * 1024) {
-                alert('File size should be less than 2MB');
+                alert('❌ File size should be less than 2MB');
                 photoInput.value = '';
                 return;
             }
 
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
+                alert('❌ Please select an image file');
                 photoInput.value = '';
                 return;
             }
@@ -77,17 +93,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (mobileOwn && !/^[0-9]{10}$/.test(mobileOwn)) {
                 e.preventDefault(); 
-                alert('Invalid 10-digit mobile number'); 
+                alert('❌ Invalid 10-digit mobile number'); 
                 return;
             }
             if (parentMobile && !/^[0-9]{10}$/.test(parentMobile)) {
                 e.preventDefault(); 
-                alert('Invalid parent mobile number'); 
+                alert('❌ Invalid parent mobile number'); 
                 return;
             }
             if (pinCode && !/^[0-9]{6}$/.test(pinCode)) {
                 e.preventDefault(); 
-                alert('Invalid 6-digit pin code'); 
+                alert('❌ Invalid 6-digit pin code'); 
                 return;
             }
         });
@@ -170,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ADD COURSE TO DATABASE
+    /* ================= ADD COURSE TO DATABASE ================= */
     const addCourseForm = document.getElementById('addCourseForm');
     
     if (addCourseForm) {
@@ -181,12 +197,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const submitBtn = addCourseForm.querySelector('button[type="submit"]');
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             
+            // Validation
             if (!courseName) {
                 alert('❌ Please enter a course name');
                 return;
             }
             
-            // Check if course already exists in select
+            // Check if course already exists in dropdown
             let alreadyExists = false;
             for (let option of courseSelect.options) {
                 if (option.value.toLowerCase() === courseName.toLowerCase()) {
@@ -197,16 +214,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (alreadyExists) {
                 alert('⚠️ This course already exists!');
+                document.getElementById('newCourseName').focus();
                 return;
             }
             
             // Show loading state
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = '⏳ Adding...';
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '⏳ Adding...';
             submitBtn.disabled = true;
             
             // Send to backend
-            fetch('/core/add-course/', {  // Updated URL path
+            fetch('/add-course/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -218,50 +236,31 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Failed to add course');
+                    });
                 }
                 return response.json();
             })
             .then(data => {
-                if (data.success) {
-                    // Add to select dropdown
-                    const option = document.createElement('option');
-                    option.value = data.course_name;
-                    option.textContent = data.course_name;
-                    option.selected = true;
-                    courseSelect.appendChild(option);
+            if (data.success) {
+                    // Show success message
+                    alert('✅ ' + data.message + '\n\nPage will reload to show the new course everywhere.');
                     
-                    // Reset form
-                    addCourseForm.reset();
-                    
-                    // Show success
-                    alert('✅ ' + data.message);
-                    
-                    // Close modal
-                    closeAddCourseModal();
+                    // Reload the page to show new course in all dropdowns
+                    window.location.reload();
                 } else {
                     alert('❌ ' + data.message);
-                }
+            }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('❌ Error adding course: ' + error.message);
+                alert('❌ ' + error.message);
             })
             .finally(() => {
-                submitBtn.textContent = originalText;
+                submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
             });
         });
     }
 });
-
-/* MODAL CONTROLS */
-function openAddCourseModal() {
-    const modal = document.getElementById('addCourseModal');
-    if (modal) modal.classList.add('active');
-}
-
-function closeAddCourseModal() {
-    const modal = document.getElementById('addCourseModal');
-    if (modal) modal.classList.remove('active');
-}

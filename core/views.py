@@ -38,7 +38,7 @@ def home(request):
         mobile = request.POST.get("mobile")
         education = request.POST.get("education")
         course = request.POST.get("course")
-        custom_course = request.POST.get("other_course", "")  # NEW
+        custom_course = request.POST.get("other_course", "")
         
         # Get address fields
         address = request.POST.get("address", "")
@@ -51,7 +51,7 @@ def home(request):
             mobile=mobile,
             education=education,
             course=course,
-            custom_course=custom_course if course == "Other" else "",  # NEW
+            custom_course=custom_course if course == "Other" else "",
             address=address,
             city=city,
             taluka=taluka,
@@ -61,7 +61,12 @@ def home(request):
         messages.success(request, "Enquiry submitted successfully!")
         return redirect("home")
 
-    return render(request, "core/home.html")
+    # Get all courses from database
+    all_courses = Course.objects.all().order_by('name')
+    
+    return render(request, "core/home.html", {
+        'all_courses': all_courses
+    })
 
 # ================= DASHBOARD (UPDATED VERSION) =================
 @login_required
@@ -145,7 +150,7 @@ def enquiry_list(request):
         mobile = request.POST.get("mobile")
         education = request.POST.get("education")
         course = request.POST.get("course")
-        custom_course = request.POST.get("other_course", "")  # NEW
+        custom_course = request.POST.get("other_course", "")
         address = request.POST.get("address", "")
         city = request.POST.get("city", "")
         taluka = request.POST.get("taluka", "")
@@ -156,7 +161,7 @@ def enquiry_list(request):
             mobile=mobile,
             education=education,
             course=course,
-            custom_course=custom_course if course == "Other" else "",  # NEW
+            custom_course=custom_course if course == "Other" else "",
             address=address,
             city=city,
             taluka=taluka,
@@ -219,6 +224,9 @@ def enquiry_list(request):
     if course:
         filters_query += f"&course={course}"
     
+    # Get all courses from database
+    all_courses = Course.objects.all().order_by('name')
+    
     return render(request, "core/enquiries.html", {
         "page_obj": page_obj,
         "search": search,
@@ -228,7 +236,8 @@ def enquiry_list(request):
         "available_years": available_years,
         "available_courses": available_courses,
         "filters_query": filters_query,
-        "active_page": "enquiries"
+        "active_page": "enquiries",
+        "all_courses": all_courses  # Add this
     })
 
 # ================= DELETE ENQUIRY =================
@@ -516,6 +525,9 @@ def admitted_students(request):
         .order_by('-year')
     )
     
+    # Get all courses from database
+    all_courses = Course.objects.all().order_by('name')
+    
     return render(request, 'core/admitted_students.html', {
         'students': students,
         'search': search,
@@ -523,7 +535,8 @@ def admitted_students(request):
         'year': year,
         'course': course,
         'available_years': available_years,
-        'active_page': 'admitted_students'
+        'active_page': 'admitted_students',
+        'all_courses': all_courses  # Add this
     })
 
 
@@ -1400,6 +1413,7 @@ def backup_database(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
+# ================= ADD COURSE TO DATABASE (FIXED VERSION) =================
 @login_required
 @require_http_methods(["POST"])
 @csrf_protect
@@ -1422,8 +1436,11 @@ def add_course_ajax(request):
                 'message': 'This course already exists in database!'
             }, status=400)
         
-        # Create new course
-        course = Course.objects.create(name=course_name)
+        # Create new course with a default duration
+        course = Course.objects.create(
+            name=course_name,
+            duration='To be defined'  # You can change this default value
+        )
         
         return JsonResponse({
             'success': True,

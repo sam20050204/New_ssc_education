@@ -90,6 +90,16 @@
                 <option value="Advance Excel" {% if course == "Advance Excel" %}selected{% endif %}>Advance Excel</option>
                 <option value="IOT" {% if course == "IOT" %}selected{% endif %}>IOT</option>
                 <option value="Scratch" {% if course == "Scratch" %}selected{% endif %}>Scratch</option>
+                
+                <!-- Dynamic Courses from Database -->
+                {% for c in all_courses %}
+                    {% if c.name not in "MS-CIT,Tally,Advance Excel,IOT,Scratch" %}
+                        <option value="{{ c.name }}" {% if course == c.name %}selected{% endif %}>
+                            {{ c.name }}
+                        </option>
+                    {% endif %}
+                {% endfor %}
+                
                 <option value="Other" {% if course == "Other" %}selected{% endif %}>Other</option>
             </select>
         </div>
@@ -284,6 +294,14 @@
                                 <option value="Advance Excel">Advance Excel</option>
                                 <option value="IOT">IOT</option>
                                 <option value="Scratch">Scratch</option>
+                                
+                                <!-- Dynamic Courses from Database -->
+                                {% for c in all_courses %}
+                                    {% if c.name not in "MS-CIT,Tally,Advance Excel,IOT,Scratch" %}
+                                        <option value="{{ c.name }}">{{ c.name }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                                
                                 <option value="Other">Other</option>
                             </select>
                         </div>

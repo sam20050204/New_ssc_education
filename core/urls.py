@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-app_name = 'core'
+
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -51,5 +51,4 @@ urlpatterns = [
     # Database Backup
     path('backup-database/', views.backup_database, name='backup_database'),
     path('add-course/', views.add_course_ajax, name='add_course_ajax'),
-    
 ]

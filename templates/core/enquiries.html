@@ -353,11 +353,22 @@
             <label for="course">📚 Course</label>
             <select name="course" id="course" class="filter-select">
                 <option value="">All Courses</option>
-                {% for c in available_courses %}
-                    <option value="{{ c }}" {% if course == c %}selected{% endif %}>
-                        {{ c }}
-                    </option>
+                <option value="MS-CIT" {% if course == "MS-CIT" %}selected{% endif %}>MS-CIT</option>
+                <option value="Tally" {% if course == "Tally" %}selected{% endif %}>Tally</option>
+                <option value="Advance Excel" {% if course == "Advance Excel" %}selected{% endif %}>Advance Excel</option>
+                <option value="IOT" {% if course == "IOT" %}selected{% endif %}>IOT</option>
+                <option value="Scratch" {% if course == "Scratch" %}selected{% endif %}>Scratch</option>
+                
+                <!-- Dynamic Courses from Database -->
+                {% for c in all_courses %}
+                    {% if c.name not in "MS-CIT,Tally,Advance Excel,IOT,Scratch" %}
+                        <option value="{{ c.name }}" {% if course == c.name %}selected{% endif %}>
+                            {{ c.name }}
+                        </option>
+                    {% endif %}
                 {% endfor %}
+                
+                <option value="Other" {% if course == "Other" %}selected{% endif %}>Other</option>
             </select>
         </div>
 
@@ -489,6 +500,7 @@
 </div>
 
 <!-- ADD NEW ENQUIRY MODAL -->
+<!-- ADD NEW ENQUIRY MODAL -->
 <div id="newEnquiryModal" class="enquiry-modal">
     <div class="enquiry-modal-content">
         <div class="enquiry-modal-header">
@@ -534,7 +546,15 @@
                             <option value="Advance Excel">Advance Excel</option>
                             <option value="IOT">IOT</option>
                             <option value="Scratch">Scratch</option>
-                            <option value="Other">Other</option>
+                            
+                            <!-- Dynamic Courses from Database -->
+                            {% for course in all_courses %}
+                                {% if course.name not in "MS-CIT,Tally,Advance Excel,IOT,Scratch" %}
+                                    <option value="{{ course.name }}">{{ course.name }}</option>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            <option value="Other">Other (Specify below)</option>
                         </select>
                         
                         <!-- Custom course field (hidden by default) -->
