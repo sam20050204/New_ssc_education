@@ -488,3 +488,18 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+document.getElementById('batchMonth').value = data.batch_month || '';
+document.getElementById('batchYear').value = data.batch_year || '';
+document.getElementById('currentBatchDisplay').textContent = data.batch_display || 'Not Assigned';
+
+// Populate batch years
+const batchYearSelect = document.getElementById('batchYear');
+const currentYear = new Date().getFullYear();
+for (let i = -2; i <= 2; i++) {
+    const year = currentYear + i;
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = year;
+    batchYearSelect.appendChild(option);
+}

@@ -5,6 +5,52 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/fees_payment.css' %}">
+<style>
+    /* Additional styles for dynamic content */
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+        font-style: italic;
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 20px;
+        color: #d32f2f;
+        font-weight: bold;
+    }
+    
+    .error {
+        background-color: #ffebee;
+        color: #d32f2f;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+    
+    .search-result-item {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .search-result-item:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .result-name {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 4px;
+    }
+    
+    .result-details {
+        font-size: 12px;
+        color: #666;
+    }
+</style>
 {% endblock %}
 
 {% block page_heading %}
@@ -41,10 +87,12 @@
         <div id="searchResults" class="search-results"></div>
     </div>
 
-    <!-- STUDENT DETAILS SECTION -->
-    <div id="studentDetailsSection" class="student-details-section">
+    <!-- STUDENT DETAILS SECTION (INITIALLY HIDDEN) -->
+    <div id="studentDetailsSection" class="student-details-section" style="display: none;">
         <div class="student-header">
-            <div class="student-photo-large" id="studentPhotoLarge"></div>
+            <div class="student-photo-large" id="studentPhotoLarge">
+                <div class="no-photo">📷</div>
+            </div>
             <div class="student-info-large">
                 <h2 class="student-name-large" id="studentNameDisplay">-</h2>
                 <span class="student-course-large" id="studentCourseDisplay">-</span>
@@ -90,6 +138,7 @@
                             min="0.01"
                             required
                         >
+                        <small class="help-text">Max: ₹<span id="maxPaymentAmount">0.00</span></small>
                     </div>
 
                     <div class="form-group">
@@ -98,10 +147,10 @@
                         </label>
                         <select id="paymentMode" name="payment_mode" class="form-select" required>
                             <option value="">-- Select Mode --</option>
-                            <option value="Cash">Cash</option>
-                            <option value="UPI">UPI</option>
-                            <option value="Card">Card</option>
-                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">💵 Cash</option>
+                            <option value="UPI">📱 UPI</option>
+                            <option value="Card">💳 Card</option>
+                            <option value="Bank Transfer">🏦 Bank Transfer</option>
                         </select>
                     </div>
                 </div>
@@ -135,90 +184,91 @@
 
 <!-- RECEIPT MODAL -->
 <div id="receiptModal" class="receipt-modal">
-    <div class="receipt-container" id="receiptContent">
-        <!-- INSTITUTE HEADER -->
-        <div class="receipt-header">
-            <div class="institute-name">Shri Samarth Computer Education Murud</div>
-            <div class="institute-details">
-                Contact No: 9960638066<br>
-                Address: Samarth Road, Behind Bus Stand, Shivaji Nagar, Murud<br>
-                TQ. DIST. Latur - 413510<br>
-                <strong>MKCL Authorized Center Code: 45210017</strong>
+    <div class="receipt-modal-content">
+        <div class="receipt-container" id="receiptContent">
+            <!-- INSTITUTE HEADER -->
+            <div class="receipt-header">
+                <div class="institute-name">Shri Samarth Computer Education Murud</div>
+                <div class="institute-details">
+                    Contact No: 9960638066<br>
+                    Address: Samarth Road, Behind Bus Stand, Shivaji Nagar, Murud<br>
+                    TQ. DIST. Latur - 413510<br>
+                    <strong>MKCL Authorized Center Code: 45210017</strong>
+                </div>
+            </div>
+
+            <!-- RECEIPT TITLE -->
+            <h2 class="receipt-title">🧾 FEE PAYMENT RECEIPT</h2>
+
+            <!-- RECEIPT INFO -->
+            <div class="receipt-info">
+                <span class="receipt-label">Receipt No:</span>
+                <span class="receipt-value" id="receiptNo">-</span>
+
+                <span class="receipt-label">Date:</span>
+                <span class="receipt-value" id="receiptDate">-</span>
+
+                <span class="receipt-label">Student Name:</span>
+                <span class="receipt-value" id="receiptStudentName">-</span>
+
+                <span class="receipt-label">Course:</span>
+                <span class="receipt-value" id="receiptCourse">-</span>
+
+                <span class="receipt-label">Mobile:</span>
+                <span class="receipt-value" id="receiptMobile">-</span>
+
+                <span class="receipt-label">Payment Mode:</span>
+                <span class="receipt-value" id="receiptPaymentMode">-</span>
+            </div>
+            <hr class="receipt-divider">
+
+            <!-- AMOUNT SECTION -->
+            <div class="amount-section">
+                <div class="amount-row">
+                    <span>Total Course Fees:</span>
+                    <strong>₹<span id="receiptTotalFees">0.00</span></strong>
+                </div>
+                <div class="amount-row">
+                    <span>Previous Paid:</span>
+                    <strong>₹<span id="receiptPreviousPaid">0.00</span></strong>
+                </div>
+                <div class="amount-row paid">
+                    <span>Amount Paid Now:</span>
+                    <strong>₹<span id="receiptAmountPaid">0.00</span></strong>
+                </div>
+                <div class="amount-row">
+                    <span>Remaining Fees:</span>
+                    <strong>₹<span id="receiptRemainingFees">0.00</span></strong>
+                </div>
+                <div class="amount-in-words">
+                    <strong>In Words:</strong> <span id="receiptAmountWords">-</span>
+                </div>
+            </div>
+
+            <hr class="receipt-divider">
+
+            <!-- FOOTER -->
+            <div class="receipt-footer">
+                <div class="thank-you">
+                    Thank you for your payment!<br>
+                    <small>This is a computer-generated receipt</small>
+                </div>
+                <div class="signature-section">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Authorized Signature</div>
+                </div>
             </div>
         </div>
 
-        <!-- RECEIPT TITLE -->
-        <h2 class="receipt-title">🧾 FEE PAYMENT RECEIPT</h2>
-
-        <!-- RECEIPT INFO -->
-        <div class="receipt-info">
-            <span class="receipt-label">Receipt No:</span>
-            <span class="receipt-value" id="receiptNo">-</span>
-
-            <span class="receipt-label">Date:</span>
-            <span class="receipt-value" id="receiptDate">-</span>
-
-            <span class="receipt-label">Student Name:</span>
-            <span class="receipt-value" id="receiptStudentName">-</span>
-
-            <span class="receipt-label">Course:</span>
-            <span class="receipt-value" id="receiptCourse">-</span>
-
-            <span class="receipt-label">Mobile:</span>
-            <span class="receipt-value" id="receiptMobile">-</span>
-
-            <span class="receipt-label">Payment Mode:</span>
-            <span class="receipt-value" id="receiptPaymentMode">-</span>
+        <!-- MODAL ACTIONS -->
+        <div class="modal-actions">
+            <button class="btn-print" onclick="printReceipt()">
+                🖨️ Print Receipt
+            </button>
+            <button class="btn-close" onclick="closeReceiptModal()">
+                ❌ Close
+            </button>
         </div>
-
-        <hr class="receipt-divider">
-
-        <!-- AMOUNT SECTION -->
-        <div class="amount-section">
-            <div class="amount-row">
-                <span>Total Course Fees:</span>
-                <strong>₹<span id="receiptTotalFees">0.00</span></strong>
-            </div>
-            <div class="amount-row">
-                <span>Previous Paid:</span>
-                <strong>₹<span id="receiptPreviousPaid">0.00</span></strong>
-            </div>
-            <div class="amount-row paid">
-                <span>Amount Paid Now:</span>
-                <strong>₹<span id="receiptAmountPaid">0.00</span></strong>
-            </div>
-            <div class="amount-row">
-                <span>Remaining Fees:</span>
-                <strong>₹<span id="receiptRemainingFees">0.00</span></strong>
-            </div>
-            <div class="amount-in-words">
-                <strong>In Words:</strong> <span id="receiptAmountWords">-</span>
-            </div>
-        </div>
-
-        <hr class="receipt-divider">
-
-        <!-- FOOTER -->
-        <div class="receipt-footer">
-            <div class="thank-you">
-                Thank you for your payment!<br>
-                <small>This is a computer-generated receipt</small>
-            </div>
-            <div class="signature-section">
-                <div class="signature-line"></div>
-                <div class="signature-label">Authorized Signature</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL ACTIONS -->
-    <div class="modal-actions">
-        <button class="btn-print" onclick="printReceipt()">
-            🖨️ Print Receipt
-        </button>
-        <button class="btn-close" onclick="closeReceiptModal()">
-            ❌ Close
-        </button>
     </div>
 </div>
 

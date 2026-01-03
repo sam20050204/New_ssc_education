@@ -566,7 +566,7 @@
             </div>
 
             <div class="modal-actions">
-                <button type="submit" class="btn-submit">✅ Submit Enquiry</button>
+                <button type="submit" id="submitBtn" class="btn-submit">✅ Submit Enquiry</button>
                 <button type="button" class="btn-cancel" onclick="closeNewEnquiryModal()">❌ Close</button>
             </div>
         </form>
@@ -722,11 +722,19 @@ function closeNewEnquiryModal() {
 }
 
 // Handle New Enquiry Form Submission with AJAX
+// Handle New Enquiry Form Submission with AJAX
 document.getElementById('newEnquiryForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
+    
+    const submitBtn = this.querySelector('.btn-submit');
+    
+    // Prevent double submission
+    if (submitBtn.disabled) {
+        return false;
+    }
     
     const formData = new FormData(this);
-    const submitBtn = this.querySelector('.btn-submit');
     const originalText = submitBtn.textContent;
     
     // Show loading state
@@ -752,7 +760,11 @@ document.getElementById('newEnquiryForm').addEventListener('submit', function(e)
             document.getElementById('newEnquiryForm').reset();
             
             // Hide "Other" course field if shown
-            document.getElementById('otherCourseEnquiry').style.display = 'none';
+            const otherField = document.getElementById('otherCourseEnquiry');
+            if (otherField) {
+                otherField.style.display = 'none';
+                otherField.required = false;
+            }
             
             // Hide success message after 3 seconds
             setTimeout(() => {
@@ -774,6 +786,8 @@ document.getElementById('newEnquiryForm').addEventListener('submit', function(e)
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
     });
+    
+    return false; // Extra safety to prevent form submission
 });
 
 // Close modals on ESC key

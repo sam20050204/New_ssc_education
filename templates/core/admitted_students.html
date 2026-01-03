@@ -104,6 +104,31 @@
             </select>
         </div>
 
+        <!-- Add these two new filter groups after the course filter -->
+        <div class="filter-group">
+            <label for="batch_month">📅 Batch Month</label>
+            <select name="batch_month" id="batch_month" class="filter-select">
+                <option value="">All Batch Months</option>
+                {% for bm in available_batch_months %}
+                    <option value="{{ bm }}" {% if batch_month == bm %}selected{% endif %}>
+                        {{ bm }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="batch_year">📆 Batch Year</label>
+            <select name="batch_year" id="batch_year" class="filter-select">
+                <option value="">All Batch Years</option>
+                {% for by in available_batch_years %}
+                    <option value="{{ by }}" {% if batch_year == by %}selected{% endif %}>
+                        {{ by }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div class="filter-buttons">
             <button type="submit" class="filter-btn apply">
                 🔍 Apply Filters
@@ -124,6 +149,11 @@
         {% if course %}in {{ course }}{% endif %}
         {% if month %}for month {{ month }}{% endif %}
         {% if year %}in year {{ year }}{% endif %}
+        {% if batch_month or batch_year %}
+            in batch 
+            {% if batch_month %}{{ batch_month }}{% endif %}
+            {% if batch_year %}{{ batch_year }}{% endif %}
+        {% endif %}
     </p>
 </div>
 {% endif %}
@@ -159,7 +189,13 @@
                             <span class="detail-icon">📞</span>
                             <span>{{ student.mobile_own }}</span>
                         </div>
-                        
+                        {% if student.batch_month and student.batch_year %}
+                            <div class="detail-item" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 1px solid #0284c7;">
+                                <span class="detail-icon">📅</span>
+                                <span style="color: #0c4a6e; font-weight: 600;">{{ student.batch_month }} {{ student.batch_year }}</span>
+                            </div>
+                            {% endif %}
+
                         <div class="detail-item fees">
                             <span class="detail-icon">💰</span>
                             <span>Remaining: ₹{{ student.remaining_fees|floatformat:2 }}</span>
@@ -310,7 +346,46 @@
                             <input type="text" id="customCourse" name="custom_course" placeholder="If Other selected">
                         </div>
                     </div>
-
+                    <div class="form-section" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left-color: #0284c7;">
+                        <h3 style="color: #0c4a6e;">📅 Batch Information</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Batch Month</label>
+                                <select id="batchMonth" name="batch_month">
+                                    <option value="">-- Select Month --</option>
+                                    <option value="January">January</option>
+                                    <option value="February">February</option>
+                                    <option value="March">March</option>
+                                    <option value="April">April</option>
+                                    <option value="May">May</option>
+                                    <option value="June">June</option>
+                                    <option value="July">July</option>
+                                    <option value="August">August</option>
+                                    <option value="September">September</option>
+                                    <option value="October">October</option>
+                                    <option value="November">November</option>
+                                    <option value="December">December</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Batch Year</label>
+                                <select id="batchYear" name="batch_year">
+                                    <option value="">-- Select Year --</option>
+                                    <!-- Years will be populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <div style="background: white; padding: 10px; border-radius: 6px; border: 2px solid #0284c7;">
+                                <strong style="color: #0c4a6e;">Current Batch:</strong> 
+                                <span id="currentBatchDisplay" style="color: #0284c7; font-weight: 700;">
+                                    -
+                                </span>
+                            </div>
+                        </div>
+                    </div>   
                     <div class="form-row">
                         <div class="form-group full-width">
                             <label>Educational Qualification <span class="required">*</span></label>

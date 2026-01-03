@@ -148,19 +148,88 @@ function closeNewEnquiryModal() {
 }
 
 // Handle New Enquiry Form Submission with AJAX
+// ================= DUPLICATE PREVENTION FLAG =================
+let formSubmitted = false;
+
+// Handle New Enquiry Form Submission with AJAX
 document.addEventListener('DOMContentLoaded', function() {
     const newEnquiryForm = document.getElementById('newEnquiryForm');
     if (newEnquiryForm) {
         newEnquiryForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            // ================= PREVENT DOUBLE SUBMISSION =================
+            if (formSubmitted) {
+                alert('⏳ Form is being submitted. Please wait...');
+                return false;
+            }
+            
+            // ================= VALIDATE FORM DATA =================
+            const nameInput = document.getElementById('nameEnquiry');
+            const mobileInput = document.getElementById('mobileEnquiry');
+            const educationInput = document.getElementById('educationEnquiry');
+            const courseInput = document.getElementById('courseEnquiry');
+            const otherCourseInput = document.getElementById('otherCourseEnquiry');
+            
+            // Validate name
+            const name = nameInput ? nameInput.value.trim() : '';
+            if (!name) {
+                alert('❌ Please enter your name');
+                return false;
+            }
+            
+            // Validate mobile
+            const mobile = mobileInput ? mobileInput.value.trim() : '';
+            if (!mobile) {
+                alert('❌ Please enter mobile number');
+                return false;
+            }
+            if (!/^[0-9]{10}$/.test(mobile)) {
+                alert('❌ Please enter a valid 10-digit mobile number');
+                return false;
+            }
+            
+            // Validate education
+            const education = educationInput ? educationInput.value.trim() : '';
+            if (!education) {
+                alert('❌ Please enter education qualification');
+                return false;
+            }
+            
+            // Validate course
+            const course = courseInput ? courseInput.value.trim() : '';
+            if (!course) {
+                alert('❌ Please select a course');
+                return false;
+            }
+            
+            // Validate custom course if "Other" selected
+            if (course === 'Other') {
+                const customCourse = otherCourseInput ? otherCourseInput.value.trim() : '';
+                if (!customCourse) {
+                    alert('❌ Please specify the course name');
+                    return false;
+                }
+            }
+            
+            // ================= MARK AS SUBMITTED =================
+            formSubmitted = true;
+            
             const formData = new FormData(this);
             const submitBtn = this.querySelector('.btn-submit');
             const originalText = submitBtn.textContent;
             
-            // Show loading state
+            // ================= DISABLE SUBMIT BUTTON =================
             submitBtn.textContent = '⏳ Submitting...';
             submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+            
+            // ================= DISABLE ALL FORM INPUTS =================
+            const allInputs = newEnquiryForm.querySelectorAll('input, textarea, select');
+            allInputs.forEach(input => {
+                input.disabled = true;
+            });
             
             fetch(window.location.href, {
                 method: 'POST',
@@ -192,9 +261,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         successMsg.classList.remove('show');
                     }, 3000);
                     
-                    // Reset submit button
+                    // Reset form state for next entry
+                    formSubmitted = false;
                     submitBtn.textContent = originalText;
                     submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                    
+                    // Re-enable form inputs
+                    allInputs.forEach(input => {
+                        input.disabled = false;
+                    });
                     
                     // Note: Modal stays open for next entry
                 } else {
@@ -204,13 +281,29 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error:', error);
                 alert('❌ Error adding enquiry. Please try again.');
+                
+                // Reset on error
+                formSubmitted = false;
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+                
+                // Re-enable form inputs
+                allInputs.forEach(input => {
+                    input.disabled = false;
+                });
             });
         });
     }
 });
 
+// ================= PREVENT RE-SUBMISSION ON PAGE REFRESH =================
+window.addEventListener('beforeunload', function() {
+    if (formSubmitted) {
+        formSubmitted = true;  // Keep flag true
+    }
+});
 // Close modals on ESC key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {

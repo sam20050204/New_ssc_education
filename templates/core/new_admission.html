@@ -184,6 +184,54 @@
             </div>
         </div>
 
+        <!-- Batch Information -->
+        <div class="form-section" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left-color: #0284c7;">
+            <h3 class="section-title" style="color: #0c4a6e;">📅 Batch Information</h3>
+            
+            <div class="form-row double">
+                <div class="form-group">
+                    <label for="batch_month">Batch Month <span class="required">*</span></label>
+                    <select name="batch_month" id="batch_month" required>
+                        <option value="">-- Select Month --</option>
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="batch_year">Batch Year <span class="required">*</span></label>
+                    <select name="batch_year" id="batch_year" required>
+                        <option value="">-- Select Year --</option>
+                        <!-- Years will be populated by JavaScript -->
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group full-width">
+                <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #0284c7;">
+                    <strong style="color: #0c4a6e;">Selected Batch:</strong> 
+                    <span id="batchPreview" style="color: #0284c7; font-weight: 700; font-size: 16px;">
+                        Not Selected
+                    </span>
+                </div>
+            </div>
+            
+            <small style="color: #0c4a6e; font-size: 13px; margin-top: 10px; display: block; font-weight: 600;">
+                💡 Select the month and year when this student's batch starts
+            </small>
+        </div>
+
+
         <!-- Personal Information with Photo -->
         <div class="form-section">
             <h3 class="section-title">👤 Personal Information</h3>
@@ -411,6 +459,39 @@ document.addEventListener('DOMContentLoaded', function() {
             closeAddCourseModal();
         });
     }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const batchYearSelect = document.getElementById('batch_year');
+    const currentYear = new Date().getFullYear();
+    
+    for (let i = 0; i <= 2; i++) {
+        const year = currentYear + i;
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        batchYearSelect.appendChild(option);
+    }
+    
+    // Update batch preview
+    const batchMonthSelect = document.getElementById('batch_month');
+    const batchPreview = document.getElementById('batchPreview');
+    
+    function updateBatchPreview() {
+        const month = batchMonthSelect.value;
+        const year = batchYearSelect.value;
+        
+        if (month && year) {
+            batchPreview.textContent = `${month} ${year}`;
+            batchPreview.style.color = '#0284c7';
+        } else {
+            batchPreview.textContent = 'Not Selected';
+            batchPreview.style.color = '#94a3b8';
+        }
+    }
+    
+    batchMonthSelect.addEventListener('change', updateBatchPreview);
+    batchYearSelect.addEventListener('change', updateBatchPreview);
 });
 </script>
 {% endblock %}

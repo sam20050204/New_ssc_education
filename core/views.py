@@ -1,3 +1,10 @@
+# Fix for core/views.py - Add this import at the top of the file
+
+# At the very top of core/views.py, find the imports section and add:
+
+from django.db import transaction  # ADD THIS LINE
+
+# Your existing imports should look like this:
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -7,9 +14,9 @@ from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db.models.functions import ExtractYear
-from django.db import transaction
+from django.db import transaction  # THIS IS THE MISSING IMPORT
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_protect  # ADD THIS LINE
+from django.views.decorators.csrf import csrf_protect
 from django.conf import settings
 import csv
 import openpyxl
@@ -22,6 +29,7 @@ import shutil
 import os
 
 from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
+
 
 
 # ================= CUSTOM LOGOUT =================
@@ -39,8 +47,6 @@ def home(request):
         education = request.POST.get("education")
         course = request.POST.get("course")
         custom_course = request.POST.get("other_course", "")
-        
-        # Get address fields
         address = request.POST.get("address", "")
         city = request.POST.get("city", "")
         taluka = request.POST.get("taluka", "")
@@ -61,19 +67,18 @@ def home(request):
         messages.success(request, "Enquiry submitted successfully!")
         return redirect("home")
 
-    # Get all courses from database
     all_courses = Course.objects.all().order_by('name')
     
     return render(request, "core/home.html", {
         'all_courses': all_courses
     })
 
-# ================= DASHBOARD (UPDATED VERSION) =================
+
+# ================= DASHBOARD =================
 @login_required
 def dashboard(request):
     selected_year = request.GET.get('year', '')
     
-    # Get available years from AdmittedStudent model
     available_years = (
         AdmittedStudent.objects
         .annotate(year=ExtractYear('admission_date'))
@@ -82,40 +87,29 @@ def dashboard(request):
         .order_by('-year')
     )
     
-    # Base queryset for admitted students
     students = AdmittedStudent.objects.all()
     
-    # Filter by year if selected
     if selected_year:
         students = students.filter(admission_date__year=selected_year)
     
-    # Total enquiries (from Enquiry model)
     enquiries = Enquiry.objects.all()
     if selected_year:
         enquiries = enquiries.filter(created_at__year=selected_year)
     enquiry_count = enquiries.count()
     
-    # MSCIT Students - only MS-CIT course
     mscit_count = students.filter(course='MS-CIT').count()
-    
-    # KLIC Students - all courses EXCEPT MS-CIT
     klic_count = students.exclude(course='MS-CIT').count()
     
-    # Get course distribution for pie chart
     course_distribution = {}
     for student in students:
         course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
         course_distribution[course_name] = course_distribution.get(course_name, 0) + 1
     
-    # Get monthly admission data
-    monthly_data = {str(i): 0 for i in range(1, 13)}  # Initialize all months with 0
+    monthly_data = {str(i): 0 for i in range(1, 13)}
     
     if selected_year:
-        # Get admissions for selected year
         year_students = AdmittedStudent.objects.filter(admission_date__year=selected_year)
     else:
-        # Get admissions for current year
-        from datetime import datetime
         current_year = datetime.now().year
         year_students = AdmittedStudent.objects.filter(admission_date__year=current_year)
     
@@ -123,7 +117,6 @@ def dashboard(request):
         month = str(student.admission_date.month)
         monthly_data[month] = monthly_data.get(month, 0) + 1
     
-    # Convert to JSON for JavaScript
     course_distribution_json = json.dumps(course_distribution)
     monthly_data_json = json.dumps(monthly_data)
     
@@ -141,22 +134,45 @@ def dashboard(request):
     return render(request, "core/dashboard.html", context)
 
 
-# ================= ENQUIRY LIST =================
+# ================= ENQUIRY LIST (SINGLE DEFINITION) =================
 @login_required
 def enquiry_list(request):
     # Handle POST request for adding new enquiry
     if request.method == "POST":
-        name = request.POST.get("name")
-        mobile = request.POST.get("mobile")
-        education = request.POST.get("education")
-        course = request.POST.get("course")
-        custom_course = request.POST.get("other_course", "")
-        address = request.POST.get("address", "")
-        city = request.POST.get("city", "")
-        taluka = request.POST.get("taluka", "")
-        district = request.POST.get("district", "")
-
-        Enquiry.objects.create(
+        name = request.POST.get("name", "").strip()
+        mobile = request.POST.get("mobile", "").strip()
+        education = request.POST.get("education", "").strip()
+        course = request.POST.get("course", "").strip()
+        custom_course = request.POST.get("other_course", "").strip()
+        address = request.POST.get("address", "").strip()
+        city = request.POST.get("city", "").strip()
+        taluka = request.POST.get("taluka", "").strip()
+        district = request.POST.get("district", "").strip()
+        
+        # VALIDATION
+        if not name or not mobile or not education or not course:
+            messages.error(request, "❌ Please fill all required fields!")
+            return redirect("enquiry_list")
+        
+        if len(mobile) != 10 or not mobile.isdigit():
+            messages.error(request, "❌ Mobile number must be 10 digits!")
+            return redirect("enquiry_list")
+        
+        # CHECK FOR DUPLICATE ENQUIRY
+        five_minutes_ago = timezone.now() - timedelta(minutes=5)
+        
+        duplicate = Enquiry.objects.filter(
+            name__iexact=name,
+            mobile=mobile,
+            created_at__gte=five_minutes_ago
+        ).exists()
+        
+        if duplicate:
+            messages.error(request, "⚠️ This enquiry was already submitted recently!")
+            return redirect("enquiry_list")
+        
+        # CREATE ENQUIRY
+        enquiry = Enquiry.objects.create(
             name=name,
             mobile=mobile,
             education=education,
@@ -167,11 +183,11 @@ def enquiry_list(request):
             taluka=taluka,
             district=district
         )
-
-        messages.success(request, "Enquiry added successfully!")
+        
+        messages.success(request, f"✅ Enquiry submitted successfully!")
         return redirect("enquiry_list")
     
-    # Rest of your existing GET logic...
+    # GET REQUEST - Display enquiries
     search = request.GET.get("search", "")
     month = request.GET.get("month", "")
     year = request.GET.get("year", "")
@@ -224,7 +240,6 @@ def enquiry_list(request):
     if course:
         filters_query += f"&course={course}"
     
-    # Get all courses from database
     all_courses = Course.objects.all().order_by('name')
     
     return render(request, "core/enquiries.html", {
@@ -237,8 +252,9 @@ def enquiry_list(request):
         "available_courses": available_courses,
         "filters_query": filters_query,
         "active_page": "enquiries",
-        "all_courses": all_courses  # Add this
+        "all_courses": all_courses
     })
+
 
 # ================= DELETE ENQUIRY =================
 @login_required
@@ -298,12 +314,13 @@ def export_enquiries(request):
 
     return response
 
+
+# ================= ENQUIRY DETAIL =================
 @login_required
 def enquiry_detail(request, id):
     """Return enquiry details as JSON"""
     enquiry = get_object_or_404(Enquiry, id=id)
     
-    # Get the display course name (handle "Other" course case)
     if enquiry.course == "Other" and enquiry.custom_course:
         display_course = enquiry.custom_course
     else:
@@ -314,9 +331,9 @@ def enquiry_detail(request, id):
         'name': enquiry.name,
         'mobile': enquiry.mobile,
         'education': enquiry.education,
-        'course': enquiry.course,  # Original course selection
-        'custom_course': enquiry.custom_course or '',  # Custom course if "Other" selected
-        'display_course': display_course,  # For display purposes
+        'course': enquiry.course,
+        'custom_course': enquiry.custom_course or '',
+        'display_course': display_course,
         'address': enquiry.address or '',
         'city': enquiry.city or '',
         'taluka': enquiry.taluka or '',
@@ -326,13 +343,13 @@ def enquiry_detail(request, id):
     
     return JsonResponse(data)
 
+
 # ================= CONVERT ENQUIRY TO ADMISSION =================
 @login_required
-def convert_enquiry(request, id):
+def convert_enquiry_to_admission(request, id):
     """Convert enquiry to admission with pre-filled data"""
     enquiry = get_object_or_404(Enquiry, id=id)
     
-    # Determine the course to display
     if enquiry.course == 'Other' and enquiry.custom_course:
         course_value = 'Other'
         custom_course_value = enquiry.custom_course
@@ -340,7 +357,6 @@ def convert_enquiry(request, id):
         course_value = enquiry.course
         custom_course_value = ''
     
-    # Store enquiry data in session for pre-filling
     request.session['enquiry_conversion'] = {
         'enquiry_id': enquiry.id,
         'name': enquiry.name,
@@ -354,12 +370,10 @@ def convert_enquiry(request, id):
         'district': enquiry.district or '',
     }
     
-    # Redirect to new admission page
     return redirect('new_admission')
 
-# ================= NEW ADMISSION =================
-# REPLACE the new_admission function in core/views.py with this:
 
+# ================= NEW ADMISSION =================
 @login_required
 def new_admission(request):
     if request.method == "POST":
@@ -385,6 +399,10 @@ def new_admission(request):
             total_fees = request.POST.get("total_fees", 5000)
             photo = request.FILES.get("photo")
             
+            # NEW: Get batch information
+            batch_month = request.POST.get("batch_month", "")
+            batch_year = request.POST.get("batch_year", "")
+            
             admission = AdmittedStudent.objects.create(
                 course=course,
                 custom_course=custom_course if course == "Other" else "",
@@ -405,12 +423,10 @@ def new_admission(request):
                 pin_code=pin_code,
                 educational_qualification=educational_qualification,
                 total_fees=total_fees,
-                photo=photo
+                photo=photo,
+                batch_month=batch_month,  # NEW
+                batch_year=batch_year,    # NEW
             )
-            
-            # Clear session data after successful admission
-            if 'enquiry_conversion' in request.session:
-                del request.session['enquiry_conversion']
             
             messages.success(request, f"Admission for {full_name} has been successfully recorded! Total Fees: ₹{total_fees}")
             return redirect("new_admission")
@@ -427,13 +443,16 @@ def new_admission(request):
     return render(request, "core/new_admission.html", {
         "active_page": "new_admission",
         "enquiry_data": enquiry_data,
-        "all_courses": all_courses  # Pass courses to template
+        "all_courses": all_courses
     })
-# ================= NEW: ADD COURSE TO DATABASE =================
+
+
+# ================= ADD COURSE TO DATABASE (SINGLE DEFINITION) =================
 @login_required
 @require_http_methods(["POST"])
-def add_course(request):
-    """Add a new course to the database"""
+@csrf_protect
+def add_course_ajax(request):
+    """Add a new course via AJAX"""
     try:
         data = json.loads(request.body)
         course_name = data.get('course_name', '').strip()
@@ -441,17 +460,15 @@ def add_course(request):
         if not course_name:
             return JsonResponse({
                 'success': False,
-                'error': 'Course name is required'
-            })
+                'message': 'Course name cannot be empty'
+            }, status=400)
         
-        # Check if course already exists
         if Course.objects.filter(name__iexact=course_name).exists():
             return JsonResponse({
                 'success': False,
-                'error': 'This course already exists'
-            })
+                'message': 'This course already exists in database!'
+            }, status=400)
         
-        # Create new course
         course = Course.objects.create(
             name=course_name,
             duration='To be defined'
@@ -459,38 +476,22 @@ def add_course(request):
         
         return JsonResponse({
             'success': True,
-            'course': {
-                'id': course.id,
-                'name': course.name
-            },
-            'message': f'Course "{course_name}" added successfully!'
-        })
-        
+            'message': f'Course "{course_name}" added successfully!',
+            'course_id': course.id,
+            'course_name': course.name
+        }, status=201)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'message': f'Error: {str(e)}'
         }, status=500)
 
-
-# ================= NEW: GET ALL COURSES =================
-@login_required
-def get_courses(request):
-    """Get all courses from database"""
-    try:
-        courses = Course.objects.all().order_by('name')
-        courses_list = [{'id': c.id, 'name': c.name} for c in courses]
-        
-        return JsonResponse({
-            'success': True,
-            'courses': courses_list
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
 
 # ================= ADMITTED STUDENTS LIST =================
 @login_required
@@ -499,6 +500,8 @@ def admitted_students(request):
     month = request.GET.get("month", "")
     year = request.GET.get("year", "")
     course = request.GET.get("course", "")
+    batch_month = request.GET.get("batch_month", "")  # NEW
+    batch_year = request.GET.get("batch_year", "")    # NEW
     
     students = AdmittedStudent.objects.all().order_by('-admission_date')
     
@@ -518,12 +521,38 @@ def admitted_students(request):
     if course:
         students = students.filter(course=course)
     
+    # NEW: Batch filters
+    if batch_month:
+        students = students.filter(batch_month=batch_month)
+    
+    if batch_year:
+        students = students.filter(batch_year=batch_year)
+    
     available_years = (
         AdmittedStudent.objects
         .annotate(year=ExtractYear('admission_date'))
         .values_list('year', flat=True)
         .distinct()
         .order_by('-year')
+    )
+    
+    # NEW: Get available batch months and years
+    available_batch_months = (
+        AdmittedStudent.objects
+        .exclude(batch_month__isnull=True)
+        .exclude(batch_month='')
+        .values_list('batch_month', flat=True)
+        .distinct()
+        .order_by('batch_month')
+    )
+    
+    available_batch_years = (
+        AdmittedStudent.objects
+        .exclude(batch_year__isnull=True)
+        .exclude(batch_year='')
+        .values_list('batch_year', flat=True)
+        .distinct()
+        .order_by('-batch_year')
     )
     
     # Get all courses from database
@@ -535,10 +564,15 @@ def admitted_students(request):
         'month': month,
         'year': year,
         'course': course,
+        'batch_month': batch_month,  # NEW
+        'batch_year': batch_year,    # NEW
         'available_years': available_years,
+        'available_batch_months': available_batch_months,  # NEW
+        'available_batch_years': available_batch_years,    # NEW
         'active_page': 'admitted_students',
-        'all_courses': all_courses  # Add this
+        'all_courses': all_courses
     })
+
 
 
 # ================= STUDENT DETAIL (ADMITTED) =================
@@ -585,7 +619,10 @@ def student_detail_admitted(request, student_id):
         'total_fees': float(student.total_fees),
         'paid_fees': float(student.paid_fees),
         'remaining_fees': float(student.remaining_fees),
-        'payment_history': payment_history,  # ← NEW: Add payment history
+        'batch_month': student.batch_month or '',  # NEW
+        'batch_year': student.batch_year or '',    # NEW
+        'batch_display': student.batch_display,   # NEW
+        'payment_history': payment_history,
     }
     
     return JsonResponse(data)
@@ -616,6 +653,10 @@ def update_student_admitted(request, student_id):
         student.district = request.POST.get('district')
         student.pin_code = request.POST.get('pin_code')
         
+        # NEW: Update batch information
+        student.batch_month = request.POST.get('batch_month', '')
+        student.batch_year = request.POST.get('batch_year', '')
+        
         if request.FILES.get('photo'):
             student.photo = request.FILES['photo']
         
@@ -625,7 +666,6 @@ def update_student_admitted(request, student_id):
         return JsonResponse({'success': True})
     
     return JsonResponse({'success': False, 'error': 'Invalid request'})
-
 
 # ================= FEES PAYMENT PAGE =================
 @login_required
@@ -663,7 +703,6 @@ def search_students_for_payment(request):
 
 
 # ================= SUBMIT FEE PAYMENT =================
-@login_required
 def submit_fee_payment(request):
     if request.method == 'POST':
         try:
@@ -706,12 +745,18 @@ def submit_fee_payment(request):
                 # Prepare receipt data
                 course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
                 
+                # NEW: Include batch information
+                batch_display = f"{student.batch_month} {student.batch_year}" if student.batch_month and student.batch_year else "Not Assigned"
+                
                 receipt_data = {
                     'receipt_no': payment.receipt_no,
                     'date': payment.payment_date.strftime('%d-%m-%Y'),
                     'time': payment.payment_date.strftime('%I:%M %p'),
                     'student_name': student.full_name,
                     'course': course_name,
+                    'batch_month': student.batch_month or '',      # NEW
+                    'batch_year': student.batch_year or '',        # NEW
+                    'batch_display': batch_display,                # NEW
                     'mobile': student.mobile_own,
                     'payment_mode': payment_mode,
                     'total_fees': f"{float(student.total_fees):.2f}",
@@ -738,7 +783,6 @@ def submit_fee_payment(request):
             })
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
-
 
 # ================= NUMBER TO WORDS CONVERTER =================
 def number_to_words(num):
@@ -773,28 +817,23 @@ def number_to_words(num):
         
         return result
     
-    # Split into integer and decimal parts
     rupees = int(num)
     paise = int(round((num - rupees) * 100))
     
     result = ''
     
-    # Convert crores
     if rupees >= 10000000:
         result += convert_less_than_thousand(rupees // 10000000) + 'Crore '
         rupees %= 10000000
     
-    # Convert lakhs
     if rupees >= 100000:
         result += convert_less_than_thousand(rupees // 100000) + 'Lakh '
         rupees %= 100000
     
-    # Convert thousands
     if rupees >= 1000:
         result += convert_less_than_thousand(rupees // 1000) + 'Thousand '
         rupees %= 1000
     
-    # Convert remaining
     if rupees > 0:
         result += convert_less_than_thousand(rupees)
     
@@ -820,7 +859,7 @@ def export_students_excel(request):
     headers = ['S.No','Full Name','Mobile','Course','Total Fees','Paid Fees','Remaining Fees','Admission Date']
     ws.append(headers)
 
-    for i, s in enumerate(students,1):
+    for i, s in enumerate(students, 1):
         course = s.custom_course if s.course == 'Other' else s.course
         ws.append([
             i,
@@ -837,9 +876,10 @@ def export_students_excel(request):
     wb.save(file)
     file.seek(0)
 
-    response = HttpResponse(file.read(),content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response = HttpResponse(file.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = f'attachment; filename=students_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
     return response
+
 
 # ================= RECEIPTS VIEW =================
 @login_required
@@ -855,16 +895,13 @@ def receipts_view(request):
 def get_receipts(request):
     """API endpoint to get all receipts with filters"""
     try:
-        # Get filter parameters
         search = request.GET.get('search', '').strip()
         date_filter = request.GET.get('date', '').strip()
         month_filter = request.GET.get('month', '').strip()
         year_filter = request.GET.get('year', '').strip()
         
-        # Get all payments with related student data
         payments = FeePayment.objects.select_related('student').all().order_by('-payment_date')
         
-        # Apply search filter
         if search:
             payments = payments.filter(
                 Q(student__full_name__icontains=search) |
@@ -872,7 +909,6 @@ def get_receipts(request):
                 Q(receipt_no__icontains=search)
             )
         
-        # Apply date filter
         if date_filter:
             try:
                 filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
@@ -880,7 +916,6 @@ def get_receipts(request):
             except ValueError:
                 pass
         
-        # Apply month and year filters
         if month_filter:
             try:
                 payments = payments.filter(payment_date__month=int(month_filter))
@@ -893,10 +928,8 @@ def get_receipts(request):
             except ValueError:
                 pass
         
-        # Build receipts data
         receipts_data = []
         for payment in payments:
-            # Get course name
             course_name = payment.student.custom_course if payment.student.course == 'Other' and payment.student.custom_course else payment.student.course
             
             receipts_data.append({
@@ -923,9 +956,6 @@ def get_receipts(request):
         })
         
     except Exception as e:
-        print(f"Error in get_receipts: {str(e)}")  # Debug log
-        import traceback
-        traceback.print_exc()  # Print full traceback
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -938,19 +968,12 @@ def get_receipts(request):
 def update_receipt(request, receipt_id):
     """API endpoint to update receipt details"""
     try:
-        # Get the payment
         payment = get_object_or_404(FeePayment, id=receipt_id)
-        
-        # Parse JSON data
         data = json.loads(request.body)
-        
-        # Store old amount for updating student's paid_fees
         old_amount = payment.amount
         
-        # Update fields
         if 'payment_date' in data:
             try:
-                # Parse the date string
                 payment_date_str = data['payment_date']
                 payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d')
                 payment.payment_date = payment_date
@@ -963,23 +986,16 @@ def update_receipt(request, receipt_id):
         if 'paid_fees' in data:
             new_amount = Decimal(str(data['paid_fees']))
             
-            # Validate amount
             if new_amount <= 0:
                 return JsonResponse({
                     'success': False,
                     'error': 'Payment amount must be greater than zero'
                 })
             
-            # Calculate the difference
             difference = new_amount - old_amount
-            
-            # Update payment amount
             payment.amount = new_amount
-            
-            # Recalculate remaining fees
             payment.remaining_after_this = payment.total_fees_at_payment - (payment.paid_before_this + new_amount)
             
-            # Update student's paid fees
             with transaction.atomic():
                 student = AdmittedStudent.objects.select_for_update().get(id=payment.student.id)
                 student.paid_fees += difference
@@ -1000,16 +1016,13 @@ def update_receipt(request, receipt_id):
             'error': 'Receipt not found'
         }, status=404)
     except Exception as e:
-        print(f"Error in update_receipt: {str(e)}")  # Debug log
-        import traceback
-        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': str(e)
         }, status=500)
 
 
-# ================= DELETE RECEIPT API (FIXED VERSION) =================
+# ================= DELETE RECEIPT API =================
 @login_required
 def delete_receipt(request, receipt_id):
     """API endpoint to delete a receipt"""
@@ -1020,28 +1033,15 @@ def delete_receipt(request, receipt_id):
         }, status=405)
     
     try:
-        # Get the payment
         payment = FeePayment.objects.select_related('student').get(id=receipt_id)
-        
-        # Store payment details before deletion
         payment_amount = payment.amount
         student = payment.student
         receipt_no = payment.receipt_no
-        student_name = student.full_name
         
-        # Debug logging
-        print(f"Deleting receipt {receipt_no} for {student_name}, amount: {payment_amount}")
-        
-        # Update student's paid fees (subtract the deleted payment amount)
         with transaction.atomic():
-            # Recalculate student's paid fees
             student.paid_fees = max(0, student.paid_fees - payment_amount)
             student.save()
-            
-            # Delete the payment record
             payment.delete()
-            
-            print(f"Receipt deleted successfully. Student's new paid_fees: {student.paid_fees}")
         
         return JsonResponse({
             'success': True,
@@ -1049,35 +1049,29 @@ def delete_receipt(request, receipt_id):
         })
         
     except FeePayment.DoesNotExist:
-        print(f"Receipt with id {receipt_id} not found")
         return JsonResponse({
             'success': False,
             'error': 'Receipt not found'
         }, status=404)
     except Exception as e:
-        print(f"Error in delete_receipt: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': f'Error deleting receipt: {str(e)}'
         }, status=500)
+
 
 # ================= EXPORT RECEIPTS API =================
 @login_required
 def export_receipts(request):
     """Export receipts to Excel"""
     try:
-        # Get filter parameters
         search = request.GET.get('search', '')
         date_filter = request.GET.get('date', '')
         month = request.GET.get('month', '')
         year = request.GET.get('year', '')
         
-        # Get all payments
         payments = FeePayment.objects.select_related('student').all().order_by('-payment_date')
         
-        # Apply filters
         if search:
             payments = payments.filter(
                 Q(student__full_name__icontains=search) |
@@ -1104,19 +1098,16 @@ def export_receipts(request):
             except ValueError:
                 pass
         
-        # Create workbook
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Payment Receipts"
         
-        # Headers
         headers = [
             'Receipt No', 'Student Name', 'Mobile', 'Course', 
             'Payment Date', 'Payment Mode', 'Total Fees', 
             'Paid Before', 'Amount Paid', 'Remaining Fees', 'Remarks'
         ]
         
-        # Style headers
         header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF", size=12)
         
@@ -1127,7 +1118,6 @@ def export_receipts(request):
             cell.font = header_font
             cell.alignment = Alignment(horizontal="center", vertical="center")
         
-        # Add data
         for row_num, payment in enumerate(payments, 2):
             course_name = payment.student.custom_course if payment.student.course == 'Other' and payment.student.custom_course else payment.student.course
             
@@ -1143,7 +1133,6 @@ def export_receipts(request):
             ws.cell(row=row_num, column=10).value = float(payment.remaining_after_this)
             ws.cell(row=row_num, column=11).value = payment.remarks or ''
         
-        # Adjust column widths
         for column in ws.columns:
             max_length = 0
             column_letter = column[0].column_letter
@@ -1156,7 +1145,6 @@ def export_receipts(request):
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column_letter].width = adjusted_width
         
-        # Create response
         excel_file = BytesIO()
         wb.save(excel_file)
         excel_file.seek(0)
@@ -1172,27 +1160,22 @@ def export_receipts(request):
         return response
         
     except Exception as e:
-        print(f"Error in export_receipts: {str(e)}")  # Debug log
-        import traceback
-        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': str(e)
         }, status=500)
-    
+
+
 # ================= EXPORT ADMITTED STUDENTS TO EXCEL =================
 @login_required
 def export_admitted_students_excel(request):
-    # Get filter parameters
     search = request.GET.get('search', '')
     month = request.GET.get('month', '')
     year = request.GET.get('year', '')
     course = request.GET.get('course', '')
     
-    # Base queryset
     students = AdmittedStudent.objects.all()
     
-    # Apply filters
     if search:
         students = students.filter(
             Q(full_name__icontains=search) |
@@ -1209,15 +1192,12 @@ def export_admitted_students_excel(request):
     if course:
         students = students.filter(course=course)
     
-    # Order by admission date
     students = students.order_by('-admission_date')
     
-    # Create workbook
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Admitted Students"
     
-    # Headers
     headers = [
         'S.No', 'Full Name', 'Student Name', 'Father Name', 'Surname', 'Mother Name',
         'Date of Birth', 'Mobile (Own)', 'Parent Mobile', 'Gender', 'Marital Status',
@@ -1227,7 +1207,6 @@ def export_admitted_students_excel(request):
         'Admission Date'
     ]
     
-    # Style headers
     header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
     header_font = Font(bold=True, color="FFFFFF", size=12)
     
@@ -1238,9 +1217,8 @@ def export_admitted_students_excel(request):
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center", vertical="center")
     
-    # Add data
     for row_num, student in enumerate(students, 2):
-        ws.cell(row=row_num, column=1).value = row_num - 1  # S.No
+        ws.cell(row=row_num, column=1).value = row_num - 1
         ws.cell(row=row_num, column=2).value = student.full_name
         ws.cell(row=row_num, column=3).value = student.student_name
         ws.cell(row=row_num, column=4).value = student.father_name
@@ -1264,10 +1242,8 @@ def export_admitted_students_excel(request):
         ws.cell(row=row_num, column=22).value = float(student.remaining_fees)
         percentage = (student.paid_fees / student.total_fees * 100) if student.total_fees else 0
         ws.cell(row=row_num, column=23).value = f"{percentage:.2f}%"
-
         ws.cell(row=row_num, column=24).value = student.admission_date.strftime('%d-%m-%Y %I:%M %p')
     
-    # Adjust column widths
     for column in ws.columns:
         max_length = 0
         column_letter = column[0].column_letter
@@ -1280,7 +1256,6 @@ def export_admitted_students_excel(request):
         adjusted_width = min(max_length + 2, 50)
         ws.column_dimensions[column_letter].width = adjusted_width
     
-    # Create response
     excel_file = BytesIO()
     wb.save(excel_file)
     excel_file.seek(0)
@@ -1290,7 +1265,6 @@ def export_admitted_students_excel(request):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     
-    # Generate filename with timestamp and filters
     filename_parts = ['admitted_students']
     if search:
         filename_parts.append(f'search_{search[:20]}')
@@ -1308,17 +1282,12 @@ def export_admitted_students_excel(request):
     return response
 
 
-
-
+# ================= DELETE ADMITTED STUDENTS =================
 @login_required
 @require_http_methods(["POST"])
 def delete_admitted_students(request):
-    """
-    Delete multiple admitted students at once
-    This will also delete all related fee payment records
-    """
+    """Delete multiple admitted students at once"""
     try:
-        # Parse JSON data
         data = json.loads(request.body)
         student_ids = data.get('student_ids', [])
         
@@ -1328,7 +1297,6 @@ def delete_admitted_students(request):
                 'error': 'No students selected'
             })
         
-        # Validate that all IDs are integers
         try:
             student_ids = [int(id) for id in student_ids]
         except (ValueError, TypeError):
@@ -1337,7 +1305,6 @@ def delete_admitted_students(request):
                 'error': 'Invalid student IDs'
             })
         
-        # Get students to delete
         students_to_delete = AdmittedStudent.objects.filter(id__in=student_ids)
         
         if not students_to_delete.exists():
@@ -1346,25 +1313,18 @@ def delete_admitted_students(request):
                 'error': 'No students found with the given IDs'
             })
         
-        # Count students
         delete_count = students_to_delete.count()
         
-        # Delete students (this will also delete related FeePayment records due to CASCADE)
         with transaction.atomic():
-            # Delete photos first (optional - to clean up media files)
             for student in students_to_delete:
                 if student.photo:
                     try:
-                        # Delete the physical file
                         if student.photo.path:
-                            import os
                             if os.path.isfile(student.photo.path):
                                 os.remove(student.photo.path)
                     except Exception as e:
-                        # Log error but don't fail the deletion
-                        print(f"Error deleting photo for student {student.id}: {str(e)}")
+                        print(f"Error deleting photo: {str(e)}")
             
-            # Delete all students (and related fee payments via CASCADE)
             students_to_delete.delete()
         
         return JsonResponse({
@@ -1379,20 +1339,13 @@ def delete_admitted_students(request):
             'error': 'Invalid JSON data'
         }, status=400)
     except Exception as e:
-        print(f"Error in delete_admitted_students: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': f'An error occurred: {str(e)}'
         }, status=500)
-    
-    # ================= DATABASE BACKUP =================
+
+
 # ================= DATABASE BACKUP =================
-# Add this at the END of your core/views.py file
-
-from django.conf import settings
-
 @login_required
 def backup_database(request):
     try:
@@ -1412,51 +1365,3 @@ def backup_database(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
-
-
-# ================= ADD COURSE TO DATABASE (FIXED VERSION) =================
-@login_required
-@require_http_methods(["POST"])
-@csrf_protect
-def add_course_ajax(request):
-    """Add a new course via AJAX"""
-    try:
-        data = json.loads(request.body)
-        course_name = data.get('course_name', '').strip()
-        
-        if not course_name:
-            return JsonResponse({
-                'success': False,
-                'message': 'Course name cannot be empty'
-            }, status=400)
-        
-        # Check if course already exists
-        if Course.objects.filter(name__iexact=course_name).exists():
-            return JsonResponse({
-                'success': False,
-                'message': 'This course already exists in database!'
-            }, status=400)
-        
-        # Create new course with a default duration
-        course = Course.objects.create(
-            name=course_name,
-            duration='To be defined'  # You can change this default value
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Course "{course_name}" added successfully!',
-            'course_id': course.id,
-            'course_name': course.name
-        }, status=201)
-    
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'message': 'Invalid JSON data'
-        }, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }, status=500)

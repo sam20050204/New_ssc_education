@@ -76,6 +76,19 @@ class AdmittedStudent(models.Model):
     
     # Educational Information
     educational_qualification = models.CharField(max_length=200)
+
+    batch_month = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True,
+        help_text="Month of batch (e.g., January, February)"
+    )
+    batch_year = models.CharField(
+        max_length=4, 
+        blank=True, 
+        null=True,
+        help_text="Year of batch (e.g., 2024, 2025)"
+    )
     
     # Photo
     photo = models.ImageField(upload_to='student_photos/', blank=True, null=True)
@@ -110,6 +123,13 @@ class AdmittedStudent(models.Model):
         if self.total_fees and self.total_fees > 0:
             return (self.paid_fees / self.total_fees) * Decimal('100')
         return Decimal('0')
+    
+    @property
+    def batch_display(self):
+        """Return formatted batch name"""
+        if self.batch_month and self.batch_year:
+            return f"{self.batch_month} {self.batch_year}"
+        return "Not Assigned"
     
     class Meta:
         ordering = ['-admission_date']
