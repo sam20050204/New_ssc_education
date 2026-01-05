@@ -31,12 +31,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (query.length < 2) {
                 searchResults.innerHTML = '';
+                searchResults.style.display = 'none';
                 return;
             }
             
             // Show loading indicator
+            searchResults.style.display = 'block';
             searchResults.innerHTML = '<div class="loading">🔍 Searching...</div>';
             
+            // ✅ FIXED: Use correct endpoint path
             fetch(`/fees/search-students/?q=${encodeURIComponent(query)}`, {
                 method: 'GET',
                 headers: {
@@ -45,14 +48,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .then(response => {
-                console.log('Response status:', response.status);  // DEBUG
+                console.log('Search response status:', response.status);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
-                console.log('Search results:', data);  // DEBUG
+                console.log('Search results:', data);
                 
                 if (!data.students || data.students.length === 0) {
                     searchResults.innerHTML = '<div class="no-results">❌ No students found</div>';
@@ -67,8 +70,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 `).join('');
             })
             .catch(error => {
-                console.error('Search error:', error);  // DEBUG
-                searchResults.innerHTML = `<div class="error">❌ Error searching students: ${error.message}</div>`;
+                console.error('Search error:', error);
+                searchResults.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
             });
         });
     }
@@ -85,18 +88,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Select student from search results
 function selectStudent(studentId, fullName, course, mobile) {
-    console.log('Selecting student:', studentId, fullName);  // DEBUG
+    console.log('Selecting student:', studentId, fullName);
     
     selectedStudentId = studentId;
     
     // Hide search results
     document.getElementById('searchResults').innerHTML = '';
+    document.getElementById('searchResults').style.display = 'none';
     document.getElementById('studentSearch').value = '';
     
     // Show loading indicator
     const detailsSection = document.getElementById('studentDetailsSection');
     if (detailsSection) {
-        // Just show the section with loading message, don't replace the whole HTML
         detailsSection.style.display = 'block';
         const studentHeader = detailsSection.querySelector('.student-header');
         if (studentHeader) {
@@ -104,7 +107,7 @@ function selectStudent(studentId, fullName, course, mobile) {
         }
     }
     
-    // Load student details
+    // ✅ FIXED: Use correct URL with /admission/ prefix
     fetch(`/admission/${studentId}/detail/`, {
         method: 'GET',
         headers: {
@@ -113,17 +116,21 @@ function selectStudent(studentId, fullName, course, mobile) {
         }
     })
     .then(response => {
-        console.log('Detail response status:', response.status);  // DEBUG
+        console.log('Detail response status:', response.status);
+        console.log('Detail response URL:', response.url);  // DEBUG
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         return response.json();
     })
     .then(data => {
-        console.log('Student details:', data);  // DEBUG
+        console.log('Student details loaded:', data);
         
         const detailsSection = document.getElementById('studentDetailsSection');
-        if (!detailsSection) return;
+        if (!detailsSection) {
+            throw new Error('Student details section not found');
+        }
         
         // ================= UPDATE STUDENT HEADER SECTION =================
         const studentHeader = detailsSection.querySelector('.student-header');
@@ -134,13 +141,13 @@ function selectStudent(studentId, fullName, course, mobile) {
                 : '<div class="no-photo">📷</div>';
             
             studentHeader.innerHTML = `
-                <div class="student-photo-large" id="studentPhotoLarge">
+                <div class="student-photo-large">
                     ${photoHTML}
                 </div>
                 <div class="student-info-large">
-                    <h2 class="student-name-large" id="studentNameDisplay">${data.full_name}</h2>
-                    <span class="student-course-large" id="studentCourseDisplay">${displayCourse}</span>
-                    <p class="student-mobile-large">📞 <span id="studentMobileDisplay">${data.mobile_own}</span></p>
+                    <h2 class="student-name-large">${data.full_name}</h2>
+                    <span class="student-course-large">${displayCourse}</span>
+                    <p class="student-mobile-large">📞 ${data.mobile_own}</p>
                 </div>
             `;
         }
@@ -151,27 +158,25 @@ function selectStudent(studentId, fullName, course, mobile) {
             feesGrid.innerHTML = `
                 <div class="fees-info-card total">
                     <div class="fees-label">Total Fees</div>
-                    <div class="fees-amount total">₹<span id="totalFeesDisplay">${parseFloat(data.total_fees).toFixed(2)}</span></div>
+                    <div class="fees-amount total">₹${parseFloat(data.total_fees).toFixed(2)}</div>
                 </div>
                 <div class="fees-info-card paid">
                     <div class="fees-label">Paid Fees</div>
-                    <div class="fees-amount paid">₹<span id="paidFeesDisplay">${parseFloat(data.paid_fees).toFixed(2)}</span></div>
+                    <div class="fees-amount paid">₹${parseFloat(data.paid_fees).toFixed(2)}</div>
                 </div>
                 <div class="fees-info-card remaining">
                     <div class="fees-label">Remaining Fees</div>
-                    <div class="fees-amount remaining">₹<span id="remainingFeesDisplay">${parseFloat(data.remaining_fees).toFixed(2)}</span></div>
+                    <div class="fees-amount remaining">₹${parseFloat(data.remaining_fees).toFixed(2)}</div>
                 </div>
             `;
         }
         
         // ================= UPDATE FORM FIELDS =================
-        // Update hidden student ID
         const studentIdInput = document.getElementById('selectedStudentId');
         if (studentIdInput) {
             studentIdInput.value = studentId;
         }
         
-        // Update payment amount max value
         const paymentAmountInput = document.getElementById('paymentAmount');
         if (paymentAmountInput) {
             paymentAmountInput.max = parseFloat(data.remaining_fees).toFixed(2);
@@ -179,13 +184,12 @@ function selectStudent(studentId, fullName, course, mobile) {
             paymentAmountInput.placeholder = `Max: ₹${parseFloat(data.remaining_fees).toFixed(2)}`;
         }
         
-        // Update max payment display
         const maxPaymentDisplay = document.getElementById('maxPaymentAmount');
         if (maxPaymentDisplay) {
             maxPaymentDisplay.textContent = parseFloat(data.remaining_fees).toFixed(2);
         }
         
-        // Show the form section
+        // Show form section
         const formSection = detailsSection.querySelector('.payment-form-section');
         if (formSection) {
             formSection.style.display = 'block';
@@ -194,7 +198,7 @@ function selectStudent(studentId, fullName, course, mobile) {
         // Show details section
         detailsSection.style.display = 'block';
         
-        // Auto-focus on payment amount field
+        // Auto-focus on payment amount
         setTimeout(() => {
             if (paymentAmountInput) {
                 paymentAmountInput.focus();
@@ -202,14 +206,19 @@ function selectStudent(studentId, fullName, course, mobile) {
         }, 100);
     })
     .catch(error => {
-        console.error('Detail loading error:', error);  // DEBUG
-        alert('❌ Error loading student details: ' + error.message);
+        console.error('Detail loading error:', error);
+        alert('❌ Error loading student details:\n\n' + error.message + '\n\nMake sure the student record exists and the URL is correct.');
         
         const detailsSection = document.getElementById('studentDetailsSection');
         if (detailsSection) {
             const studentHeader = detailsSection.querySelector('.student-header');
             if (studentHeader) {
-                studentHeader.innerHTML = `<div class="error">❌ Error loading details: ${error.message}</div>`;
+                studentHeader.innerHTML = `
+                    <div class="error" style="padding: 20px; text-align: center;">
+                        ❌ Error loading details<br>
+                        <small>${error.message}</small>
+                    </div>
+                `;
             }
         }
     });
@@ -217,20 +226,17 @@ function selectStudent(studentId, fullName, course, mobile) {
 
 // Submit payment
 function submitPayment() {
-    // ================= PREVENT DOUBLE SUBMISSION =================
     if (paymentSubmitting) {
         alert('⏳ Payment is being processed. Please wait...');
         return false;
     }
     
-    // ================= PREVENT RAPID SUBMISSIONS =================
     const now = Date.now();
     if (now - lastSubmissionTime < 2000) {
         alert('⏳ Please wait before submitting again');
         return false;
     }
     
-    // ================= VALIDATION =================
     if (!selectedStudentId) {
         alert('❌ Please select a student');
         return false;
@@ -254,7 +260,6 @@ function submitPayment() {
         return false;
     }
     
-    // Check if amount exceeds remaining fees
     const remainingFeesText = document.getElementById('remainingFeesDisplay').textContent;
     const remainingFees = parseFloat(remainingFeesText);
     
@@ -263,27 +268,23 @@ function submitPayment() {
         return false;
     }
     
-    // ================= MARK AS SUBMITTING =================
     paymentSubmitting = true;
     lastSubmissionTime = now;
     
     const submitBtn = document.querySelector('#paymentForm button[type="submit"]');
     const originalText = submitBtn.textContent;
     
-    // ================= DISABLE BUTTON =================
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Processing...';
     submitBtn.style.opacity = '0.6';
     submitBtn.style.cursor = 'not-allowed';
     
-    // ================= DISABLE ALL FORM INPUTS =================
     const paymentForm = document.getElementById('paymentForm');
     const allInputs = paymentForm.querySelectorAll('input, select, textarea');
     allInputs.forEach(input => {
         input.disabled = true;
     });
     
-    // ================= SEND PAYMENT DATA =================
     const formData = new FormData();
     formData.append('student_id', selectedStudentId);
     formData.append('amount', amount);
@@ -299,7 +300,7 @@ function submitPayment() {
         }
     })
     .then(response => {
-        console.log('Payment response status:', response.status);  // DEBUG
+        console.log('Payment response status:', response.status);
         if (!response.ok) {
             return response.json().then(data => {
                 throw new Error(data.error || 'Payment submission failed');
@@ -308,34 +309,25 @@ function submitPayment() {
         return response.json();
     })
     .then(data => {
-        console.log('Payment response:', data);  // DEBUG
+        console.log('Payment successful:', data);
         
         if (data.success) {
-            // Show success message
             alert('✅ Payment recorded successfully!');
-            
-            // Display receipt
             displayReceipt(data.receipt);
             
-            // Reset form
             paymentForm.reset();
-            
-            // Reset state
             paymentSubmitting = false;
             selectedStudentId = null;
             
-            // Hide student details section
             document.getElementById('studentDetailsSection').style.display = 'none';
             document.getElementById('studentSearch').value = '';
             document.getElementById('searchResults').innerHTML = '';
             
-            // Reset button
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
             submitBtn.style.opacity = '1';
             submitBtn.style.cursor = 'pointer';
             
-            // Re-enable inputs
             allInputs.forEach(input => {
                 input.disabled = false;
             });
@@ -344,17 +336,15 @@ function submitPayment() {
         }
     })
     .catch(error => {
-        console.error('Payment error:', error);  // DEBUG
+        console.error('Payment error:', error);
         alert('❌ ' + error.message);
         
-        // Reset on error
         paymentSubmitting = false;
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
         submitBtn.style.opacity = '1';
         submitBtn.style.cursor = 'pointer';
         
-        // Re-enable inputs
         allInputs.forEach(input => {
             input.disabled = false;
         });
@@ -376,7 +366,6 @@ function displayReceipt(receipt) {
     document.getElementById('receiptRemainingFees').textContent = receipt.remaining_fees;
     document.getElementById('receiptAmountWords').textContent = receipt.amount_in_words;
     
-    // Show receipt modal
     const receiptModal = document.getElementById('receiptModal');
     if (receiptModal) {
         receiptModal.classList.add('active');
@@ -402,112 +391,23 @@ function printReceipt() {
             <title>Fee Payment Receipt</title>
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
-                    font-family: 'Arial', sans-serif; 
-                    margin: 20px; 
-                    background: #fff;
-                    color: #333;
-                }
-                .receipt-container { 
-                    max-width: 700px; 
-                    margin: 0 auto; 
-                    background: white;
-                    padding: 20px;
-                    border: 1px solid #ddd;
-                }
-                .receipt-header { 
-                    text-align: center; 
-                    margin-bottom: 20px; 
-                    border-bottom: 3px solid #333; 
-                    padding-bottom: 15px; 
-                }
-                .institute-name { 
-                    font-size: 18px; 
-                    font-weight: bold; 
-                    color: #333;
-                }
-                .institute-details { 
-                    font-size: 11px; 
-                    color: #666; 
-                    margin-top: 5px; 
-                    line-height: 1.6;
-                }
-                .receipt-title { 
-                    text-align: center; 
-                    font-size: 16px; 
-                    margin: 20px 0; 
-                    font-weight: bold;
-                }
-                .receipt-info { 
-                    display: grid; 
-                    grid-template-columns: 150px 1fr; 
-                    gap: 10px; 
-                    margin: 20px 0;
-                    font-size: 12px;
-                }
-                .receipt-label { 
-                    font-weight: bold;
-                    color: #333;
-                }
-                .receipt-value { 
-                    color: #666;
-                }
-                .amount-section { 
-                    margin: 20px 0; 
-                    font-size: 12px;
-                }
-                .amount-row { 
-                    display: flex; 
-                    justify-content: space-between; 
-                    padding: 8px 0;
-                    border-bottom: 1px dotted #ddd;
-                }
-                .amount-row.paid { 
-                    background: #e8f5e9; 
-                    padding: 10px; 
-                    font-weight: bold;
-                    border: 1px solid #4caf50;
-                    border-bottom: none;
-                }
-                .amount-in-words { 
-                    margin-top: 15px; 
-                    padding: 10px; 
-                    background: #f5f5f5;
-                    border-left: 3px solid #666;
-                    font-size: 11px;
-                    line-height: 1.5;
-                }
-                .receipt-footer { 
-                    text-align: center; 
-                    margin-top: 30px;
-                    font-size: 12px;
-                }
-                .thank-you {
-                    margin-bottom: 20px;
-                    font-weight: bold;
-                }
-                .signature-section { 
-                    margin-top: 40px; 
-                    text-align: center; 
-                }
-                .signature-line { 
-                    border-top: 1px solid #333; 
-                    width: 200px; 
-                    margin: 0 auto 5px; 
-                }
-                .signature-label {
-                    font-size: 11px;
-                    color: #666;
-                }
-                hr { 
-                    border: none; 
-                    border-top: 1px solid #ddd; 
-                    margin: 15px 0;
-                }
-                @media print { 
-                    body { margin: 0; padding: 0; }
-                    .receipt-container { border: none; }
-                }
+                body { font-family: Arial, sans-serif; margin: 20px; background: #fff; color: #333; }
+                .receipt-container { max-width: 700px; margin: 0 auto; background: white; padding: 20px; border: 1px solid #ddd; }
+                .receipt-header { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #333; padding-bottom: 15px; }
+                .institute-name { font-size: 18px; font-weight: bold; color: #333; }
+                .institute-details { font-size: 11px; color: #666; margin-top: 5px; line-height: 1.6; }
+                .receipt-title { text-align: center; font-size: 16px; margin: 20px 0; font-weight: bold; }
+                .receipt-info { display: grid; grid-template-columns: 150px 1fr; gap: 10px; margin: 20px 0; font-size: 12px; }
+                .receipt-label { font-weight: bold; color: #333; }
+                .receipt-value { color: #666; }
+                .amount-section { margin: 20px 0; font-size: 12px; }
+                .amount-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; }
+                .amount-row.paid { background: #e8f5e9; padding: 10px; font-weight: bold; border: 1px solid #4caf50; }
+                .amount-in-words { margin-top: 15px; padding: 10px; background: #f5f5f5; border-left: 3px solid #666; font-size: 11px; }
+                .receipt-footer { text-align: center; margin-top: 30px; font-size: 12px; }
+                .signature-section { margin-top: 40px; text-align: center; }
+                .signature-line { border-top: 1px solid #333; width: 200px; margin: 0 auto 5px; }
+                @media print { body { margin: 0; padding: 0; } }
             </style>
         </head>
         <body>
@@ -532,7 +432,7 @@ function closeReceiptModal() {
     }
 }
 
-// Close modals on ESC key
+// Close on ESC
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         if (!paymentSubmitting) {
@@ -541,7 +441,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Close modal on outside click
+// Close on outside click
 window.addEventListener('click', function(e) {
     const receiptModal = document.getElementById('receiptModal');
     if (e.target === receiptModal && !paymentSubmitting) {
@@ -549,7 +449,7 @@ window.addEventListener('click', function(e) {
     }
 });
 
-// Prevent closing modal during payment submission
+// Prevent closing during payment
 window.addEventListener('beforeunload', function(e) {
     if (paymentSubmitting) {
         e.preventDefault();

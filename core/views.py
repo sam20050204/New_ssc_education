@@ -1,10 +1,7 @@
-# Fix for core/views.py - Add this import at the top of the file
+# At the very top, add this import:
+from datetime import timedelta  # ✅ ADD THIS LINE
 
-# At the very top of core/views.py, find the imports section and add:
-
-from django.db import transaction  # ADD THIS LINE
-
-# Your existing imports should look like this:
+# ...existing imports...
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -14,7 +11,7 @@ from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db.models.functions import ExtractYear
-from django.db import transaction  # THIS IS THE MISSING IMPORT
+from django.db import transaction
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.conf import settings
@@ -22,14 +19,13 @@ import csv
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta  # ✅ FIXED: Added timedelta
 from decimal import Decimal
 import json
 import shutil
 import os
 
 from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
-
 
 
 # ================= CUSTOM LOGOUT =================
