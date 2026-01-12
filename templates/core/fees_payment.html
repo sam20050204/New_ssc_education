@@ -183,20 +183,29 @@
 <!-- ✅ UPDATED RECEIPT MODAL - Add this to replace the existing receipt modal in fees_payment.html -->
 
 <!-- RECEIPT MODAL -->
+<!-- ✅ FIXED RECEIPT MODAL - Replace the receipt modal section in fees_payment.html -->
+
+<!-- RECEIPT MODAL -->
 <div id="receiptModal" class="receipt-modal">
     <div class="receipt-modal-content">
         <div class="receipt-container" id="receiptContent">
-            <!-- INSTITUTE HEADER -->
-            <div class="receipt-header">
-                <div class="institute-name">Shri Samarth Computer Education Murud</div>
-                <div class="institute-details">
-                    Contact No: 9960638066<br>
-                    Address: Samarth Road, Behind Bus Stand, Shivaji Nagar, Murud<br>
-                    TQ. DIST. Latur - 413510<br>
-                    <strong>MKCL Authorized Center Code: 45210017</strong>
-                </div>
+            <!-- Receipt content will be loaded dynamically -->
+            <div style="text-align: center; padding: 40px; color: #666;">
+                <p>Receipt content will appear here...</p>
             </div>
+        </div>
 
+        <!-- ✅ MODAL ACTIONS WITH PRINT BUTTON -->
+        <div class="modal-actions" style="display: flex; gap: 15px; justify-content: center; padding: 20px; background: white; border-top: 2px solid #e8e8e8;">
+            <button class="btn-print" onclick="printReceipt()" style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                🖨️ Print Receipt
+            </button>
+            <button class="btn-close" onclick="closeReceiptModal()" style="padding: 12px 30px; background: #e9ecef; color: #495057; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">
+                ❌ Close
+            </button>
+        </div>
+    </div>
+</div>
             <!-- RECEIPT TITLE -->
             <h2 class="receipt-title">🧾 FEE PAYMENT RECEIPT</h2>
 

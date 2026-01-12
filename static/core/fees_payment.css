@@ -731,3 +731,57 @@
 .search-results::-webkit-scrollbar-thumb:hover {
     background: #5568d3;
 }
+
+
+/* ===================== UPDATED PRINT STYLES ===================== */
+/* Add this to the END of your fees_payment.css file */
+
+@media print {
+    /* Keep everything simple - let the new window handle printing */
+    .modal-actions,
+    .btn-print,
+    .btn-close {
+        display: none !important;
+    }
+    
+    .receipt-container {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+}
+    
+    /* Hide modal actions and buttons */
+    .modal-actions,
+    .btn-print,
+    .btn-close {
+        display: none !important;
+    }
+    
+    /* Remove shadows and borders for clean print */
+    .receipt-container {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 20px;
+    }
+    
+    /* Optimize page breaks */
+    .receipt-container {
+        page-break-inside: avoid;
+    }
+    
+    /* Remove modal background */
+    .receipt-modal {
+        background: white !important;
+        position: static !important;
+        overflow: visible !important;
+    }
+    
+    /* Ensure receipt content is properly sized */
+    .receipt-header,
+    .receipt-title,
+    .receipt-info,
+    .amount-section,
+    .receipt-footer {
+        page-break-inside: avoid;
+    }
+}
