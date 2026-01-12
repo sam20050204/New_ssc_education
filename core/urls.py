@@ -19,7 +19,7 @@ urlpatterns = [
     path('admission/<int:student_id>/update/', views.update_student_admitted, name='update_student_admitted'),
     path('admission/delete/', views.delete_admitted_students, name='delete_admitted_students'),
     
-    # Fees Payment URLs - ✅ FIXED: Correct paths
+    # Fees Payment URLs - ✅ VERIFIED: These paths are correct
     path('fees/payment/', views.fees_payment, name='fees_payment'),
     path('fees/search-students/', views.search_students_for_payment, name='search_students_for_payment'),
     path('fees/submit-payment/', views.submit_fee_payment, name='submit_fee_payment'),

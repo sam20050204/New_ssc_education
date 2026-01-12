@@ -57,24 +57,25 @@ function debounce(func, wait) {
 // Load receipts from backend
 async function loadReceipts() {
     try {
-        console.log('Loading receipts...'); // Debug log
+        console.log('Loading receipts...');
         showLoading(true);
         
-        const response = await fetch('/api/receipts/');
-        console.log('Response status:', response.status); // Debug log
+        // ✅ FIXED: Use correct endpoint from urls.py
+        const response = await fetch('/receipts/api/');  // Changed from '/api/receipts/'
+        console.log('Response status:', response.status);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('Received data:', data); // Debug log
+        console.log('Received data:', data);
         
         if (data.success) {
             allReceipts = data.receipts || [];
             filteredReceipts = [...allReceipts];
             
-            console.log('Total receipts loaded:', allReceipts.length); // Debug log
+            console.log('Total receipts loaded:', allReceipts.length);
             
             renderReceipts(filteredReceipts);
             updateSummary(filteredReceipts);
@@ -89,6 +90,7 @@ async function loadReceipts() {
         showLoading(false);
     }
 }
+
 
 // Apply filters
 function applyFilters() {
@@ -239,7 +241,8 @@ async function handleEditSubmit(e) {
     };
     
     try {
-        const response = await fetch(`/api/receipts/${receiptId}/update/`, {
+        // ✅ FIXED: Use correct endpoint from urls.py
+        const response = await fetch(`/receipts/${receiptId}/update/`, {  // Changed from '/api/receipts/${receiptId}/update/'
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -253,7 +256,7 @@ async function handleEditSubmit(e) {
         if (data.success) {
             showNotification('Receipt updated successfully!', 'success');
             closeEditModal();
-            loadReceipts(); // Reload receipts
+            loadReceipts();
         } else {
             showNotification(data.error || 'Failed to update receipt', 'error');
         }
@@ -263,6 +266,7 @@ async function handleEditSubmit(e) {
     }
 }
 
+
 // Delete receipt function
 async function deleteReceipt(receiptId) {
     const receipt = allReceipts.find(r => r.id === receiptId);
@@ -271,7 +275,6 @@ async function deleteReceipt(receiptId) {
         return;
     }
     
-    // Confirm deletion
     const confirmMessage = `Are you sure you want to delete this receipt?\n\n` +
                           `Receipt No: ${receipt.receipt_no}\n` +
                           `Student: ${receipt.student_name}\n` +
@@ -285,7 +288,8 @@ async function deleteReceipt(receiptId) {
     try {
         showLoading(true);
         
-        const response = await fetch(`/api/receipts/${receiptId}/delete/`, {
+        // ✅ FIXED: Use correct endpoint from urls.py
+        const response = await fetch(`/receipts/${receiptId}/delete/`, {  // Changed from '/api/receipts/${receiptId}/delete/'
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -297,7 +301,7 @@ async function deleteReceipt(receiptId) {
         
         if (data.success) {
             showNotification('Receipt deleted successfully!', 'success');
-            loadReceipts(); // Reload receipts
+            loadReceipts();
         } else {
             showNotification(data.error || 'Failed to delete receipt', 'error');
         }
@@ -411,7 +415,6 @@ async function exportToExcel() {
     try {
         showLoading(true);
         
-        // Build query parameters
         const params = new URLSearchParams();
         
         const searchTerm = document.getElementById('searchInput').value;
@@ -424,8 +427,8 @@ async function exportToExcel() {
         if (monthFilter) params.append('month', monthFilter);
         if (yearFilter) params.append('year', yearFilter);
         
-        // Download file
-        window.location.href = `/api/receipts/export/?${params.toString()}`;
+        // ✅ FIXED: Use correct endpoint from urls.py
+        window.location.href = `/receipts/export/?${params.toString()}`;  // Changed from '/api/receipts/export/'
         
         showLoading(false);
         showNotification('Export started! Your download will begin shortly.', 'success');

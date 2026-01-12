@@ -116,70 +116,67 @@
             </div>
         </div>
 
-        <!-- PAYMENT FORM -->
-        <div class="payment-form-section">
-            <h3>💳 Record Payment</h3>
-            <form id="paymentForm">
-                {% csrf_token %}
-                <input type="hidden" id="selectedStudentId" name="student_id">
+        <!-- PAYMENT FORM - Place this inside the student-details-section -->
+            <div class="payment-form-section" style="display: none;">
+                <h3>💳 Record Payment</h3>
+                <form id="paymentForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="selectedStudentId" name="student_id">
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="paymentAmount">
-                            Payment Amount (₹) <span class="required">*</span>
-                        </label>
-                        <input
-                            type="number"
-                            id="paymentAmount"
-                            name="amount"
-                            class="form-input payment-amount-input"
-                            placeholder="0.00"
-                            step="0.01"
-                            min="0.01"
-                            required
-                        >
-                        <small class="help-text">Max: ₹<span id="maxPaymentAmount">0.00</span></small>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="paymentAmount">
+                                Payment Amount (₹) <span class="required">*</span>
+                            </label>
+                            <input
+                                type="number"
+                                id="paymentAmount"
+                                name="amount"
+                                class="form-input payment-amount-input"
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0.01"
+                                required
+                            >
+                            <small class="help-text">Max: ₹<span id="maxPaymentAmount">0.00</span></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="paymentMode">
+                                Payment Mode <span class="required">*</span>
+                            </label>
+                            <select id="paymentMode" name="payment_mode" class="form-select" required>
+                                <option value="">-- Select Mode --</option>
+                                <option value="Cash">💵 Cash</option>
+                                <option value="UPI">📱 UPI</option>
+                                <option value="Card">💳 Card</option>
+                                <option value="Bank Transfer">🏦 Bank Transfer</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="paymentMode">
-                            Payment Mode <span class="required">*</span>
-                        </label>
-                        <select id="paymentMode" name="payment_mode" class="form-select" required>
-                            <option value="">-- Select Mode --</option>
-                            <option value="Cash">💵 Cash</option>
-                            <option value="UPI">📱 UPI</option>
-                            <option value="Card">💳 Card</option>
-                            <option value="Bank Transfer">🏦 Bank Transfer</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group full-width">
+                            <label for="remarks">Remarks (Optional)</label>
+                            <textarea
+                                id="remarks"
+                                name="remarks"
+                                class="form-input"
+                                rows="2"
+                                placeholder="Any additional notes..."
+                            ></textarea>
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group full-width">
-                        <label for="remarks">Remarks (Optional)</label>
-                        <textarea
-                            id="remarks"
-                            name="remarks"
-                            class="form-input"
-                            rows="2"
-                            placeholder="Any additional notes..."
-                        ></textarea>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-submit">
+                            💾 Submit Payment
+                        </button>
+                        <button type="reset" class="btn-reset">
+                            🔄 Reset
+                        </button>
                     </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn-submit">
-                        💾 Submit Payment
-                    </button>
-                    <button type="reset" class="btn-reset">
-                        🔄 Reset
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
+                </form>
 </div>
 
 <!-- RECEIPT MODAL -->

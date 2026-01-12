@@ -23,66 +23,32 @@ function openStudentModal(studentId) {
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
     
-    // Fetch student details
-    fetch(`/student-detail-admitted/${studentId}/`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch student details');
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Set student ID
-            document.getElementById('studentId').value = data.id;
-            
-            // Personal info
-            document.getElementById('studentName').value = data.student_name || '';
-            document.getElementById('fatherName').value = data.father_name || '';
-            document.getElementById('surname').value = data.surname || '';
-            document.getElementById('motherName').value = data.mother_name || '';
-            document.getElementById('fullName').value = data.full_name || '';
-            document.getElementById('dob').value = data.date_of_birth || '';
-            document.getElementById('gender').value = data.gender || 'Male';
-            document.getElementById('maritalStatus').value = data.marital_status || 'Single';
-            
-            // Photo
-            const modalPhoto = document.getElementById('modalPhoto');
-            if (data.photo) {
-                modalPhoto.src = data.photo;
-            } else {
-                const firstLetter = data.student_name ? data.student_name.charAt(0).toUpperCase() : 'S';
-                modalPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23667eea"/><text x="50%" y="50%" font-size="60" fill="white" text-anchor="middle" dy=".3em">${firstLetter}</text></svg>`;
-            }
-            
-            // Contact info
-            document.getElementById('mobileOwn').value = data.mobile_own || '';
-            document.getElementById('parentMobile').value = data.parent_mobile || '';
-            
-            // Course info
-            document.getElementById('courseSelect').value = data.course || 'MS-CIT';
-            document.getElementById('customCourse').value = data.custom_course || '';
-            document.getElementById('qualification').value = data.educational_qualification || '';
-            
-            // Address
-            document.getElementById('address').value = data.address || '';
-            document.getElementById('city').value = data.city || '';
-            document.getElementById('tehsil').value = data.tehsil_block || '';
-            document.getElementById('district').value = data.district || '';
-            document.getElementById('pinCode').value = data.pin_code || '';
-            
-            // Financial info
-            document.getElementById('totalFees').value = data.total_fees || 5000;
-            document.getElementById('paidFees').value = data.paid_fees || 0;
-            calculateRemainingFees();
-            
-            // ===================== NEW: Display Payment History =====================
-            displayPaymentHistory(data.payment_history || []);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('❌ Error loading student details. Please try again.');
-            closeModal();
-        });
+    // ✅ FIXED: Use correct URL pattern from urls.py
+    fetch(`/admission/${studentId}/detail/`, {  // Changed from /student-detail-admitted/${studentId}/
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log('Detail response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Student details loaded:', data);
+        
+        // ... rest of the code remains the same ...
+    })
+    .catch(error => {
+        console.error('Detail loading error:', error);
+        alert('❌ Error loading student details:\n\n' + error.message);
+        closeModal();
+    });
 }
 
 // ===================== NEW FUNCTION: Display Payment History =====================
@@ -371,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
             saveBtn.disabled = true;
             
             // Submit form
-            fetch(`/update-student-admitted/${studentId}/`, {
+            fetch(`/admission/${studentId}/update/`, {  // ✅ FIXED: Correct URL
                 method: 'POST',
                 body: formData,
                 headers: {

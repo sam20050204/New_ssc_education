@@ -1,7 +1,5 @@
-# At the very top, add this import:
-from datetime import timedelta  # ✅ ADD THIS LINE
-
-# ...existing imports...
+from datetime import timedelta
+from django.db import transaction  
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -11,7 +9,6 @@ from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db.models.functions import ExtractYear
-from django.db import transaction
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.conf import settings
@@ -19,14 +16,13 @@ import csv
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from io import BytesIO
-from datetime import datetime, timedelta  # ✅ FIXED: Added timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 import json
 import shutil
 import os
 
 from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
-
 
 # ================= CUSTOM LOGOUT =================
 def custom_logout(request):
@@ -698,30 +694,72 @@ def search_students_for_payment(request):
     return JsonResponse({'students': students_data})
 
 
-# ================= SUBMIT FEE PAYMENT =================
+# ================= SUBMIT FEE PAYMENT - FIXED VERSION =================
+@login_required
 def submit_fee_payment(request):
     if request.method == 'POST':
         try:
+            # Get form data
             student_id = request.POST.get('student_id')
-            amount = Decimal(request.POST.get('amount'))
+            amount = request.POST.get('amount')
             payment_mode = request.POST.get('payment_mode')
             remarks = request.POST.get('remarks', '')
             
+            # Debug logging
+            print(f"Received payment data: student_id={student_id}, amount={amount}, payment_mode={payment_mode}")
+            
+            # Validate inputs
+            if not student_id:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Student ID is required'
+                }, status=400)
+            
+            if not amount:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Payment amount is required'
+                }, status=400)
+            
+            if not payment_mode:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Payment mode is required'
+                }, status=400)
+            
+            # Convert amount to Decimal
+            try:
+                amount = Decimal(str(amount))
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid amount format'
+                }, status=400)
+            
+            # Validate amount
+            if amount <= 0:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Payment amount must be greater than zero'
+                }, status=400)
+            
+            # Use atomic transaction
             with transaction.atomic():
-                student = AdmittedStudent.objects.select_for_update().get(id=student_id)
-                
-                # Validate amount
-                if amount <= 0:
+                # Get student with lock
+                try:
+                    student = AdmittedStudent.objects.select_for_update().get(id=student_id)
+                except AdmittedStudent.DoesNotExist:
                     return JsonResponse({
                         'success': False,
-                        'error': 'Payment amount must be greater than zero'
-                    })
+                        'error': 'Student not found'
+                    }, status=404)
                 
+                # Check if amount exceeds remaining fees
                 if amount > student.remaining_fees:
                     return JsonResponse({
                         'success': False,
-                        'error': f'Payment amount cannot exceed remaining fees (₹{student.remaining_fees})'
-                    })
+                        'error': f'Payment amount (₹{amount}) cannot exceed remaining fees (₹{student.remaining_fees})'
+                    }, status=400)
                 
                 # Create payment record
                 payment = FeePayment.objects.create(
@@ -741,7 +779,7 @@ def submit_fee_payment(request):
                 # Prepare receipt data
                 course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
                 
-                # NEW: Include batch information
+                # Batch information
                 batch_display = f"{student.batch_month} {student.batch_year}" if student.batch_month and student.batch_year else "Not Assigned"
                 
                 receipt_data = {
@@ -750,9 +788,9 @@ def submit_fee_payment(request):
                     'time': payment.payment_date.strftime('%I:%M %p'),
                     'student_name': student.full_name,
                     'course': course_name,
-                    'batch_month': student.batch_month or '',      # NEW
-                    'batch_year': student.batch_year or '',        # NEW
-                    'batch_display': batch_display,                # NEW
+                    'batch_month': student.batch_month or '',
+                    'batch_year': student.batch_year or '',
+                    'batch_display': batch_display,
                     'mobile': student.mobile_own,
                     'payment_mode': payment_mode,
                     'total_fees': f"{float(student.total_fees):.2f}",
@@ -762,23 +800,27 @@ def submit_fee_payment(request):
                     'amount_in_words': number_to_words(float(amount))
                 }
                 
+                print(f"Payment successful! Receipt: {receipt_data['receipt_no']}")
+                
                 return JsonResponse({
                     'success': True,
-                    'receipt': receipt_data
+                    'receipt': receipt_data,
+                    'message': 'Payment recorded successfully'
                 })
                 
-        except AdmittedStudent.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'error': 'Student not found'
-            })
         except Exception as e:
+            print(f"Error in submit_fee_payment: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return JsonResponse({
                 'success': False,
-                'error': str(e)
-            })
+                'error': f'Server error: {str(e)}'
+            }, status=500)
     
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    return JsonResponse({
+        'success': False,
+        'error': 'Invalid request method. Use POST.'
+    }, status=405)
 
 # ================= NUMBER TO WORDS CONVERTER =================
 def number_to_words(num):

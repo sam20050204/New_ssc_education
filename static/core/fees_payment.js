@@ -1,4 +1,5 @@
 let selectedStudentId = null;
+let selectedStudentData = null; // Store student data
 let lastSubmissionTime = 0;
 let paymentSubmitting = false;
 
@@ -27,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const query = this.value.trim();
             const searchResults = document.getElementById('searchResults');
             
-            console.log('Search query:', query);  // DEBUG
+            console.log('Search query:', query);
             
             if (query.length < 2) {
                 searchResults.innerHTML = '';
@@ -35,11 +36,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Show loading indicator
             searchResults.style.display = 'block';
             searchResults.innerHTML = '<div class="loading">🔍 Searching...</div>';
             
-            // ✅ FIXED: Use correct endpoint path
             fetch(`/fees/search-students/?q=${encodeURIComponent(query)}`, {
                 method: 'GET',
                 headers: {
@@ -81,6 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (paymentForm) {
         paymentForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Payment form submitted!');
             submitPayment();
         });
     }
@@ -93,21 +93,31 @@ function selectStudent(studentId, fullName, course, mobile) {
     selectedStudentId = studentId;
     
     // Hide search results
-    document.getElementById('searchResults').innerHTML = '';
-    document.getElementById('searchResults').style.display = 'none';
-    document.getElementById('studentSearch').value = '';
+    const searchResults = document.getElementById('searchResults');
+    if (searchResults) {
+        searchResults.innerHTML = '';
+        searchResults.style.display = 'none';
+    }
+    
+    const studentSearch = document.getElementById('studentSearch');
+    if (studentSearch) {
+        studentSearch.value = '';
+    }
     
     // Show loading indicator
     const detailsSection = document.getElementById('studentDetailsSection');
-    if (detailsSection) {
-        detailsSection.style.display = 'block';
-        const studentHeader = detailsSection.querySelector('.student-header');
-        if (studentHeader) {
-            studentHeader.innerHTML = '<div class="loading">⏳ Loading student details...</div>';
-        }
+    if (!detailsSection) {
+        console.error('Student details section not found!');
+        alert('❌ Error: Student details section not found');
+        return;
     }
     
-    // ✅ FIXED: Use correct URL with /admission/ prefix
+    detailsSection.style.display = 'block';
+    const studentHeader = detailsSection.querySelector('.student-header');
+    if (studentHeader) {
+        studentHeader.innerHTML = '<div class="loading">⏳ Loading student details...</div>';
+    }
+    
     fetch(`/admission/${studentId}/detail/`, {
         method: 'GET',
         headers: {
@@ -117,7 +127,6 @@ function selectStudent(studentId, fullName, course, mobile) {
     })
     .then(response => {
         console.log('Detail response status:', response.status);
-        console.log('Detail response URL:', response.url);  // DEBUG
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -127,17 +136,20 @@ function selectStudent(studentId, fullName, course, mobile) {
     .then(data => {
         console.log('Student details loaded:', data);
         
+        // Store student data globally
+        selectedStudentData = data;
+        
         const detailsSection = document.getElementById('studentDetailsSection');
         if (!detailsSection) {
             throw new Error('Student details section not found');
         }
         
-        // ================= UPDATE STUDENT HEADER SECTION =================
+        // Update student header
         const studentHeader = detailsSection.querySelector('.student-header');
         if (studentHeader) {
             const displayCourse = data.custom_course || data.course;
             const photoHTML = data.photo 
-                ? `<img src="${data.photo}" alt="${data.full_name}" style="max-width: 100%; max-height: 150px; border-radius: 8px;">` 
+                ? `<img src="${data.photo}" alt="${data.full_name}">` 
                 : '<div class="no-photo">📷</div>';
             
             studentHeader.innerHTML = `
@@ -152,7 +164,7 @@ function selectStudent(studentId, fullName, course, mobile) {
             `;
         }
         
-        // ================= UPDATE FEES INFO GRID =================
+        // Update fees info grid
         const feesGrid = detailsSection.querySelector('.fees-info-grid');
         if (feesGrid) {
             feesGrid.innerHTML = `
@@ -171,10 +183,10 @@ function selectStudent(studentId, fullName, course, mobile) {
             `;
         }
         
-        // ================= UPDATE FORM FIELDS =================
-        const studentIdInput = document.getElementById('selectedStudentId');
-        if (studentIdInput) {
-            studentIdInput.value = studentId;
+        // Update form fields with null checks
+        const selectedStudentIdInput = document.getElementById('selectedStudentId');
+        if (selectedStudentIdInput) {
+            selectedStudentIdInput.value = studentId;
         }
         
         const paymentAmountInput = document.getElementById('paymentAmount');
@@ -207,25 +219,19 @@ function selectStudent(studentId, fullName, course, mobile) {
     })
     .catch(error => {
         console.error('Detail loading error:', error);
-        alert('❌ Error loading student details:\n\n' + error.message + '\n\nMake sure the student record exists and the URL is correct.');
+        alert('❌ Error loading student details:\n\n' + error.message);
         
         const detailsSection = document.getElementById('studentDetailsSection');
         if (detailsSection) {
-            const studentHeader = detailsSection.querySelector('.student-header');
-            if (studentHeader) {
-                studentHeader.innerHTML = `
-                    <div class="error" style="padding: 20px; text-align: center;">
-                        ❌ Error loading details<br>
-                        <small>${error.message}</small>
-                    </div>
-                `;
-            }
+            detailsSection.style.display = 'none';
         }
     });
 }
 
-// Submit payment
+// Submit payment - FIXED VERSION
 function submitPayment() {
+    console.log('submitPayment function called!');
+    
     if (paymentSubmitting) {
         alert('⏳ Payment is being processed. Please wait...');
         return false;
@@ -237,34 +243,47 @@ function submitPayment() {
         return false;
     }
     
-    if (!selectedStudentId) {
-        alert('❌ Please select a student');
+    if (!selectedStudentId || !selectedStudentData) {
+        alert('❌ Please select a student first');
         return false;
     }
     
-    const amount = document.getElementById('paymentAmount').value.trim();
-    const paymentMode = document.getElementById('paymentMode').value.trim();
+    const amountInput = document.getElementById('paymentAmount');
+    const paymentModeSelect = document.getElementById('paymentMode');
+    
+    if (!amountInput || !paymentModeSelect) {
+        alert('❌ Error: Form elements not found');
+        return false;
+    }
+    
+    const amount = amountInput.value.trim();
+    const paymentMode = paymentModeSelect.value.trim();
+    
+    console.log('Payment data:', { selectedStudentId, amount, paymentMode });
     
     if (!amount) {
         alert('❌ Please enter payment amount');
+        amountInput.focus();
         return false;
     }
     
     if (parseFloat(amount) <= 0) {
         alert('❌ Payment amount must be greater than zero');
+        amountInput.focus();
         return false;
     }
     
     if (!paymentMode) {
         alert('❌ Please select payment mode');
+        paymentModeSelect.focus();
         return false;
     }
     
-    const remainingFeesText = document.getElementById('remainingFeesDisplay').textContent;
-    const remainingFees = parseFloat(remainingFeesText);
+    // Get remaining fees from stored data
+    const remainingFees = parseFloat(selectedStudentData.remaining_fees);
     
     if (parseFloat(amount) > remainingFees) {
-        alert(`❌ Payment amount cannot exceed remaining fees (₹${remainingFees.toFixed(2)})`);
+        alert(`❌ Payment amount (₹${parseFloat(amount).toFixed(2)}) cannot exceed remaining fees (₹${remainingFees.toFixed(2)})`);
         return false;
     }
     
@@ -272,6 +291,12 @@ function submitPayment() {
     lastSubmissionTime = now;
     
     const submitBtn = document.querySelector('#paymentForm button[type="submit"]');
+    if (!submitBtn) {
+        console.error('Submit button not found!');
+        paymentSubmitting = false;
+        return false;
+    }
+    
     const originalText = submitBtn.textContent;
     
     submitBtn.disabled = true;
@@ -289,7 +314,13 @@ function submitPayment() {
     formData.append('student_id', selectedStudentId);
     formData.append('amount', amount);
     formData.append('payment_mode', paymentMode);
-    formData.append('remarks', document.getElementById('remarks').value || '');
+    
+    const remarksInput = document.getElementById('remarks');
+    if (remarksInput) {
+        formData.append('remarks', remarksInput.value || '');
+    }
+    
+    console.log('Sending payment request...');
     
     fetch('/fees/submit-payment/', {
         method: 'POST',
@@ -301,12 +332,12 @@ function submitPayment() {
     })
     .then(response => {
         console.log('Payment response status:', response.status);
-        if (!response.ok) {
-            return response.json().then(data => {
+        return response.json().then(data => {
+            if (!response.ok) {
                 throw new Error(data.error || 'Payment submission failed');
-            });
-        }
-        return response.json();
+            }
+            return data;
+        });
     })
     .then(data => {
         console.log('Payment successful:', data);
@@ -318,10 +349,22 @@ function submitPayment() {
             paymentForm.reset();
             paymentSubmitting = false;
             selectedStudentId = null;
+            selectedStudentData = null;
             
-            document.getElementById('studentDetailsSection').style.display = 'none';
-            document.getElementById('studentSearch').value = '';
-            document.getElementById('searchResults').innerHTML = '';
+            const detailsSection = document.getElementById('studentDetailsSection');
+            if (detailsSection) {
+                detailsSection.style.display = 'none';
+            }
+            
+            const studentSearch = document.getElementById('studentSearch');
+            if (studentSearch) {
+                studentSearch.value = '';
+            }
+            
+            const searchResults = document.getElementById('searchResults');
+            if (searchResults) {
+                searchResults.innerHTML = '';
+            }
             
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
@@ -353,18 +396,29 @@ function submitPayment() {
 
 // Display receipt
 function displayReceipt(receipt) {
-    document.getElementById('receiptNo').textContent = receipt.receipt_no;
-    document.getElementById('receiptDate').textContent = receipt.date;
-    document.getElementById('receiptStudentName').textContent = receipt.student_name;
-    document.getElementById('receiptCourse').textContent = receipt.course;
-    document.getElementById('receiptMobile').textContent = receipt.mobile;
-    document.getElementById('receiptPaymentMode').textContent = receipt.payment_mode;
+    console.log('Displaying receipt:', receipt);
     
-    document.getElementById('receiptTotalFees').textContent = receipt.total_fees;
-    document.getElementById('receiptPreviousPaid').textContent = receipt.previous_paid;
-    document.getElementById('receiptAmountPaid').textContent = receipt.amount_paid;
-    document.getElementById('receiptRemainingFees').textContent = receipt.remaining_fees;
-    document.getElementById('receiptAmountWords').textContent = receipt.amount_in_words;
+    // Use safe element access
+    const setTextContent = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        } else {
+            console.warn(`Element not found: ${id}`);
+        }
+    };
+    
+    setTextContent('receiptNo', receipt.receipt_no);
+    setTextContent('receiptDate', receipt.date);
+    setTextContent('receiptStudentName', receipt.student_name);
+    setTextContent('receiptCourse', receipt.course);
+    setTextContent('receiptMobile', receipt.mobile);
+    setTextContent('receiptPaymentMode', receipt.payment_mode);
+    setTextContent('receiptTotalFees', receipt.total_fees);
+    setTextContent('receiptPreviousPaid', receipt.previous_paid);
+    setTextContent('receiptAmountPaid', receipt.amount_paid);
+    setTextContent('receiptRemainingFees', receipt.remaining_fees);
+    setTextContent('receiptAmountWords', receipt.amount_in_words);
     
     const receiptModal = document.getElementById('receiptModal');
     if (receiptModal) {
