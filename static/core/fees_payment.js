@@ -1,5 +1,6 @@
+// ===================== FIXED: fees_payment.js =====================
 let selectedStudentId = null;
-let selectedStudentData = null; // Store student data
+let selectedStudentData = null;
 let lastSubmissionTime = 0;
 let paymentSubmitting = false;
 
@@ -92,7 +93,6 @@ function selectStudent(studentId, fullName, course, mobile) {
     
     selectedStudentId = studentId;
     
-    // Hide search results
     const searchResults = document.getElementById('searchResults');
     if (searchResults) {
         searchResults.innerHTML = '';
@@ -104,7 +104,6 @@ function selectStudent(studentId, fullName, course, mobile) {
         studentSearch.value = '';
     }
     
-    // Show loading indicator
     const detailsSection = document.getElementById('studentDetailsSection');
     if (!detailsSection) {
         console.error('Student details section not found!');
@@ -136,7 +135,6 @@ function selectStudent(studentId, fullName, course, mobile) {
     .then(data => {
         console.log('Student details loaded:', data);
         
-        // Store student data globally
         selectedStudentData = data;
         
         const detailsSection = document.getElementById('studentDetailsSection');
@@ -144,13 +142,17 @@ function selectStudent(studentId, fullName, course, mobile) {
             throw new Error('Student details section not found');
         }
         
-        // Update student header
         const studentHeader = detailsSection.querySelector('.student-header');
         if (studentHeader) {
             const displayCourse = data.custom_course || data.course;
             const photoHTML = data.photo 
                 ? `<img src="${data.photo}" alt="${data.full_name}">` 
                 : '<div class="no-photo">📷</div>';
+            
+            // ✅ FIXED: Display batch information
+            const batchDisplay = (data.batch_month && data.batch_year) 
+                ? `${data.batch_month} ${data.batch_year}` 
+                : 'Not Assigned';
             
             studentHeader.innerHTML = `
                 <div class="student-photo-large">
@@ -159,12 +161,14 @@ function selectStudent(studentId, fullName, course, mobile) {
                 <div class="student-info-large">
                     <h2 class="student-name-large">${data.full_name}</h2>
                     <span class="student-course-large">${displayCourse}</span>
+                    <div style="margin-top: 10px; padding: 8px 16px; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 2px solid #0284c7; border-radius: 8px; display: inline-block;">
+                        <span style="color: #0c4a6e; font-weight: 700; font-size: 14px;">📅 Batch: ${batchDisplay}</span>
+                    </div>
                     <p class="student-mobile-large">📞 ${data.mobile_own}</p>
                 </div>
             `;
         }
         
-        // Update fees info grid
         const feesGrid = detailsSection.querySelector('.fees-info-grid');
         if (feesGrid) {
             feesGrid.innerHTML = `
@@ -183,7 +187,6 @@ function selectStudent(studentId, fullName, course, mobile) {
             `;
         }
         
-        // Update form fields with null checks
         const selectedStudentIdInput = document.getElementById('selectedStudentId');
         if (selectedStudentIdInput) {
             selectedStudentIdInput.value = studentId;
@@ -201,16 +204,13 @@ function selectStudent(studentId, fullName, course, mobile) {
             maxPaymentDisplay.textContent = parseFloat(data.remaining_fees).toFixed(2);
         }
         
-        // Show form section
         const formSection = detailsSection.querySelector('.payment-form-section');
         if (formSection) {
             formSection.style.display = 'block';
         }
         
-        // Show details section
         detailsSection.style.display = 'block';
         
-        // Auto-focus on payment amount
         setTimeout(() => {
             if (paymentAmountInput) {
                 paymentAmountInput.focus();
@@ -228,7 +228,7 @@ function selectStudent(studentId, fullName, course, mobile) {
     });
 }
 
-// Submit payment - FIXED VERSION
+// ✅ FIXED: Submit payment function
 function submitPayment() {
     console.log('submitPayment function called!');
     
@@ -279,7 +279,6 @@ function submitPayment() {
         return false;
     }
     
-    // Get remaining fees from stored data
     const remainingFees = parseFloat(selectedStudentData.remaining_fees);
     
     if (parseFloat(amount) > remainingFees) {
@@ -343,9 +342,10 @@ function submitPayment() {
         console.log('Payment successful:', data);
         
         if (data.success) {
-            alert('✅ Payment recorded successfully!');
+            // ✅ FIXED: Show receipt immediately
             displayReceipt(data.receipt);
             
+            // Reset form after showing receipt
             paymentForm.reset();
             paymentSubmitting = false;
             selectedStudentId = null;
@@ -394,11 +394,11 @@ function submitPayment() {
     });
 }
 
-// Display receipt
+// ✅ FIXED: Display receipt function - AUTO PRINT
 function displayReceipt(receipt) {
     console.log('Displaying receipt:', receipt);
     
-    // Use safe element access
+    // Set all receipt fields
     const setTextContent = (id, value) => {
         const element = document.getElementById(id);
         if (element) {
@@ -420,10 +420,27 @@ function displayReceipt(receipt) {
     setTextContent('receiptRemainingFees', receipt.remaining_fees);
     setTextContent('receiptAmountWords', receipt.amount_in_words);
     
+    // ✅ NEW: Add batch information to receipt
+    const batchDisplay = (receipt.batch_month && receipt.batch_year) 
+        ? `${receipt.batch_month} ${receipt.batch_year}` 
+        : 'Not Assigned';
+    setTextContent('receiptBatch', batchDisplay);
+    
+    // ✅ FIXED: Show modal with correct z-index
     const receiptModal = document.getElementById('receiptModal');
     if (receiptModal) {
         receiptModal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        
+        console.log('Receipt modal displayed successfully');
+        
+        // ✅ NEW: Auto-trigger print dialog after a short delay
+        setTimeout(() => {
+            printReceipt();
+        }, 500); // Give time for modal to render
+    } else {
+        console.error('Receipt modal not found!');
+        alert('✅ Payment recorded successfully!\n\nReceipt: ' + receipt.receipt_no);
     }
 }
 
@@ -454,27 +471,29 @@ function printReceipt() {
                 .receipt-info { display: grid; grid-template-columns: 150px 1fr; gap: 10px; margin: 20px 0; font-size: 12px; }
                 .receipt-label { font-weight: bold; color: #333; }
                 .receipt-value { color: #666; }
+                .receipt-divider { border: none; border-top: 1px dashed #999; margin: 15px 0; }
                 .amount-section { margin: 20px 0; font-size: 12px; }
                 .amount-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; }
-                .amount-row.paid { background: #e8f5e9; padding: 10px; font-weight: bold; border: 1px solid #4caf50; }
+                .amount-row.paid { background: #e8f5e9; padding: 10px; font-weight: bold; border: 1px solid #4caf50; margin: 10px 0; }
                 .amount-in-words { margin-top: 15px; padding: 10px; background: #f5f5f5; border-left: 3px solid #666; font-size: 11px; }
                 .receipt-footer { text-align: center; margin-top: 30px; font-size: 12px; }
-                .signature-section { margin-top: 40px; text-align: center; }
-                .signature-line { border-top: 1px solid #333; width: 200px; margin: 0 auto 5px; }
-                @media print { body { margin: 0; padding: 0; } }
+                .thank-you { margin-bottom: 20px; }
+                .signature-section { margin-top: 40px; text-align: right; padding-right: 50px; }
+                .signature-line { border-top: 2px solid #333; width: 200px; margin: 0 0 5px auto; }
+                .signature-label { font-weight: bold; color: #333; }
+                @media print { 
+                    body { margin: 0; padding: 0; } 
+                    @page { margin: 1cm; }
+                }
             </style>
         </head>
-        <body>
+        <body onload="window.print(); window.close();">
             ${receiptContent.innerHTML}
         </body>
         </html>
     `);
     
     printWindow.document.close();
-    setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-    }, 250);
 }
 
 // Close receipt modal
@@ -510,3 +529,72 @@ window.addEventListener('beforeunload', function(e) {
         e.returnValue = '';
     }
 });
+
+// Number to words converter
+function number_to_words(num) {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 
+                   'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    
+    if (num == 0) return 'Zero Rupees Only';
+    
+    function convert_less_than_thousand(n) {
+        if (n == 0) return '';
+        
+        let result = '';
+        
+        if (n >= 100) {
+            result += ones[Math.floor(n / 100)] + ' Hundred ';
+            n %= 100;
+        }
+        
+        if (n >= 20) {
+            result += tens[Math.floor(n / 10)] + ' ';
+            n %= 10;
+        } else if (n >= 10) {
+            result += teens[n - 10] + ' ';
+            return result;
+        }
+        
+        if (n > 0) {
+            result += ones[n] + ' ';
+        }
+        
+        return result;
+    }
+    
+    let rupees = Math.floor(num);
+    let paise = Math.round((num - rupees) * 100);
+    
+    let result = '';
+    
+    if (rupees >= 10000000) {
+        result += convert_less_than_thousand(Math.floor(rupees / 10000000)) + 'Crore ';
+        rupees %= 10000000;
+    }
+    
+    if (rupees >= 100000) {
+        result += convert_less_than_thousand(Math.floor(rupees / 100000)) + 'Lakh ';
+        rupees %= 100000;
+    }
+    
+    if (rupees >= 1000) {
+        result += convert_less_than_thousand(Math.floor(rupees / 1000)) + 'Thousand ';
+        rupees %= 1000;
+    }
+    
+    if (rupees > 0) {
+        result += convert_less_than_thousand(rupees);
+    }
+    
+    result += 'Rupees';
+    
+    if (paise > 0) {
+        result += ' and ' + convert_less_than_thousand(paise) + 'Paise';
+    }
+    
+    result += ' Only';
+    
+    return result.trim();
+}

@@ -1,4 +1,6 @@
-// ===================== GET CSRF TOKEN =====================
+// ===================== FIXED: admitted_students.js =====================
+
+// Get CSRF token
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -14,17 +16,14 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// ===================== OPEN STUDENT MODAL =====================
-// ===================== OPEN STUDENT MODAL =====================
+// ✅ FIXED: Open student modal with payment history
 function openStudentModal(studentId) {
     const modal = document.getElementById('studentModal');
     
-    // Show loading state
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
     
-    // ✅ FIXED: Use correct URL pattern from urls.py
-    fetch(`/admission/${studentId}/detail/`, {  // Changed from /student-detail-admitted/${studentId}/
+    fetch(`/admission/${studentId}/detail/`, {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -42,7 +41,69 @@ function openStudentModal(studentId) {
     .then(data => {
         console.log('Student details loaded:', data);
         
-        // ... rest of the code remains the same ...
+        // Populate form fields
+        document.getElementById('studentId').value = data.id;
+        document.getElementById('studentName').value = data.student_name;
+        document.getElementById('fatherName').value = data.father_name;
+        document.getElementById('surname').value = data.surname;
+        document.getElementById('motherName').value = data.mother_name;
+        document.getElementById('fullName').value = data.full_name;
+        document.getElementById('dob').value = data.date_of_birth;
+        document.getElementById('mobileOwn').value = data.mobile_own;
+        document.getElementById('parentMobile').value = data.parent_mobile || '';
+        document.getElementById('gender').value = data.gender;
+        document.getElementById('maritalStatus').value = data.marital_status;
+        
+        // Photo
+        const modalPhoto = document.getElementById('modalPhoto');
+        if (data.photo) {
+            modalPhoto.src = data.photo;
+        } else {
+            const firstLetter = data.student_name.charAt(0).toUpperCase();
+            modalPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23667eea"/><text x="50%" y="50%" font-size="60" fill="white" text-anchor="middle" dy=".3em">${firstLetter}</text></svg>`;
+        }
+        
+        // Course info
+        document.getElementById('courseSelect').value = data.course;
+        document.getElementById('customCourse').value = data.custom_course || '';
+        document.getElementById('qualification').value = data.educational_qualification;
+        
+        // Batch info
+        document.getElementById('batchMonth').value = data.batch_month || '';
+        document.getElementById('batchYear').value = data.batch_year || '';
+        document.getElementById('currentBatchDisplay').textContent = data.batch_display || 'Not Assigned';
+        
+        // Populate batch years
+        const batchYearSelect = document.getElementById('batchYear');
+        if (batchYearSelect && batchYearSelect.options.length <= 1) {
+            const currentYear = new Date().getFullYear();
+            for (let i = -2; i <= 2; i++) {
+                const year = currentYear + i;
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                batchYearSelect.appendChild(option);
+            }
+            // Set the value again after populating
+            batchYearSelect.value = data.batch_year || '';
+        }
+        
+        // Address
+        document.getElementById('address').value = data.address;
+        document.getElementById('city').value = data.city;
+        document.getElementById('tehsil').value = data.tehsil_block;
+        document.getElementById('district').value = data.district;
+        document.getElementById('pinCode').value = data.pin_code;
+        
+        // Financial info
+        document.getElementById('totalFees').value = data.total_fees || 5000;
+        document.getElementById('paidFees').value = data.paid_fees || 0;
+        calculateRemainingFees();
+        
+        // ✅ FIXED: Display payment history
+        displayPaymentHistory(data.payment_history || []);
+        
+        modal.style.display = 'block';
     })
     .catch(error => {
         console.error('Detail loading error:', error);
@@ -51,7 +112,7 @@ function openStudentModal(studentId) {
     });
 }
 
-// ===================== NEW FUNCTION: Display Payment History =====================
+// ✅ FIXED: Display payment history function
 function displayPaymentHistory(payments) {
     const paymentHistoryContainer = document.getElementById('paymentHistoryContainer');
     
@@ -60,7 +121,9 @@ function displayPaymentHistory(payments) {
         return;
     }
     
-    if (payments.length === 0) {
+    console.log('Displaying payment history:', payments);
+    
+    if (!payments || payments.length === 0) {
         paymentHistoryContainer.innerHTML = `
             <div class="no-payments">
                 <div class="no-payments-icon">💸</div>
@@ -117,20 +180,19 @@ function displayPaymentHistory(payments) {
     paymentHistoryContainer.innerHTML = html;
 }
 
-// ===================== CLOSE MODAL =====================
+// Close modal
 function closeModal() {
     const modal = document.getElementById('studentModal');
     modal.style.display = 'none';
     document.body.style.overflow = 'auto';
     
-    // Reset form
     const form = document.getElementById('studentForm');
     if (form) {
         form.reset();
     }
 }
 
-// ===================== CLOSE MODAL ON OUTSIDE CLICK =====================
+// Close modal on outside click
 window.onclick = function(event) {
     const modal = document.getElementById('studentModal');
     if (event.target === modal) {
@@ -138,14 +200,14 @@ window.onclick = function(event) {
     }
 }
 
-// ===================== CLOSE MODAL ON ESC KEY =====================
+// Close modal on ESC key
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         closeModal();
     }
 });
 
-// ===================== CALCULATE REMAINING FEES =====================
+// Calculate remaining fees
 function calculateRemainingFees() {
     const totalFeesInput = document.getElementById('totalFees');
     const paidFeesInput = document.getElementById('paidFees');
@@ -157,7 +219,6 @@ function calculateRemainingFees() {
         const remainingFees = Math.max(0, totalFees - paidFees);
         remainingFeesInput.value = remainingFees.toFixed(2);
         
-        // Add visual feedback
         if (remainingFees === 0) {
             remainingFeesInput.style.color = '#10b981';
             remainingFeesInput.style.fontWeight = '700';
@@ -171,7 +232,7 @@ function calculateRemainingFees() {
     }
 }
 
-// ===================== AUTO-GENERATE FULL NAME =====================
+// Auto-generate full name
 function generateFullName() {
     const studentNameInput = document.getElementById('studentName');
     const fatherNameInput = document.getElementById('fatherName');
@@ -192,7 +253,7 @@ function generateFullName() {
     }
 }
 
-// ===================== VALIDATE MOBILE NUMBER =====================
+// Validate mobile number
 function validateMobile(input) {
     const value = input.value.replace(/\D/g, '');
     input.value = value.slice(0, 10);
@@ -206,7 +267,7 @@ function validateMobile(input) {
     }
 }
 
-// ===================== VALIDATE PIN CODE =====================
+// Validate pin code
 function validatePinCode(input) {
     const value = input.value.replace(/\D/g, '');
     input.value = value.slice(0, 6);
@@ -220,10 +281,10 @@ function validatePinCode(input) {
     }
 }
 
-// ===================== DOCUMENT READY =====================
+// Document ready
 document.addEventListener('DOMContentLoaded', function() {
     
-    // ===================== FEES CALCULATION =====================
+    // Fees calculation
     const totalFeesInput = document.getElementById('totalFees');
     const paidFeesInput = document.getElementById('paidFees');
     
@@ -234,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
         paidFeesInput.addEventListener('input', calculateRemainingFees);
     }
     
-    // ===================== AUTO-GENERATE FULL NAME =====================
+    // Auto-generate full name
     const studentNameInput = document.getElementById('studentName');
     const fatherNameInput = document.getElementById('fatherName');
     const surnameInput = document.getElementById('surname');
@@ -249,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
         surnameInput.addEventListener('input', generateFullName);
     }
     
-    // ===================== MOBILE NUMBER VALIDATION =====================
+    // Mobile number validation
     const mobileOwnInput = document.getElementById('mobileOwn');
     const parentMobileInput = document.getElementById('parentMobile');
     
@@ -264,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // ===================== PIN CODE VALIDATION =====================
+    // Pin code validation
     const pinCodeInput = document.getElementById('pinCode');
     if (pinCodeInput) {
         pinCodeInput.addEventListener('input', function() {
@@ -272,28 +333,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // ===================== PHOTO PREVIEW =====================
+    // Photo preview
     const photoInput = document.getElementById('photoInput');
     if (photoInput) {
         photoInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             
             if (file) {
-                // Check file size (max 2MB)
                 if (file.size > 2 * 1024 * 1024) {
                     alert('⚠️ File size should be less than 2MB');
                     photoInput.value = '';
                     return;
                 }
                 
-                // Check file type
                 if (!file.type.startsWith('image/')) {
                     alert('⚠️ Please select an image file');
                     photoInput.value = '';
                     return;
                 }
                 
-                // Show preview
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const modalPhoto = document.getElementById('modalPhoto');
@@ -306,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // ===================== FORM SUBMISSION =====================
+    // Form submission
     const studentForm = document.getElementById('studentForm');
     if (studentForm) {
         studentForm.addEventListener('submit', function(e) {
@@ -315,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const studentId = document.getElementById('studentId').value;
             const formData = new FormData(studentForm);
             
-            // Validate required fields
+            // Validate
             const mobileOwn = document.getElementById('mobileOwn').value;
             if (mobileOwn.length !== 10) {
                 alert('⚠️ Please enter a valid 10-digit mobile number');
@@ -330,14 +388,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Show loading state
             const saveBtn = document.querySelector('.save-btn');
             const originalText = saveBtn.textContent;
             saveBtn.textContent = '💾 Saving...';
             saveBtn.disabled = true;
             
-            // Submit form
-            fetch(`/admission/${studentId}/update/`, {  // ✅ FIXED: Correct URL
+            fetch(`/admission/${studentId}/update/`, {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -350,7 +406,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     showNotification('✅ Student details updated successfully!', 'success');
                     closeModal();
                     
-                    // Reload page to show updated data
                     setTimeout(() => {
                         window.location.reload();
                     }, 1000);
@@ -369,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // ===================== FILTER FORM - PREVENT MULTIPLE SUBMISSIONS =====================
+    // Filter form - prevent multiple submissions
     const filterForm = document.getElementById('filterForm');
     if (filterForm) {
         let isSubmitting = false;
@@ -382,14 +437,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             isSubmitting = true;
             
-            // Reset after 2 seconds
             setTimeout(() => {
                 isSubmitting = false;
             }, 2000);
         });
     }
     
-    // ===================== SMOOTH SCROLL TO TOP ON FILTER =====================
+    // Smooth scroll to top on filter
     const applyFilterBtn = document.querySelector('.filter-btn.apply');
     if (applyFilterBtn) {
         applyFilterBtn.addEventListener('click', function() {
@@ -400,23 +454,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ===================== SHOW SUCCESS MESSAGE ON LOAD =====================
+// Show success message on load
 window.addEventListener('load', function() {
-    // Check if there's a success message in URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get('success');
     
     if (success === 'updated') {
-        // Remove the parameter from URL
         const newUrl = window.location.pathname;
         window.history.replaceState({}, document.title, newUrl);
         
-        // Show success notification
         showNotification('✅ Student details updated successfully!', 'success');
     }
 });
 
-// ===================== NOTIFICATION FUNCTION =====================
+// Notification function
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
@@ -432,7 +483,7 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// ===================== ADD ANIMATION STYLES =====================
+// Add animation styles
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -455,17 +506,81 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-document.getElementById('batchMonth').value = data.batch_month || '';
-document.getElementById('batchYear').value = data.batch_year || '';
-document.getElementById('currentBatchDisplay').textContent = data.batch_display || 'Not Assigned';
+// ✅ SELECTION AND DELETION FUNCTIONS
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+    const count = checkboxes.length;
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const countSpan = document.getElementById('selectedCount');
+    
+    if (countSpan) countSpan.textContent = count;
+    
+    if (deleteBtn) {
+        if (count > 0) {
+            deleteBtn.style.display = 'inline-flex';
+        } else {
+            deleteBtn.style.display = 'none';
+        }
+    }
+}
 
-// Populate batch years
-const batchYearSelect = document.getElementById('batchYear');
-const currentYear = new Date().getFullYear();
-for (let i = -2; i <= 2; i++) {
-    const year = currentYear + i;
-    const option = document.createElement('option');
-    option.value = year;
-    option.textContent = year;
-    batchYearSelect.appendChild(option);
+function deleteSelectedStudents() {
+    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+    const studentIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (studentIds.length === 0) {
+        alert('⚠️ Please select at least one student to delete');
+        return;
+    }
+    
+    const confirmMessage = `⚠️ Are you sure you want to delete ${studentIds.length} student${studentIds.length > 1 ? 's' : ''}?\n\n` +
+                          `This action cannot be undone and will also delete:\n` +
+                          `• All fee payment records\n` +
+                          `• Student photos and documents\n\n` +
+                          `Type "DELETE" to confirm:`;
+    
+    const userInput = prompt(confirmMessage);
+    
+    if (userInput !== 'DELETE') {
+        if (userInput !== null) {
+            alert('❌ Deletion cancelled. You must type "DELETE" to confirm.');
+        }
+        return;
+    }
+    
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const originalText = deleteBtn.innerHTML;
+    deleteBtn.innerHTML = '<span>⏳</span> Deleting...';
+    deleteBtn.disabled = true;
+    
+    fetch('/admission/delete/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            student_ids: studentIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`✅ Successfully deleted ${data.deleted_count} student${data.deleted_count > 1 ? 's' : ''}!`, 'success');
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            alert('❌ Error: ' + (data.error || 'Failed to delete students'));
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error deleting students. Please try again.');
+        deleteBtn.innerHTML = originalText;
+        deleteBtn.disabled = false;
+    });
 }
