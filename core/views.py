@@ -1372,23 +1372,55 @@ def backup_database(request):
 
 
 @login_required
+@login_required
 def statistics_view(request):
     """Main statistics page with year selection"""
-    years = Student.objects.values_list('academic_year', flat=True).distinct().order_by('-academic_year')
+    selected_year = request.GET.get('year', '')
+    
+    # Get available years from AdmittedStudent
+    available_years = (
+        AdmittedStudent.objects
+        .annotate(year=ExtractYear('admission_date'))
+        .values_list('year', flat=True)
+        .distinct()
+        .order_by('-year')
+    )
+    
+    # Get students for selected year
+    students = AdmittedStudent.objects.all()
+    if selected_year:
+        students = students.filter(admission_date__year=selected_year)
+    
+    # Calculate total profit (Total Paid Fees - Fees Paid to MKCL)
+    total_profit = Decimal('0.00')
+    for student in students:
+        mkcl_fees = Decimal('0.00')
+        if hasattr(student, 'finance_detail'):
+            mkcl_1 = student.finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
+            mkcl_2 = student.finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+            mkcl_fees = mkcl_1 + mkcl_2
+        
+        total_paid = student.paid_fees or Decimal('0.00')
+        profit = total_paid - mkcl_fees
+        total_profit += profit
     
     context = {
-        'years': years,
-        'selected_year': request.GET.get('year', ''),
+        'available_years': available_years,
+        'selected_year': selected_year,
+        'total_profit': total_profit,
+        'student_count': students.count(),
     }
-    return render(request, 'statistics.html', context)
+    return render(request, 'core/statistics.html', context)
 
 @login_required
 def student_finance_details(request):
     """Student Finance Details section"""
     selected_year = request.GET.get('year', '')
     
-    # Get all students for the selected year
-    students = Student.objects.filter(academic_year=selected_year) if selected_year else Student.objects.all()
+    # Get all admitted students for the selected year
+    students = AdmittedStudent.objects.all()
+    if selected_year:
+        students = students.filter(admission_date__year=selected_year)
     
     finance_data = []
     total_profit = Decimal('0.00')
@@ -1406,46 +1438,80 @@ def student_finance_details(request):
             }
         )
         
-        # Calculate totals
-        total_paid = student.fees_paid or Decimal('0.00')
-        total_fees = student.course_fees or Decimal('0.00')
+        # Calculate totals from AdmittedStudent
+        total_paid = student.paid_fees or Decimal('0.00')
+        total_fees = student.total_fees or Decimal('0.00')
         balance_fees = total_fees - total_paid
         
         # Calculate fees paid to MKCL total
-        mkcl_total = (finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')) + \
-                     (finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00'))
+        mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
+        mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+        mkcl_total = mkcl_1 + mkcl_2
         
         # Calculate profit
         profit = total_paid - mkcl_total
         total_profit += profit
         
+        # Get course name
+        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+        
+        # Get fee payments for this student - ordered by payment_date (oldest first)
+        fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
+        
+        # Extract installment amounts from FeePayment records
+        first_inst = Decimal('0.00')
+        second_inst = Decimal('0.00')
+        third_inst = Decimal('0.00')
+        
+        if len(fee_payments) >= 1:
+            first_inst = fee_payments[0].amount
+        if len(fee_payments) >= 2:
+            second_inst = fee_payments[1].amount
+        if len(fee_payments) >= 3:
+            third_inst = fee_payments[2].amount
+        
+        # Build payment history (ordered by payment_date, newest first for display)
+        payment_history = []
+        for payment in fee_payments.order_by('-payment_date'):
+            payment_history.append({
+                'receipt_no': payment.receipt_no,
+                'amount': payment.amount,
+                'payment_date': payment.payment_date,
+                'payment_mode': payment.payment_mode,
+                'remarks': payment.remarks,
+                'paid_before': payment.paid_before_this,
+                'remaining_after': payment.remaining_after_this,
+            })
+        
         finance_data.append({
             'id': student.id,
             'sr_no': student.id,
-            'learner_name': f"{student.first_name} {student.last_name}",
-            'student_id': student.student_id,
-            'mobile_no': student.mobile_number,
-            'batch': student.batch,
-            'course': student.course,
-            'first_inst': finance_detail.first_installment or Decimal('0.00'),
-            'second_inst': finance_detail.second_installment or Decimal('0.00'),
-            'third_inst': finance_detail.third_installment or Decimal('0.00'),
+            'learner_name': student.full_name,
+            'student_id': student.id,  # Using student ID as identifier
+            'mobile_no': student.mobile_own,
+            'batch': student.batch_display,
+            'course': course_name,
+            'first_inst': first_inst,
+            'second_inst': second_inst,
+            'third_inst': third_inst,
             'total_paid': total_paid,
             'total_fees': total_fees,
             'balance_fees': balance_fees,
-            'mkcl_1': finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00'),
-            'mkcl_2': finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00'),
+            'mkcl_1': mkcl_1,
+            'mkcl_2': mkcl_2,
             'mkcl_total': mkcl_total,
             'profit': profit,
+            'payment_history': payment_history,
         })
     
     context = {
         'finance_data': finance_data,
         'total_profit': total_profit,
         'selected_year': selected_year,
+        'active_page': 'student_finance_details',
     }
     
-    return render(request, 'student_finance_details.html', context)
+    return render(request, 'core/student_finance_details.html', context)
 
 @login_required
 def update_finance_detail(request):
@@ -1463,7 +1529,7 @@ def update_finance_detail(request):
             except:
                 value = Decimal('0.00')
             
-            student = Student.objects.get(id=student_id)
+            student = AdmittedStudent.objects.get(id=student_id)
             finance_detail, created = StudentFinanceDetail.objects.get_or_create(student=student)
             
             # Update the appropriate field
@@ -1481,7 +1547,7 @@ def update_finance_detail(request):
             finance_detail.save()
             
             # Recalculate totals
-            total_paid = student.fees_paid or Decimal('0.00')
+            total_paid = student.paid_fees or Decimal('0.00')
             mkcl_total = (finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')) + \
                         (finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00'))
             profit = total_paid - mkcl_total

@@ -280,7 +280,7 @@ class FeePayment(models.Model):
 
 class StudentFinanceDetail(models.Model):
     """Model to store detailed finance information for students"""
-    student = models.OneToOneField('Student', on_delete=models.CASCADE, related_name='finance_detail')
+    student = models.OneToOneField('AdmittedStudent', on_delete=models.CASCADE, related_name='finance_detail')
     first_installment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
     second_installment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
     third_installment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
@@ -294,7 +294,7 @@ class StudentFinanceDetail(models.Model):
         verbose_name_plural = 'Student Finance Details'
     
     def __str__(self):
-        return f"Finance Detail - {self.student.first_name} {self.student.last_name}"
+        return f"Finance Detail - {self.student.full_name}"
     
     @property
     def total_mkcl_fees(self):
@@ -306,5 +306,5 @@ class StudentFinanceDetail(models.Model):
     @property
     def profit(self):
         """Calculate profit (Total Paid - MKCL Fees)"""
-        total_paid = self.student.fees_paid or 0
+        total_paid = self.student.paid_fees or 0
         return total_paid - self.total_mkcl_fees

@@ -88,56 +88,94 @@ function showError(message) {
 
 function exportToExcel() {
     try {
+        console.log('Export function called');
+        
         // Get table data
         const table = document.querySelector('.finance-table');
         if (!table) {
-            alert('No data to export');
+            alert('No data to export - Table not found');
             return;
         }
         
-        // Create CSV content
+        console.log('Table found');
+        
+        // Create CSV content with headers
         let csv = 'Sr.No.,Learner Name,Student ID,Mobile No.,Batch,Course,I Inst,II Inst,III Inst,Total Paid,Total Fees,Balance Fees,MKCL I Inst,MKCL II Inst,MKCL Total,Profit\n';
         
         const rows = table.querySelectorAll('tbody tr');
+        console.log('Total rows found:', rows.length);
+        
+        let rowCount = 0;
+        
         rows.forEach((row, index) => {
-            // Skip empty rows
-            if (row.querySelector('td[colspan]')) return;
+            // Skip empty rows or rows with colspan
+            const colspanCell = row.querySelector('td[colspan]');
+            if (colspanCell) {
+                console.log('Skipping row', index, '- has colspan');
+                return;
+            }
             
             const cells = row.querySelectorAll('td');
-            const inputs = row.querySelectorAll('input');
+            if (cells.length === 0) {
+                console.log('Skipping row', index, '- no cells');
+                return;
+            }
             
-            if (cells.length === 0) return;
+            rowCount++;
+            console.log('Processing row', rowCount);
             
-            // Extract data
-            const srNo = index + 1;
+            // Extract data from cells
+            const srNo = rowCount;
+            
+            // Learner Name and Student ID
             const learnerNameCell = cells[1];
             const learnerName = learnerNameCell.querySelector('strong') ? 
                 learnerNameCell.querySelector('strong').textContent.trim() : '';
-            const studentId = learnerNameCell.querySelector('small') ? 
-                learnerNameCell.querySelector('small').textContent.trim() : '';
-            const mobile = cells[2].textContent.trim();
-            const batch = cells[3].textContent.trim();
-            const course = cells[4].textContent.trim();
+            const studentIdText = learnerNameCell.querySelector('small') ? 
+                learnerNameCell.querySelector('small').textContent.replace('ID:', '').trim() : '';
             
-            // Get input values
-            const firstInst = inputs[0] ? inputs[0].value : '0';
-            const secondInst = inputs[1] ? inputs[1].value : '0';
-            const thirdInst = inputs[2] ? inputs[2].value : '0';
+            const mobile = cells[2] ? cells[2].textContent.trim() : '';
+            const batch = cells[3] ? cells[3].textContent.trim() : '';
+            const course = cells[4] ? cells[4].textContent.trim() : '';
+            
+            // Get installment values (read-only cells)
+            const firstInst = cells[5] ? cells[5].textContent.replace('₹', '').trim() : '0';
+            const secondInst = cells[6] ? cells[6].textContent.replace('₹', '').trim() : '0';
+            const thirdInst = cells[7] ? cells[7].textContent.replace('₹', '').trim() : '0';
             
             // Get readonly values
-            const totalPaid = cells[8].textContent.replace('₹', '').trim();
-            const totalFees = cells[9].textContent.replace('₹', '').trim();
-            const balanceFees = cells[10].textContent.replace('₹', '').trim();
+            const totalPaid = cells[8] ? cells[8].textContent.replace('₹', '').trim() : '0';
+            const totalFees = cells[9] ? cells[9].textContent.replace('₹', '').trim() : '0';
+            const balanceFees = cells[10] ? cells[10].textContent.replace('₹', '').trim() : '0';
             
-            // Get MKCL values
-            const mkclFirst = inputs[3] ? inputs[3].value : '0';
-            const mkclSecond = inputs[4] ? inputs[4].value : '0';
-            const mkclTotal = cells[13].textContent.replace('₹', '').trim();
-            const profit = cells[14].textContent.replace('₹', '').trim();
+            // Get MKCL values (from input fields in editable cells)
+            let mkclFirst = '0';
+            let mkclSecond = '0';
             
-            // Build CSV row
-            csv += `${srNo},"${learnerName}","${studentId}",${mobile},${batch},${course},${firstInst},${secondInst},${thirdInst},${totalPaid},${totalFees},${balanceFees},${mkclFirst},${mkclSecond},${mkclTotal},${profit}\n`;
+            if (cells[11]) {
+                const mkclFirstInput = cells[11].querySelector('input');
+                mkclFirst = mkclFirstInput ? mkclFirstInput.value : cells[11].textContent.replace('₹', '').trim();
+            }
+            
+            if (cells[12]) {
+                const mkclSecondInput = cells[12].querySelector('input');
+                mkclSecond = mkclSecondInput ? mkclSecondInput.value : cells[12].textContent.replace('₹', '').trim();
+            }
+            
+            const mkclTotal = cells[13] ? cells[13].textContent.replace('₹', '').trim() : '0';
+            const profit = cells[14] ? cells[14].textContent.replace('₹', '').trim() : '0';
+            
+            // Build CSV row - escape quotes in names
+            const escapeName = (str) => String(str).replace(/"/g, '""');
+            csv += `${srNo},"${escapeName(learnerName)}","${escapeName(studentIdText)}","${escapeName(mobile)}","${escapeName(batch)}","${escapeName(course)}",${firstInst},${secondInst},${thirdInst},${totalPaid},${totalFees},${balanceFees},${mkclFirst},${mkclSecond},${mkclTotal},${profit}\n`;
         });
+        
+        console.log('Total rows processed:', rowCount);
+        
+        if (rowCount === 0) {
+            alert('No data to export');
+            return;
+        }
         
         // Create and download file
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -147,27 +185,38 @@ function exportToExcel() {
         const date = new Date();
         const dateStr = date.getFullYear() + '_' + 
                        String(date.getMonth() + 1).padStart(2, '0') + '_' + 
-                       String(date.getDate()).padStart(2, '0');
+                       String(date.getDate()).padStart(2, '0') + '_' +
+                       String(date.getHours()).padStart(2, '0') +
+                       String(date.getMinutes()).padStart(2, '0');
         
         link.setAttribute('href', url);
         link.setAttribute('download', `student_finance_details_${dateStr}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
+        
+        console.log('Triggering download');
         link.click();
-        document.body.removeChild(link);
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
         
         // Show success message
         const indicator = document.getElementById('saveIndicator');
-        indicator.textContent = '✓ Exported successfully!';
-        indicator.classList.remove('error-indicator');
-        indicator.style.display = 'block';
-        setTimeout(() => {
-            indicator.style.display = 'none';
-        }, 2000);
+        if (indicator) {
+            indicator.textContent = '✓ Data exported successfully!';
+            indicator.classList.remove('error-indicator');
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 2000);
+        }
         
     } catch (error) {
         console.error('Export error:', error);
-        alert('Error exporting data. Please try again.');
+        alert('Error exporting data: ' + error.message);
     }
 }
 
