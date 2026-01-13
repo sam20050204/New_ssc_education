@@ -276,3 +276,35 @@ class FeePayment(models.Model):
                 self.receipt_no = f"RCP-{new_number:06d}"
 
         super().save(*args, **kwargs)
+
+
+class StudentFinanceDetail(models.Model):
+    """Model to store detailed finance information for students"""
+    student = models.OneToOneField('Student', on_delete=models.CASCADE, related_name='finance_detail')
+    first_installment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
+    second_installment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
+    third_installment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
+    fees_paid_to_mkcl_1 = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
+    fees_paid_to_mkcl_2 = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Student Finance Detail'
+        verbose_name_plural = 'Student Finance Details'
+    
+    def __str__(self):
+        return f"Finance Detail - {self.student.first_name} {self.student.last_name}"
+    
+    @property
+    def total_mkcl_fees(self):
+        """Calculate total fees paid to MKCL"""
+        mkcl_1 = self.fees_paid_to_mkcl_1 or 0
+        mkcl_2 = self.fees_paid_to_mkcl_2 or 0
+        return mkcl_1 + mkcl_2
+    
+    @property
+    def profit(self):
+        """Calculate profit (Total Paid - MKCL Fees)"""
+        total_paid = self.student.fees_paid or 0
+        return total_paid - self.total_mkcl_fees

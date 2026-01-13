@@ -1,0 +1,114 @@
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'css/student_finance_details.css' %}">
+
+<div class="save-indicator" id="saveIndicator">Saved successfully!</div>
+
+<div class="finance-header">
+    <div>
+        <h2 style="margin: 0; color: #333;">Student Finance Details</h2>
+        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">
+            {% if selected_year %}Academic Year: {{ selected_year }}{% else %}All Years{% endif %}
+        </p>
+    </div>
+    <div>
+        <div class="total-profit-box">
+            <h3>Total Profit</h3>
+            <p class="amount">₹ {{ total_profit|floatformat:2 }}</p>
+        </div>
+    </div>
+</div>
+
+<div style="margin-bottom: 15px; text-align: right;">
+    <button class="export-button" onclick="exportToExcel()">📊 Export to Excel</button>
+</div>
+
+<div class="finance-table-container">
+    <table class="finance-table">
+        <thead>
+            <tr>
+                <th rowspan="2">Sr.No.</th>
+                <th rowspan="2">Learner Name<br>student I'D</th>
+                <th rowspan="2">Mobile No.</th>
+                <th rowspan="2">Batch</th>
+                <th rowspan="2">Course</th>
+                <th colspan="6" class="section-header">Fees Paid By Learner</th>
+                <th colspan="3" class="section-header">Fees Paid to MKCL</th>
+                <th rowspan="2">Profit</th>
+            </tr>
+            <tr>
+                <th>I Inst</th>
+                <th>II Inst</th>
+                <th>III Inst</th>
+                <th>Total Paid</th>
+                <th>Total Fees</th>
+                <th>Balance Fees</th>
+                <th>I Inst</th>
+                <th>II Inst</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in finance_data %}
+            <tr data-student-id="{{ data.id }}">
+                <td>{{ forloop.counter }}</td>
+                <td style="text-align: left;">
+                    <strong>{{ data.learner_name }}</strong><br>
+                    <small style="color: #666;">{{ data.student_id }}</small>
+                </td>
+                <td>{{ data.mobile_no }}</td>
+                <td>{{ data.batch }}</td>
+                <td>{{ data.course }}</td>
+                
+                <!-- Fees Paid By Learner - Editable -->
+                <td class="editable-cell">
+                    <input type="number" step="0.01" value="{{ data.first_inst }}" 
+                           onchange="updateField({{ data.id }}, 'first_inst', this.value)"
+                           class="finance-input">
+                </td>
+                <td class="editable-cell">
+                    <input type="number" step="0.01" value="{{ data.second_inst }}" 
+                           onchange="updateField({{ data.id }}, 'second_inst', this.value)"
+                           class="finance-input">
+                </td>
+                <td class="editable-cell">
+                    <input type="number" step="0.01" value="{{ data.third_inst }}" 
+                           onchange="updateField({{ data.id }}, 'third_inst', this.value)"
+                           class="finance-input">
+                </td>
+                
+                <!-- Auto-filled fields -->
+                <td class="readonly-cell">₹ {{ data.total_paid|floatformat:2 }}</td>
+                <td class="readonly-cell">₹ {{ data.total_fees|floatformat:2 }}</td>
+                <td class="readonly-cell">₹ {{ data.balance_fees|floatformat:2 }}</td>
+                
+                <!-- Fees Paid to MKCL - Editable -->
+                <td class="editable-cell">
+                    <input type="number" step="0.01" value="{{ data.mkcl_1 }}" 
+                           onchange="updateField({{ data.id }}, 'mkcl_1', this.value)"
+                           class="finance-input">
+                </td>
+                <td class="editable-cell">
+                    <input type="number" step="0.01" value="{{ data.mkcl_2 }}" 
+                           onchange="updateField({{ data.id }}, 'mkcl_2', this.value)"
+                           class="finance-input">
+                </td>
+                
+                <!-- Calculated fields -->
+                <td class="readonly-cell mkcl-total-{{ data.id }}">₹ {{ data.mkcl_total|floatformat:2 }}</td>
+                <td class="readonly-cell profit-cell profit-{{ data.id }} {% if data.profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                    ₹ {{ data.profit|floatformat:2 }}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="15" style="text-align: center; padding: 40px; color: #666;">
+                    No student records found for the selected year.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script src="{% static 'js/student_finance_details.js' %}"></script>

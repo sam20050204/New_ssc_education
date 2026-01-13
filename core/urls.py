@@ -43,4 +43,9 @@ urlpatterns = [
     
     # Database Management
     path('backup/database/', views.backup_database, name='backup_database'),
+    
+    #Statistics URLs
+    path('statistics/', views.statistics_view, name='statistics'),
+    path('student-finance-details/', views.student_finance_details, name='student_finance_details'),
+    path('update-finance-detail/', views.update_finance_detail, name='update_finance_detail'),
 ]

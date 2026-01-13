@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db.models.functions import ExtractYear
@@ -21,7 +20,8 @@ from decimal import Decimal
 import json
 import shutil
 import os
-
+from django.db.models import Sum, Count, Q
+from .models import Student, FeePayment, StudentFinanceDetail
 from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
 
 # ================= CUSTOM LOGOUT =================
@@ -1368,3 +1368,130 @@ def backup_database(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    
+
+
+@login_required
+def statistics_view(request):
+    """Main statistics page with year selection"""
+    years = Student.objects.values_list('academic_year', flat=True).distinct().order_by('-academic_year')
+    
+    context = {
+        'years': years,
+        'selected_year': request.GET.get('year', ''),
+    }
+    return render(request, 'statistics.html', context)
+
+@login_required
+def student_finance_details(request):
+    """Student Finance Details section"""
+    selected_year = request.GET.get('year', '')
+    
+    # Get all students for the selected year
+    students = Student.objects.filter(academic_year=selected_year) if selected_year else Student.objects.all()
+    
+    finance_data = []
+    total_profit = Decimal('0.00')
+    
+    for student in students:
+        # Get or create finance detail record
+        finance_detail, created = StudentFinanceDetail.objects.get_or_create(
+            student=student,
+            defaults={
+                'first_installment': Decimal('0.00'),
+                'second_installment': Decimal('0.00'),
+                'third_installment': Decimal('0.00'),
+                'fees_paid_to_mkcl_1': Decimal('0.00'),
+                'fees_paid_to_mkcl_2': Decimal('0.00'),
+            }
+        )
+        
+        # Calculate totals
+        total_paid = student.fees_paid or Decimal('0.00')
+        total_fees = student.course_fees or Decimal('0.00')
+        balance_fees = total_fees - total_paid
+        
+        # Calculate fees paid to MKCL total
+        mkcl_total = (finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')) + \
+                     (finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00'))
+        
+        # Calculate profit
+        profit = total_paid - mkcl_total
+        total_profit += profit
+        
+        finance_data.append({
+            'id': student.id,
+            'sr_no': student.id,
+            'learner_name': f"{student.first_name} {student.last_name}",
+            'student_id': student.student_id,
+            'mobile_no': student.mobile_number,
+            'batch': student.batch,
+            'course': student.course,
+            'first_inst': finance_detail.first_installment or Decimal('0.00'),
+            'second_inst': finance_detail.second_installment or Decimal('0.00'),
+            'third_inst': finance_detail.third_installment or Decimal('0.00'),
+            'total_paid': total_paid,
+            'total_fees': total_fees,
+            'balance_fees': balance_fees,
+            'mkcl_1': finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00'),
+            'mkcl_2': finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00'),
+            'mkcl_total': mkcl_total,
+            'profit': profit,
+        })
+    
+    context = {
+        'finance_data': finance_data,
+        'total_profit': total_profit,
+        'selected_year': selected_year,
+    }
+    
+    return render(request, 'student_finance_details.html', context)
+
+@login_required
+def update_finance_detail(request):
+    """AJAX endpoint to update finance details"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            student_id = data.get('student_id')
+            field = data.get('field')
+            value = data.get('value', '0')
+            
+            # Convert value to Decimal
+            try:
+                value = Decimal(value) if value else Decimal('0.00')
+            except:
+                value = Decimal('0.00')
+            
+            student = Student.objects.get(id=student_id)
+            finance_detail, created = StudentFinanceDetail.objects.get_or_create(student=student)
+            
+            # Update the appropriate field
+            if field == 'first_inst':
+                finance_detail.first_installment = value
+            elif field == 'second_inst':
+                finance_detail.second_installment = value
+            elif field == 'third_inst':
+                finance_detail.third_installment = value
+            elif field == 'mkcl_1':
+                finance_detail.fees_paid_to_mkcl_1 = value
+            elif field == 'mkcl_2':
+                finance_detail.fees_paid_to_mkcl_2 = value
+            
+            finance_detail.save()
+            
+            # Recalculate totals
+            total_paid = student.fees_paid or Decimal('0.00')
+            mkcl_total = (finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')) + \
+                        (finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00'))
+            profit = total_paid - mkcl_total
+            
+            return JsonResponse({
+                'success': True,
+                'mkcl_total': float(mkcl_total),
+                'profit': float(profit)
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})

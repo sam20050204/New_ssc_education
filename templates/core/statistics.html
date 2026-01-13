@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Statistics - SSC Education{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/statistics.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="statistics-container">
+    <h1 class="page-title">Statistics Dashboard</h1>
+    
+    <!-- Year Selector -->
+    <div class="year-selector">
+        <label for="yearSelect">Select Academic Year:</label>
+        <select id="yearSelect" onchange="filterByYear()">
+            <option value="">All Years</option>
+            {% for year in years %}
+            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <!-- Statistics Grid -->
+    <div class="statistics-grid" id="statisticsGrid">
+        <div class="stat-box" onclick="showSection('finance')">
+            <div class="icon">💰</div>
+            <h3>Student Finance Details</h3>
+            <p>View detailed financial records and profits</p>
+        </div>
+        
+        <div class="stat-box" onclick="showSection('performance')">
+            <div class="icon">📊</div>
+            <h3>Student Performance</h3>
+            <p>Track academic progress and results</p>
+        </div>
+        
+        <div class="stat-box" onclick="showSection('attendance')">
+            <div class="icon">📅</div>
+            <h3>Attendance Records</h3>
+            <p>Monitor student attendance patterns</p>
+        </div>
+        
+        <div class="stat-box" onclick="showSection('courses')">
+            <div class="icon">📚</div>
+            <h3>Course Analytics</h3>
+            <p>Analyze course enrollment and completion</p>
+        </div>
+    </div>
+    
+    <!-- Detail Sections -->
+    <div id="financeSection" class="detail-section">
+        <button class="back-button" onclick="hideAllSections()">← Back to Dashboard</button>
+        <div id="financeContent">
+            <p style="text-align: center; padding: 40px; color: #666;">
+                <span class="loading-spinner"></span>
+                Loading...
+            </p>
+        </div>
+    </div>
+    
+    <div id="performanceSection" class="detail-section">
+        <button class="back-button" onclick="hideAllSections()">← Back to Dashboard</button>
+        <h2>Student Performance</h2>
+        <p style="padding: 40px; text-align: center; color: #666;">Coming soon...</p>
+    </div>
+    
+    <div id="attendanceSection" class="detail-section">
+        <button class="back-button" onclick="hideAllSections()">← Back to Dashboard</button>
+        <h2>Attendance Records</h2>
+        <p style="padding: 40px; text-align: center; color: #666;">Coming soon...</p>
+    </div>
+    
+    <div id="coursesSection" class="detail-section">
+        <button class="back-button" onclick="hideAllSections()">← Back to Dashboard</button>
+        <h2>Course Analytics</h2>
+        <p style="padding: 40px; text-align: center; color: #666;">Coming soon...</p>
+    </div>
+</div>
+
+<script src="{% static 'js/statistics.js' %}"></script>
+{% endblock %}
