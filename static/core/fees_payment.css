@@ -743,45 +743,207 @@
     .btn-close {
         display: none !important;
     }
-    
-    .receipt-container {
-        box-shadow: none !important;
-        border-radius: 0 !important;
-    }
-}
-    
-    /* Hide modal actions and buttons */
-    .modal-actions,
-    .btn-print,
-    .btn-close {
-        display: none !important;
-    }
-    
-    /* Remove shadows and borders for clean print */
+
+    /* Remove shadows, borders and adjust spacing for clean print */
     .receipt-container {
         box-shadow: none !important;
         border-radius: 0 !important;
         padding: 20px;
-    }
-    
-    /* Optimize page breaks */
-    .receipt-container {
         page-break-inside: avoid;
     }
-    
+
     /* Remove modal background */
     .receipt-modal {
         background: white !important;
         position: static !important;
         overflow: visible !important;
     }
-    
-    /* Ensure receipt content is properly sized */
+
+    /* Ensure receipt content is properly sized and avoids breaks */
     .receipt-header,
     .receipt-title,
     .receipt-info,
     .amount-section,
     .receipt-footer {
         page-break-inside: avoid;
+    }
+}
+
+/* ===================== RECEIPT MODAL SCROLLBAR ===================== */
+.receipt-modal-content {
+    width: 100%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    background: white;
+}
+
+/* ✅ Scrollbar styling for receipt modal */
+.receipt-modal-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.receipt-modal-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.receipt-modal-content::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+    border: 2px solid #f1f1f1;
+}
+
+.receipt-modal-content::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
+}
+
+/* Firefox scrollbar */
+.receipt-modal-content {
+    scrollbar-color: #667eea #f1f1f1;
+    scrollbar-width: thin;
+}
+
+/* ===================== RECEIPT CONTAINER PADDING ===================== */
+.receipt-container {
+    background: white;
+    width: 100%;
+    padding: 30px;
+    page-break-after: avoid;
+}
+
+/* ===================== MODAL ACTIONS BUTTONS ===================== */
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-top: 1px solid #e8e8e8;
+    border-radius: 0 0 12px 12px;
+}
+
+.btn-print,
+.btn-edit,
+.btn-new,
+.btn-close {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+/* Print Button */
+.btn-print {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-print:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-print:active {
+    transform: translateY(0);
+}
+
+/* Edit Button - ✅ NEW */
+.btn-edit {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.btn-edit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+}
+
+.btn-edit:active {
+    transform: translateY(0);
+}
+
+/* New Payment Button - ✅ NEW */
+.btn-new {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.btn-new:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-new:active {
+    transform: translateY(0);
+}
+
+/* Close Button */
+.btn-close {
+    background: #e9ecef;
+    color: #495057;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-close:hover {
+    background: #dee2e6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-close:active {
+    transform: translateY(0);
+}
+
+/* ===================== RESPONSIVE BUTTONS ===================== */
+@media (max-width: 768px) {
+    .modal-actions {
+        gap: 8px;
+    }
+    
+    .btn-print,
+    .btn-edit,
+    .btn-new,
+    .btn-close {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    .receipt-modal-content {
+        max-height: 90vh;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .btn-print,
+    .btn-edit,
+    .btn-new,
+    .btn-close {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+    }
+    
+    .receipt-container {
+        padding: 15px;
     }
 }

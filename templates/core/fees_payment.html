@@ -6,7 +6,6 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/fees_payment.css' %}">
 <style>
-    /* Additional styles for dynamic content */
     .loading {
         text-align: center;
         padding: 20px;
@@ -90,13 +89,13 @@
     <!-- STUDENT DETAILS SECTION (INITIALLY HIDDEN) -->
     <div id="studentDetailsSection" class="student-details-section" style="display: none;">
         <div class="student-header">
-            <div class="student-photo-large" id="studentPhotoLarge">
+            <div class="student-photo-large">
                 <div class="no-photo">📷</div>
             </div>
             <div class="student-info-large">
-                <h2 class="student-name-large" id="studentNameDisplay">-</h2>
-                <span class="student-course-large" id="studentCourseDisplay">-</span>
-                <p class="student-mobile-large">📞 <span id="studentMobileDisplay">-</span></p>
+                <h2 class="student-name-large">-</h2>
+                <span class="student-course-large">-</span>
+                <p class="student-mobile-large">📞 <span>-</span></p>
             </div>
         </div>
 
@@ -104,184 +103,107 @@
         <div class="fees-info-grid">
             <div class="fees-info-card total">
                 <div class="fees-label">Total Fees</div>
-                <div class="fees-amount total">₹<span id="totalFeesDisplay">0.00</span></div>
+                <div class="fees-amount total">₹0.00</div>
             </div>
             <div class="fees-info-card paid">
                 <div class="fees-label">Paid Fees</div>
-                <div class="fees-amount paid">₹<span id="paidFeesDisplay">0.00</span></div>
+                <div class="fees-amount paid">₹0.00</div>
             </div>
             <div class="fees-info-card remaining">
                 <div class="fees-label">Remaining Fees</div>
-                <div class="fees-amount remaining">₹<span id="remainingFeesDisplay">0.00</span></div>
+                <div class="fees-amount remaining">₹0.00</div>
             </div>
         </div>
 
-        <!-- PAYMENT FORM - Place this inside the student-details-section -->
-            <div class="payment-form-section" style="display: none;">
-                <h3>💳 Record Payment</h3>
-                <form id="paymentForm">
-                    {% csrf_token %}
-                    <input type="hidden" id="selectedStudentId" name="student_id">
+        <!-- PAYMENT FORM -->
+        <div class="payment-form-section" style="display: none;">
+            <h3>💳 Record Payment</h3>
+            <form id="paymentForm">
+                {% csrf_token %}
+                <input type="hidden" id="selectedStudentId" name="student_id">
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="paymentAmount">
-                                Payment Amount (₹) <span class="required">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                id="paymentAmount"
-                                name="amount"
-                                class="form-input payment-amount-input"
-                                placeholder="0.00"
-                                step="0.01"
-                                min="0.01"
-                                required
-                            >
-                            <small class="help-text">Max: ₹<span id="maxPaymentAmount">0.00</span></small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="paymentMode">
-                                Payment Mode <span class="required">*</span>
-                            </label>
-                            <select id="paymentMode" name="payment_mode" class="form-select" required>
-                                <option value="">-- Select Mode --</option>
-                                <option value="Cash">💵 Cash</option>
-                                <option value="UPI">📱 UPI</option>
-                                <option value="Card">💳 Card</option>
-                                <option value="Bank Transfer">🏦 Bank Transfer</option>
-                            </select>
-                        </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="paymentAmount">
+                            Payment Amount (₹) <span class="required">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="paymentAmount"
+                            name="amount"
+                            class="form-input payment-amount-input"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0.01"
+                            required
+                        >
+                        <small class="help-text">Max: ₹<span id="maxPaymentAmount">0.00</span></small>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group full-width">
-                            <label for="remarks">Remarks (Optional)</label>
-                            <textarea
-                                id="remarks"
-                                name="remarks"
-                                class="form-input"
-                                rows="2"
-                                placeholder="Any additional notes..."
-                            ></textarea>
-                        </div>
+                    <div class="form-group">
+                        <label for="paymentMode">
+                            Payment Mode <span class="required">*</span>
+                        </label>
+                        <select id="paymentMode" name="payment_mode" class="form-select" required>
+                            <option value="">-- Select Mode --</option>
+                            <option value="Cash">💵 Cash</option>
+                            <option value="UPI">📱 UPI</option>
+                            <option value="Card">💳 Card</option>
+                            <option value="Bank Transfer">🏦 Bank Transfer</option>
+                        </select>
                     </div>
+                </div>
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn-submit">
-                            💾 Submit Payment
-                        </button>
-                        <button type="reset" class="btn-reset">
-                            🔄 Reset
-                        </button>
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="remarks">Remarks (Optional)</label>
+                        <textarea
+                            id="remarks"
+                            name="remarks"
+                            class="form-input"
+                            rows="2"
+                            placeholder="Any additional notes..."
+                        ></textarea>
                     </div>
-                </form>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">
+                        💾 Submit Payment
+                    </button>
+                    <button type="reset" class="btn-reset">
+                        🔄 Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
 
-<!-- RECEIPT MODAL -->
-<!-- ✅ UPDATED RECEIPT MODAL - Add this to replace the existing receipt modal in fees_payment.html -->
-
-<!-- RECEIPT MODAL -->
-<!-- ✅ FIXED RECEIPT MODAL - Replace the receipt modal section in fees_payment.html -->
-
-<!-- RECEIPT MODAL -->
+<!-- RECEIPT MODAL - SINGLE MODAL ONLY -->
 <div id="receiptModal" class="receipt-modal">
     <div class="receipt-modal-content">
         <div class="receipt-container" id="receiptContent">
-            <!-- Receipt content will be loaded dynamically -->
-            <div style="text-align: center; padding: 40px; color: #666;">
-                <p>Receipt content will appear here...</p>
-            </div>
+            <!-- Receipt HTML will be inserted here dynamically -->
         </div>
 
-        <!-- ✅ MODAL ACTIONS WITH PRINT BUTTON -->
-        <div class="modal-actions" style="display: flex; gap: 15px; justify-content: center; padding: 20px; background: white; border-top: 2px solid #e8e8e8;">
-            <button class="btn-print" onclick="printReceipt()" style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
-                🖨️ Print Receipt
-            </button>
-            <button class="btn-close" onclick="closeReceiptModal()" style="padding: 12px 30px; background: #e9ecef; color: #495057; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">
-                ❌ Close
-            </button>
-        </div>
-    </div>
-</div>
-            <!-- RECEIPT TITLE -->
-            <h2 class="receipt-title">🧾 FEE PAYMENT RECEIPT</h2>
-
-            <!-- RECEIPT INFO -->
-            <div class="receipt-info">
-                <span class="receipt-label">Receipt No:</span>
-                <span class="receipt-value" id="receiptNo">-</span>
-
-                <span class="receipt-label">Date:</span>
-                <span class="receipt-value" id="receiptDate">-</span>
-
-                <span class="receipt-label">Student Name:</span>
-                <span class="receipt-value" id="receiptStudentName">-</span>
-
-                <span class="receipt-label">Course:</span>
-                <span class="receipt-value" id="receiptCourse">-</span>
-
-                <!-- ✅ NEW: Batch Information -->
-                <span class="receipt-label">Batch:</span>
-                <span class="receipt-value" id="receiptBatch" style="font-weight: 700; color: #0284c7;">-</span>
-
-                <span class="receipt-label">Mobile:</span>
-                <span class="receipt-value" id="receiptMobile">-</span>
-
-                <span class="receipt-label">Payment Mode:</span>
-                <span class="receipt-value" id="receiptPaymentMode">-</span>
+        
+            <!-- MODAL ACTION BUTTONS - ✅ UPDATED WITH MORE OPTIONS -->
+            <div class="modal-actions">
+                <button class="btn-print" onclick="printReceipt()" title="Print the receipt">
+                    🖨️ Print Receipt
+                </button>
+                <button class="btn-edit" onclick="editPayment()" title="Edit payment amount/mode">
+                    ✏️ Edit Payment
+                </button>
+                <button class="btn-new" onclick="newPayment()" title="Record new payment">
+                    ➕ New Payment
+                </button>
+                <button class="btn-close" onclick="closeReceiptModal()" title="Close this window">
+                    ❌ Close
+                </button>
             </div>
-            <hr class="receipt-divider">
-
-            <!-- AMOUNT SECTION -->
-            <div class="amount-section">
-                <div class="amount-row">
-                    <span>Total Course Fees:</span>
-                    <strong>₹<span id="receiptTotalFees">0.00</span></strong>
-                </div>
-                <div class="amount-row">
-                    <span>Previous Paid:</span>
-                    <strong>₹<span id="receiptPreviousPaid">0.00</span></strong>
-                </div>
-                <div class="amount-row paid">
-                    <span>Amount Paid Now:</span>
-                    <strong>₹<span id="receiptAmountPaid">0.00</span></strong>
-                </div>
-                <div class="amount-row">
-                    <span>Remaining Fees:</span>
-                    <strong>₹<span id="receiptRemainingFees">0.00</span></strong>
-                </div>
-                <div class="amount-in-words">
-                    <strong>In Words:</strong> <span id="receiptAmountWords">-</span>
-                </div>
-            </div>
-
-            <hr class="receipt-divider">
-
-            <!-- FOOTER -->
-            <div class="receipt-footer">
-                <div class="thank-you">
-                    Thank you for your payment!<br>
-                    <small>This is a computer-generated receipt</small>
-                </div>
-                <div class="signature-section">
-                    <div class="signature-line"></div>
-                    <div class="signature-label">Authorized Signature</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- MODAL ACTIONS -->
-        <div class="modal-actions">
-            <button class="btn-print" onclick="printReceipt()">
-                🖨️ Print Receipt
-            </button>
-            <button class="btn-close" onclick="closeReceiptModal()">
-                ❌ Close
-            </button>
-        </div>
     </div>
 </div>
 

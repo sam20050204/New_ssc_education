@@ -1,4 +1,3 @@
-// ===================== COMPLETE UPDATED fees_payment.js =====================
 let selectedStudentId = null;
 let selectedStudentData = null;
 let lastSubmissionTime = 0;
@@ -113,9 +112,11 @@ function selectStudent(studentId, fullName, course, mobile) {
     }
     
     detailsSection.style.display = 'block';
+    
+    // Show loading
     const studentHeader = detailsSection.querySelector('.student-header');
     if (studentHeader) {
-        studentHeader.innerHTML = '<div class="loading">⏳ Loading student details...</div>';
+        studentHeader.innerHTML = '<div class="loading" style="width: 100%; text-align: center; padding: 40px;">⏳ Loading student details...</div>';
     }
     
     fetch(`/admission/${studentId}/detail/`, {
@@ -143,16 +144,13 @@ function selectStudent(studentId, fullName, course, mobile) {
             throw new Error('Student details section not found');
         }
         
+        // UPDATE STUDENT HEADER
         const studentHeader = detailsSection.querySelector('.student-header');
         if (studentHeader) {
             const displayCourse = data.custom_course || data.course;
             const photoHTML = data.photo 
-                ? `<img src="${data.photo}" alt="${data.full_name}">` 
-                : '<div class="no-photo">📷</div>';
-            
-            const batchDisplay = (data.batch_month && data.batch_year) 
-                ? `${data.batch_month} ${data.batch_year}` 
-                : 'Not Assigned';
+                ? `<img src="${data.photo}" alt="${data.full_name}" style="width: 100%; height: 100%; object-fit: cover;">` 
+                : '📷';
             
             studentHeader.innerHTML = `
                 <div class="student-photo-large">
@@ -161,14 +159,12 @@ function selectStudent(studentId, fullName, course, mobile) {
                 <div class="student-info-large">
                     <h2 class="student-name-large">${data.full_name}</h2>
                     <span class="student-course-large">${displayCourse}</span>
-                    <div style="margin-top: 10px; padding: 8px 16px; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 2px solid #0284c7; border-radius: 8px; display: inline-block;">
-                        <span style="color: #0c4a6e; font-weight: 700; font-size: 14px;">📅 Batch: ${batchDisplay}</span>
-                    </div>
                     <p class="student-mobile-large">📞 ${data.mobile_own}</p>
                 </div>
             `;
         }
         
+        // UPDATE FEES INFO GRID
         const feesGrid = detailsSection.querySelector('.fees-info-grid');
         if (feesGrid) {
             feesGrid.innerHTML = `
@@ -187,6 +183,7 @@ function selectStudent(studentId, fullName, course, mobile) {
             `;
         }
         
+        // UPDATE FORM FIELDS
         const selectedStudentIdInput = document.getElementById('selectedStudentId');
         if (selectedStudentIdInput) {
             selectedStudentIdInput.value = studentId;
@@ -204,6 +201,7 @@ function selectStudent(studentId, fullName, course, mobile) {
             maxPaymentDisplay.textContent = parseFloat(data.remaining_fees).toFixed(2);
         }
         
+        // SHOW FORM
         const formSection = detailsSection.querySelector('.payment-form-section');
         if (formSection) {
             formSection.style.display = 'block';
@@ -211,6 +209,7 @@ function selectStudent(studentId, fullName, course, mobile) {
         
         detailsSection.style.display = 'block';
         
+        // Focus on amount input
         setTimeout(() => {
             if (paymentAmountInput) {
                 paymentAmountInput.focus();
@@ -342,7 +341,10 @@ function submitPayment() {
         console.log('Payment successful:', data);
         
         if (data.success) {
-            // Show receipt immediately
+            // Show success message
+            alert('✅ Payment recorded successfully!\n\nReceipt No: ' + data.receipt.receipt_no);
+            
+            // Display receipt in modal
             displayReceipt(data.receipt);
             
             // Reset form after showing receipt
@@ -394,13 +396,12 @@ function submitPayment() {
     });
 }
 
-// ✅ FIXED: Display receipt function - NO AUTO-PRINT, just show modal
+// Display receipt in modal - ✅ UPDATED WITH BUTTONS
 function displayReceipt(receipt) {
     console.log('Displaying receipt:', receipt);
     
-    // Generate complete receipt HTML
+    // Create complete receipt HTML
     const receiptHTML = `
-        <!-- INSTITUTE HEADER -->
         <div class="receipt-header">
             <div class="institute-name">Shri Samarth Computer Education Murud</div>
             <div class="institute-details">
@@ -411,25 +412,20 @@ function displayReceipt(receipt) {
             </div>
         </div>
 
-        <!-- RECEIPT TITLE -->
         <h2 class="receipt-title">🧾 FEE PAYMENT RECEIPT</h2>
 
-        <!-- RECEIPT INFO -->
         <div class="receipt-info">
             <span class="receipt-label">Receipt No:</span>
             <span class="receipt-value">${receipt.receipt_no}</span>
 
             <span class="receipt-label">Date:</span>
-            <span class="receipt-value">${receipt.date} ${receipt.time || ''}</span>
+            <span class="receipt-value">${receipt.date}</span>
 
             <span class="receipt-label">Student Name:</span>
             <span class="receipt-value">${receipt.student_name}</span>
 
             <span class="receipt-label">Course:</span>
             <span class="receipt-value">${receipt.course}</span>
-
-            <span class="receipt-label">Batch:</span>
-            <span class="receipt-value" style="font-weight: 700; color: #0284c7;">${receipt.batch_display || 'Not Assigned'}</span>
 
             <span class="receipt-label">Mobile:</span>
             <span class="receipt-value">${receipt.mobile}</span>
@@ -439,14 +435,13 @@ function displayReceipt(receipt) {
         </div>
         <hr class="receipt-divider">
 
-        <!-- AMOUNT SECTION -->
         <div class="amount-section">
             <div class="amount-row">
                 <span>Total Course Fees:</span>
                 <strong>₹${receipt.total_fees}</strong>
             </div>
             <div class="amount-row">
-                <span>Previous Paid:</span>
+                <span>Previously Paid:</span>
                 <strong>₹${receipt.previous_paid}</strong>
             </div>
             <div class="amount-row paid">
@@ -454,7 +449,7 @@ function displayReceipt(receipt) {
                 <strong>₹${receipt.amount_paid}</strong>
             </div>
             <div class="amount-row">
-                <span>Remaining Fees:</span>
+                <span>Remaining:</span>
                 <strong>₹${receipt.remaining_fees}</strong>
             </div>
             <div class="amount-in-words">
@@ -464,20 +459,17 @@ function displayReceipt(receipt) {
 
         <hr class="receipt-divider">
 
-        <!-- FOOTER -->
         <div class="receipt-footer">
-            <div class="thank-you">
-                Thank you for your payment!<br>
-                <small>This is a computer-generated receipt</small>
-            </div>
-            <div class="signature-section">
-                <div class="signature-line"></div>
-                <div class="signature-label">Authorized Signature</div>
+            <p style="text-align: center;">Thank you for your payment!</p>
+            <p style="text-align: center;"><small>This is a computer-generated receipt</small></p>
+            <div style="text-align: right; margin-top: 40px; padding-right: 20px;">
+                <div style="border-top: 2px solid #333; width: 200px; margin-left: auto; margin-bottom: 5px;"></div>
+                <strong>Authorized Signature</strong>
             </div>
         </div>
     `;
     
-    // Insert receipt HTML into container
+    // Insert into modal
     const receiptContent = document.getElementById('receiptContent');
     if (receiptContent) {
         receiptContent.innerHTML = receiptHTML;
@@ -488,177 +480,222 @@ function displayReceipt(receipt) {
     if (receiptModal) {
         receiptModal.classList.add('active');
         document.body.style.overflow = 'hidden';
-        
-        console.log('Receipt modal displayed successfully');
-        
-        // Show success message
-        alert('✅ Payment recorded successfully!\n\nReceipt No: ' + receipt.receipt_no + '\n\nClick "Print Receipt" button to print.');
-    } else {
-        console.error('Receipt modal not found!');
-        alert('✅ Payment recorded successfully!\n\nReceipt: ' + receipt.receipt_no);
     }
 }
 
-// Print receipt - Uses new window method like receipts page
+// Print receipt - ✅ UPDATED
 function printReceipt() {
+    console.log('Print receipt function called');
+    
     const receiptContent = document.getElementById('receiptContent');
-    if (!receiptContent) {
+    if (!receiptContent || !receiptContent.innerHTML) {
         alert('❌ Receipt not found');
         return;
     }
     
-    // Create new window for printing
-    const printWindow = window.open('', '', 'width=800,height=600');
+    // Create new window
+    const printWindow = window.open('', '', 'width=900,height=700');
     
     if (!printWindow) {
         alert('❌ Please allow popups to print the receipt');
         return;
     }
     
-    printWindow.document.write(`
+    const printHTML = `
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Fee Payment Receipt</title>
+            <title>Fee Payment Receipt - Print</title>
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body { 
                     font-family: Arial, sans-serif; 
                     padding: 20px; 
-                    background: white; 
-                    color: #333; 
+                    background: white;
+                    color: #333;
                 }
                 .receipt-container { 
                     max-width: 700px; 
                     margin: 0 auto; 
                     background: white; 
-                    padding: 20px; 
+                    padding: 30px;
+                    border: 1px solid #ddd;
                 }
                 .receipt-header { 
                     text-align: center; 
-                    margin-bottom: 20px; 
                     border-bottom: 3px solid #333; 
                     padding-bottom: 15px; 
+                    margin-bottom: 20px;
                 }
                 .institute-name { 
                     font-size: 20px; 
                     font-weight: bold; 
-                    color: #333; 
                     margin-bottom: 8px;
                 }
                 .institute-details { 
                     font-size: 11px; 
-                    color: #666; 
-                    line-height: 1.6; 
+                    line-height: 1.6;
                 }
                 .receipt-title { 
                     text-align: center; 
                     font-size: 18px; 
                     margin: 20px 0; 
-                    font-weight: bold; 
-                    color: #333;
+                    font-weight: bold;
                 }
                 .receipt-info { 
                     display: grid; 
                     grid-template-columns: 150px 1fr; 
                     gap: 10px; 
                     margin: 20px 0; 
-                    font-size: 13px; 
+                    font-size: 13px;
                 }
                 .receipt-label { 
-                    font-weight: bold; 
-                    color: #333; 
-                }
-                .receipt-value { 
-                    color: #666; 
+                    font-weight: bold;
                 }
                 .receipt-divider { 
                     border: none; 
                     border-top: 2px dashed #999; 
-                    margin: 15px 0; 
+                    margin: 15px 0;
                 }
                 .amount-section { 
                     margin: 20px 0; 
-                    font-size: 13px; 
+                    font-size: 13px;
                 }
                 .amount-row { 
                     display: flex; 
                     justify-content: space-between; 
                     padding: 8px 0; 
-                    border-bottom: 1px dotted #ddd; 
+                    border-bottom: 1px dotted #ddd;
                 }
                 .amount-row.paid { 
                     background: #e8f5e9; 
                     padding: 12px; 
                     font-weight: bold; 
-                    border: 2px solid #4caf50; 
-                    margin: 10px 0; 
-                    border-radius: 4px;
+                    border: 2px solid #4caf50;
+                    margin: 10px 0;
                 }
                 .amount-in-words { 
                     margin-top: 15px; 
                     padding: 12px; 
                     background: #f5f5f5; 
-                    border-left: 3px solid #666; 
-                    font-size: 12px; 
+                    border-left: 3px solid #666;
+                    font-size: 12px;
                 }
                 .receipt-footer { 
                     margin-top: 30px; 
-                    font-size: 12px; 
+                    text-align: center;
                 }
-                .thank-you { 
-                    text-align: center; 
-                    margin-bottom: 30px; 
-                }
-                .signature-section { 
-                    text-align: right; 
-                    margin-top: 50px; 
-                    padding-right: 50px; 
-                }
-                .signature-line { 
-                    border-top: 2px solid #333; 
-                    width: 200px; 
-                    margin: 0 0 5px auto; 
-                }
-                .signature-label { 
-                    font-weight: bold; 
-                    color: #333; 
-                }
-                @media print { 
-                    body { margin: 0; padding: 0; } 
-                    @page { margin: 1cm; }
-                    .receipt-container { padding: 0; }
+                @media print {
+                    body { margin: 0; padding: 0; }
+                    .receipt-container { border: none; }
                 }
             </style>
         </head>
         <body>
-            ${receiptContent.innerHTML}
+            <div class="receipt-container">
+                ${receiptContent.innerHTML}
+            </div>
             <script>
-                window.onload = function() {
-                    window.print();
-                    setTimeout(function() {
-                        window.close();
-                    }, 100);
-                };
+                window.focus();
+                window.print();
+                setTimeout(function() {
+                    window.close();
+                }, 1000);
             </script>
         </body>
         </html>
-    `);
+    `;
     
+    printWindow.document.write(printHTML);
     printWindow.document.close();
+}
+
+// ✅ NEW PAYMENT - Start Fresh Payment
+function newPayment() {
+    console.log('New payment function called');
+    
+    // Close receipt modal
+    closeReceiptModal();
+    
+    // Clear all data
+    selectedStudentId = null;
+    selectedStudentData = null;
+    lastSubmissionTime = 0;
+    paymentSubmitting = false;
+    
+    // Clear student details section
+    const detailsSection = document.getElementById('studentDetailsSection');
+    if (detailsSection) {
+        detailsSection.style.display = 'none';
+    }
+    
+    // Clear form
+    const paymentForm = document.getElementById('paymentForm');
+    if (paymentForm) {
+        paymentForm.reset();
+    }
+    
+    // Clear search
+    const studentSearch = document.getElementById('studentSearch');
+    if (studentSearch) {
+        studentSearch.value = '';
+        studentSearch.focus();
+    }
+    
+    const searchResults = document.getElementById('searchResults');
+    if (searchResults) {
+        searchResults.innerHTML = '';
+        searchResults.style.display = 'none';
+    }
+    
+    alert('✅ Ready for new payment! Search for a student.');
+}
+
+// ✅ EDIT PAYMENT - Edit the current payment amount/mode
+function editPayment() {
+    console.log('Edit payment function called');
+    
+    // Close receipt modal
+    closeReceiptModal();
+    
+    // Re-enable form fields for editing
+    const paymentForm = document.getElementById('paymentForm');
+    if (paymentForm) {
+        const allInputs = paymentForm.querySelectorAll('input, select, textarea');
+        allInputs.forEach(input => {
+            input.disabled = false;
+        });
+    }
+    
+    // Focus on amount input for editing
+    const paymentAmountInput = document.getElementById('paymentAmount');
+    if (paymentAmountInput) {
+        paymentAmountInput.focus();
+        paymentAmountInput.select();
+    }
+    
+    alert('✅ You can now edit the payment details. Correct the amount or mode and submit again.');
 }
 
 // Close receipt modal
 function closeReceiptModal() {
+    console.log('Closing receipt modal');
+    
     const receiptModal = document.getElementById('receiptModal');
     if (receiptModal) {
         receiptModal.classList.remove('active');
         document.body.style.overflow = 'auto';
+        
+        // Clear receipt content
+        const receiptContent = document.getElementById('receiptContent');
+        if (receiptContent) {
+            receiptContent.innerHTML = '';
+        }
     }
 }
 
-// Close on ESC
+// Close on ESC key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         if (!paymentSubmitting) {
