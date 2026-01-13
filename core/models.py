@@ -90,6 +90,13 @@ class AdmittedStudent(models.Model):
         null=True,
         help_text="Year of batch (e.g., 2024, 2025)"
     )
+
+    @property
+    def batch_display(self):
+        """Return formatted batch string"""
+        if self.batch_month and self.batch_year:
+            return f"{self.batch_month} {self.batch_year}"
+        return "Not Assigned"
     
     # Photo
     photo = models.ImageField(upload_to='student_photos/', blank=True, null=True)

@@ -144,13 +144,18 @@ function selectStudent(studentId, fullName, course, mobile) {
             throw new Error('Student details section not found');
         }
         
-        // UPDATE STUDENT HEADER
+        // UPDATE STUDENT HEADER - ✅ INCLUDE BATCH
         const studentHeader = detailsSection.querySelector('.student-header');
         if (studentHeader) {
             const displayCourse = data.custom_course || data.course;
             const photoHTML = data.photo 
                 ? `<img src="${data.photo}" alt="${data.full_name}" style="width: 100%; height: 100%; object-fit: cover;">` 
                 : '📷';
+            
+            // ✅ Get batch information
+            const batchMonth = data.batch_month || '';
+            const batchYear = data.batch_year || '';
+            const batchDisplay = (batchMonth && batchYear) ? `${batchMonth} ${batchYear}` : 'Not Assigned';
             
             studentHeader.innerHTML = `
                 <div class="student-photo-large">
@@ -159,6 +164,7 @@ function selectStudent(studentId, fullName, course, mobile) {
                 <div class="student-info-large">
                     <h2 class="student-name-large">${data.full_name}</h2>
                     <span class="student-course-large">${displayCourse}</span>
+                    <p class="student-batch-large">📅 Batch: <strong>${batchDisplay}</strong></p>
                     <p class="student-mobile-large">📞 ${data.mobile_own}</p>
                 </div>
             `;
@@ -396,7 +402,7 @@ function submitPayment() {
     });
 }
 
-// Display receipt in modal - ✅ UPDATED WITH BUTTONS
+// Display receipt in modal - ✅ UPDATED WITH BATCH
 function displayReceipt(receipt) {
     console.log('Displaying receipt:', receipt);
     
@@ -426,6 +432,9 @@ function displayReceipt(receipt) {
 
             <span class="receipt-label">Course:</span>
             <span class="receipt-value">${receipt.course}</span>
+
+            <span class="receipt-label">Batch:</span>
+            <span class="receipt-value">${receipt.batch || 'Not Assigned'}</span>
 
             <span class="receipt-label">Mobile:</span>
             <span class="receipt-value">${receipt.mobile}</span>
@@ -483,7 +492,7 @@ function displayReceipt(receipt) {
     }
 }
 
-// Print receipt - ✅ UPDATED
+// Print receipt - ✅ UPDATED WITH BATCH
 function printReceipt() {
     console.log('Print receipt function called');
     
@@ -552,6 +561,9 @@ function printReceipt() {
                 }
                 .receipt-label { 
                     font-weight: bold;
+                }
+                .receipt-value {
+                    word-break: break-word;
                 }
                 .receipt-divider { 
                     border: none; 
@@ -652,31 +664,6 @@ function newPayment() {
     alert('✅ Ready for new payment! Search for a student.');
 }
 
-// ✅ EDIT PAYMENT - Edit the current payment amount/mode
-function editPayment() {
-    console.log('Edit payment function called');
-    
-    // Close receipt modal
-    closeReceiptModal();
-    
-    // Re-enable form fields for editing
-    const paymentForm = document.getElementById('paymentForm');
-    if (paymentForm) {
-        const allInputs = paymentForm.querySelectorAll('input, select, textarea');
-        allInputs.forEach(input => {
-            input.disabled = false;
-        });
-    }
-    
-    // Focus on amount input for editing
-    const paymentAmountInput = document.getElementById('paymentAmount');
-    if (paymentAmountInput) {
-        paymentAmountInput.focus();
-        paymentAmountInput.select();
-    }
-    
-    alert('✅ You can now edit the payment details. Correct the amount or mode and submit again.');
-}
 
 // Close receipt modal
 function closeReceiptModal() {

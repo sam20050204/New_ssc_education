@@ -87,17 +87,18 @@
     </div>
 
     <!-- STUDENT DETAILS SECTION (INITIALLY HIDDEN) -->
-    <div id="studentDetailsSection" class="student-details-section" style="display: none;">
-        <div class="student-header">
-            <div class="student-photo-large">
-                <div class="no-photo">📷</div>
+        <div id="studentDetailsSection" class="student-details-section" style="display: none;">
+            <div class="student-header">
+                <div class="student-photo-large">
+                    <div class="no-photo">📷</div>
+                </div>
+                <div class="student-info-large">
+                    <h2 class="student-name-large">-</h2>
+                    <span class="student-course-large">-</span>
+                    <p class="student-batch-large">📅 Batch: <strong>Not Assigned</strong></p>
+                    <p class="student-mobile-large">📞 <span>-</span></p>
+                </div>
             </div>
-            <div class="student-info-large">
-                <h2 class="student-name-large">-</h2>
-                <span class="student-course-large">-</span>
-                <p class="student-mobile-large">📞 <span>-</span></p>
-            </div>
-        </div>
 
         <!-- FEES INFO GRID -->
         <div class="fees-info-grid">
@@ -193,9 +194,6 @@
             <div class="modal-actions">
                 <button class="btn-print" onclick="printReceipt()" title="Print the receipt">
                     🖨️ Print Receipt
-                </button>
-                <button class="btn-edit" onclick="editPayment()" title="Edit payment amount/mode">
-                    ✏️ Edit Payment
                 </button>
                 <button class="btn-new" onclick="newPayment()" title="Record new payment">
                     ➕ New Payment

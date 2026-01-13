@@ -570,55 +570,32 @@ def admitted_students(request):
 # ================= STUDENT DETAIL (ADMITTED) =================
 @login_required
 def student_detail_admitted(request, student_id):
-    student = get_object_or_404(AdmittedStudent, id=student_id)
-    
-    # Get all fee payments for this student
-    fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
-    
-    # Prepare payment history
-    payment_history = []
-    for payment in fee_payments:
-        payment_history.append({
-            'receipt_no': payment.receipt_no,
-            'amount': float(payment.amount),
-            'payment_mode': payment.payment_mode,
-            'payment_date': payment.payment_date.strftime('%d-%m-%Y'),
-            'payment_time': payment.payment_date.strftime('%I:%M %p'),
-            'remaining_after': float(payment.remaining_after_this),
-        })
-    
-    data = {
-        'id': student.id,
-        'student_name': student.student_name,
-        'father_name': student.father_name,
-        'surname': student.surname,
-        'mother_name': student.mother_name,
-        'full_name': student.full_name,
-        'date_of_birth': student.date_of_birth.strftime('%Y-%m-%d'),
-        'mobile_own': student.mobile_own,
-        'parent_mobile': student.parent_mobile or '',
-        'gender': student.gender,
-        'marital_status': student.marital_status,
-        'photo': student.photo.url if student.photo else '',
-        'course': student.course,
-        'custom_course': student.custom_course or '',
-        'educational_qualification': student.educational_qualification,
-        'address': student.address,
-        'city': student.city,
-        'tehsil_block': student.tehsil_block,
-        'district': student.district,
-        'pin_code': student.pin_code,
-        'total_fees': float(student.total_fees),
-        'paid_fees': float(student.paid_fees),
-        'remaining_fees': float(student.remaining_fees),
-        'batch_month': student.batch_month or '',  # NEW
-        'batch_year': student.batch_year or '',    # NEW
-        'batch_display': student.batch_display,   # NEW
-        'payment_history': payment_history,
-    }
-    
-    return JsonResponse(data)
-
+    """Get admitted student details via AJAX"""
+    try:
+        student = AdmittedStudent.objects.get(id=student_id)
+        
+        # ✅ Ensure batch fields are included
+        data = {
+            'id': student.id,
+            'full_name': student.full_name,
+            'course': student.course,
+            'custom_course': student.custom_course,
+            'mobile_own': student.mobile_own,
+            'photo': student.photo.url if student.photo else None,
+            'total_fees': float(student.total_fees),
+            'paid_fees': float(student.paid_fees),
+            'remaining_fees': float(student.remaining_fees),
+            # ✅ ADD BATCH FIELDS
+            'batch_month': student.batch_month or '',
+            'batch_year': student.batch_year or '',
+        }
+        
+        return JsonResponse(data)
+    except AdmittedStudent.DoesNotExist:
+        return JsonResponse({'error': 'Student not found'}, status=404)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
 
 # ================= UPDATE STUDENT (ADMITTED) =================
 @login_required
@@ -694,7 +671,7 @@ def search_students_for_payment(request):
     return JsonResponse({'students': students_data})
 
 
-# ================= SUBMIT FEE PAYMENT - FIXED VERSION =================
+# ================= SUBMIT FEE PAYMENT - FIXED VERSION WITH BATCH =================
 @login_required
 def submit_fee_payment(request):
     if request.method == 'POST':
@@ -779,8 +756,15 @@ def submit_fee_payment(request):
                 # Prepare receipt data
                 course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
                 
-                # Batch information
-                batch_display = f"{student.batch_month} {student.batch_year}" if student.batch_month and student.batch_year else "Not Assigned"
+                # ✅ FIXED: Get batch information correctly
+                batch_month = student.batch_month or ''
+                batch_year = student.batch_year or ''
+                
+                # Create batch display string
+                if batch_month and batch_year:
+                    batch_display = f"{batch_month} {batch_year}"
+                else:
+                    batch_display = "Not Assigned"
                 
                 receipt_data = {
                     'receipt_no': payment.receipt_no,
@@ -788,9 +772,7 @@ def submit_fee_payment(request):
                     'time': payment.payment_date.strftime('%I:%M %p'),
                     'student_name': student.full_name,
                     'course': course_name,
-                    'batch_month': student.batch_month or '',
-                    'batch_year': student.batch_year or '',
-                    'batch_display': batch_display,
+                    'batch': batch_display,  # ✅ CORRECTED: Use batch_display
                     'mobile': student.mobile_own,
                     'payment_mode': payment_mode,
                     'total_fees': f"{float(student.total_fees):.2f}",
@@ -801,6 +783,7 @@ def submit_fee_payment(request):
                 }
                 
                 print(f"Payment successful! Receipt: {receipt_data['receipt_no']}")
+                print(f"Batch info: {batch_display}")
                 
                 return JsonResponse({
                     'success': True,
@@ -928,120 +911,97 @@ def receipts_view(request):
     })
 
 
-# ================= GET RECEIPTS API =================
+
+# ================= UPDATE RECEIPT API =================
 @login_required
 def get_receipts(request):
-    """API endpoint to get all receipts with filters"""
+    """API endpoint to get receipts with filters"""
     try:
-        search = request.GET.get('search', '').strip()
-        date_filter = request.GET.get('date', '').strip()
-        month_filter = request.GET.get('month', '').strip()
-        year_filter = request.GET.get('year', '').strip()
+        receipts = FeePayment.objects.select_related('student').all().order_by('-payment_date')
         
-        payments = FeePayment.objects.select_related('student').all().order_by('-payment_date')
-        
-        if search:
-            payments = payments.filter(
-                Q(student__full_name__icontains=search) |
-                Q(student__mobile_own__icontains=search) |
-                Q(receipt_no__icontains=search)
-            )
-        
-        if date_filter:
-            try:
-                filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
-                payments = payments.filter(payment_date__date=filter_date)
-            except ValueError:
-                pass
-        
-        if month_filter:
-            try:
-                payments = payments.filter(payment_date__month=int(month_filter))
-            except ValueError:
-                pass
-        
-        if year_filter:
-            try:
-                payments = payments.filter(payment_date__year=int(year_filter))
-            except ValueError:
-                pass
-        
-        receipts_data = []
-        for payment in payments:
-            course_name = payment.student.custom_course if payment.student.course == 'Other' and payment.student.custom_course else payment.student.course
+        # Prepare receipt data
+        receipt_list = []
+        for receipt in receipts:
+            student = receipt.student
             
-            receipts_data.append({
-                'id': payment.id,
-                'receipt_no': payment.receipt_no,
-                'student_name': payment.student.full_name,
-                'student_id': payment.student.id,
-                'payment_date': payment.payment_date.strftime('%Y-%m-%d'),
-                'payment_time': payment.payment_date.strftime('%I:%M %p'),
-                'paid_fees': float(payment.amount),
-                'remaining_fees': float(payment.remaining_after_this),
-                'total_fees': float(payment.total_fees_at_payment),
-                'paid_before_this': float(payment.paid_before_this),
-                'payment_mode': payment.payment_mode,
+            # ✅ Get batch information
+            batch_month = student.batch_month or ''
+            batch_year = student.batch_year or ''
+            
+            if batch_month and batch_year:
+                batch_display = f"{batch_month} {batch_year}"
+            else:
+                batch_display = "Not Assigned"
+            
+            # Get course name (custom if 'Other' selected)
+            course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+            
+            receipt_list.append({
+                'id': receipt.id,
+                'receipt_no': receipt.receipt_no,
+                'student_name': student.full_name,
                 'course': course_name,
-                'mobile': payment.student.mobile_own,
-                'remarks': payment.remarks or '',
+                'batch': batch_display,  # ✅ ADDED BATCH
+                'batch_display': batch_display,  # ✅ Fallback
+                'mobile': student.mobile_own,
+                'payment_mode': receipt.payment_mode,
+                'payment_date': receipt.payment_date.strftime('%Y-%m-%d'),
+                'payment_time': receipt.payment_date.strftime('%I:%M %p'),
+                'paid_fees': float(receipt.amount),
+                'paid_before_this': float(receipt.paid_before_this),
+                'total_fees': float(student.total_fees),
+                'remaining_fees': float(receipt.remaining_after_this),
             })
         
         return JsonResponse({
             'success': True,
-            'receipts': receipts_data,
-            'total_count': len(receipts_data)
+            'receipts': receipt_list
         })
-        
     except Exception as e:
+        print(f"Error in get_receipts: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': str(e)
         }, status=500)
 
-
 # ================= UPDATE RECEIPT API =================
 @login_required
 @require_http_methods(["POST"])
 def update_receipt(request, receipt_id):
-    """API endpoint to update receipt details"""
+    """API endpoint to update a receipt"""
     try:
-        payment = get_object_or_404(FeePayment, id=receipt_id)
         data = json.loads(request.body)
-        old_amount = payment.amount
         
+        payment = FeePayment.objects.get(id=receipt_id)
+        
+        # Update only allowed fields
         if 'payment_date' in data:
-            try:
-                payment_date_str = data['payment_date']
-                payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d')
-                payment.payment_date = payment_date
-            except ValueError:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Invalid date format'
-                })
+            payment.payment_date = data['payment_date']
         
-        if 'paid_fees' in data:
-            new_amount = Decimal(str(data['paid_fees']))
+        if 'amount' in data or 'paid_fees' in data:
+            old_amount = payment.amount
+            new_amount = Decimal(str(data.get('amount') or data.get('paid_fees', old_amount)))
             
+            # Validate amount
             if new_amount <= 0:
                 return JsonResponse({
                     'success': False,
-                    'error': 'Payment amount must be greater than zero'
-                })
+                    'error': 'Amount must be greater than zero'
+                }, status=400)
             
-            difference = new_amount - old_amount
-            payment.amount = new_amount
-            payment.remaining_after_this = payment.total_fees_at_payment - (payment.paid_before_this + new_amount)
+            # Update student's paid fees
+            student = payment.student
+            amount_difference = new_amount - old_amount
             
             with transaction.atomic():
-                student = AdmittedStudent.objects.select_for_update().get(id=payment.student.id)
-                student.paid_fees += difference
-                if student.paid_fees < 0:
-                    student.paid_fees = 0
+                student.paid_fees = max(0, student.paid_fees + amount_difference)
                 student.save()
-        
-        payment.save()
+                
+                payment.amount = new_amount
+                payment.remaining_after_this = student.total_fees - student.paid_fees
+                payment.save()
         
         return JsonResponse({
             'success': True,
@@ -1053,13 +1013,18 @@ def update_receipt(request, receipt_id):
             'success': False,
             'error': 'Receipt not found'
         }, status=404)
-    except Exception as e:
+    except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        print(f"Error updating receipt: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error: {str(e)}'
         }, status=500)
-
-
+    
 # ================= DELETE RECEIPT API =================
 @login_required
 def delete_receipt(request, receipt_id):

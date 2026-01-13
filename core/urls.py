@@ -2,7 +2,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Home & Auth
     path('', views.home, name='home'),
+    path('logout/', views.custom_logout, name='logout'),
+    
+    # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
     
     # Enquiry URLs
@@ -19,7 +23,7 @@ urlpatterns = [
     path('admission/<int:student_id>/update/', views.update_student_admitted, name='update_student_admitted'),
     path('admission/delete/', views.delete_admitted_students, name='delete_admitted_students'),
     
-    # Fees Payment URLs - ✅ VERIFIED: These paths are correct
+    # Fees Payment URLs
     path('fees/payment/', views.fees_payment, name='fees_payment'),
     path('fees/search-students/', views.search_students_for_payment, name='search_students_for_payment'),
     path('fees/submit-payment/', views.submit_fee_payment, name='submit_fee_payment'),
@@ -27,10 +31,9 @@ urlpatterns = [
     # Receipts URLs
     path('receipts/', views.receipts_view, name='receipts_view'),
     path('receipts/api/', views.get_receipts, name='get_receipts'),
-    path('receipts/<int:receipt_id>/update/', views.update_receipt, name='update_receipt'),
+    path('receipts/<int:receipt_id>/update/', views.update_receipt, name='update_receipt'),  # ✅ ADD THIS
     path('receipts/<int:receipt_id>/delete/', views.delete_receipt, name='delete_receipt'),
     path('receipts/export/', views.export_receipts, name='export_receipts'),
-    
     # Export Functions
     path('export/students/', views.export_students_excel, name='export_students_excel'),
     path('export/admitted-students/', views.export_admitted_students_excel, name='export_admitted_students_excel'),
