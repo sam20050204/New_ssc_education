@@ -1443,17 +1443,27 @@ def student_finance_details(request):
         total_fees = student.total_fees or Decimal('0.00')
         balance_fees = total_fees - total_paid
         
-        # Calculate fees paid to MKCL total
+        # Get course name for defaults logic
+        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+        
+        # Calculate fees paid to MKCL with course-based defaults
         mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
         mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+        
+        # Apply course-based defaults only if values are 0
+        if mkcl_1 == Decimal('0.00') or mkcl_1 is None:
+            if course_name == 'MS-CIT':
+                mkcl_1 = Decimal('1230.00')
+            else:
+                mkcl_1 = Decimal('500.00')
+        
+        if mkcl_2 == Decimal('0.00') or mkcl_2 is None:
+            if course_name == 'MS-CIT':
+                mkcl_2 = Decimal('570.00')
+            else:
+                mkcl_2 = Decimal('500.00')
+        
         mkcl_total = mkcl_1 + mkcl_2
-        
-        # Calculate profit
-        profit = total_paid - mkcl_total
-        total_profit += profit
-        
-        # Get course name
-        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
         
         # Get fee payments for this student - ordered by payment_date (oldest first)
         fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
@@ -1469,6 +1479,11 @@ def student_finance_details(request):
             second_inst = fee_payments[1].amount
         if len(fee_payments) >= 3:
             third_inst = fee_payments[2].amount
+        
+        # Calculate profit as (Total Fees Paid By Learner) - (Total Fees Paid to MKCL)
+        learner_total_paid = first_inst + second_inst + third_inst
+        profit = learner_total_paid - mkcl_total
+        total_profit += profit
         
         # Build payment history (ordered by payment_date, newest first for display)
         payment_history = []

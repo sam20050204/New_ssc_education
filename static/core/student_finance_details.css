@@ -1,90 +1,166 @@
-/* Finance Details Styles */
+/* Main Content Container */
+.main-content {
+    flex: 1;
+    margin-left: 260px;
+    padding: 30px 40px;
+    min-height: calc(100vh - 70px);
+    background: #f5f7fa;
+}
 
-.finance-header {
+/* Page Header - Purple Section */
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 0;
+    margin-bottom: 35px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    overflow: hidden;
+}
+
+.page-header-content {
+    padding: 30px 35px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.page-icon {
+    font-size: 48px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 15px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.page-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.page-subtitle {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 5px 0 0 0;
+    font-weight: 400;
+}
+
+/* Back Button */
+.back-button {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 25px;
+    margin-left: 0;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.back-button:hover {
+    background: #5568d3;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Finance Details Styles - Content Section */
+.finance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 2px solid #667eea;
+    border-bottom: 1px solid #e0e0e0;
     flex-wrap: wrap;
     gap: 15px;
+}
+
+.finance-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 22px;
+    line-height: 1.2;
+    text-align: left;
+    font-weight: 600;
+}
+
+.finance-header p {
+    margin: 4px 0 0 0;
+    color: #666;
+    font-size: 12px;
+    text-align: left;
 }
 
 .total-profit-box {
     background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
     color: white;
-    padding: 20px 30px;
+    padding: 12px 20px;
     border-radius: 8px;
     text-align: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 150px;
 }
 
 .total-profit-box h3 {
-    margin: 0 0 5px 0;
-    font-size: 16px;
-    font-weight: normal;
-    opacity: 0.9;
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.95;
 }
 
 .total-profit-box .amount {
-    font-size: 32px;
+    font-size: 20px;
     font-weight: bold;
     margin: 0;
 }
 
-/* ============================================
-   HORIZONTAL SCROLLBAR WRAPPER FOR PAGE
-   ============================================ */
+/* Table Section - Card Style */
 .scrollbar-wrapper {
-    overflow-x: auto;
-    overflow-y: visible;
     margin-top: 20px;
     background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    max-width: calc(100vw - 300px);
-    padding-right: 10px;
-}
-
-/* Webkit Scrollbar (Chrome, Safari, Edge) */
-.scrollbar-wrapper::-webkit-scrollbar {
-    height: 10px;
-}
-
-.scrollbar-wrapper::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-.scrollbar-wrapper::-webkit-scrollbar-thumb {
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    border-radius: 10px;
-    cursor: pointer;
-}
-
-.scrollbar-wrapper::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(90deg, #5568d3 0%, #6b4399 100%);
-}
-
-/* Firefox Scrollbar */
-.scrollbar-wrapper {
-    scrollbar-color: #667eea #f1f1f1;
-    scrollbar-width: thin;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    align-items: stretch;
+    border: 1px solid #f0f0f0;
 }
 
 .finance-table-container {
-    overflow-x: visible;
-    overflow-y: visible;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    overflow-y: auto;
     background: white;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
 }
 
 .finance-table {
     width: 100%;
+    min-width: 1000px;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 11px;
     background: white;
-    min-width: 1400px;
+    table-layout: fixed;
 }
 
 .finance-table thead {
@@ -96,12 +172,14 @@
 }
 
 .finance-table thead th {
-    padding: 12px 8px;
+    padding: 8px 4px;
     text-align: center;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 10px;
     border-right: 1px solid rgba(255,255,255,0.2);
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
 }
 
 .finance-table thead th:last-child {
@@ -109,8 +187,14 @@
 }
 
 .section-header {
-    background: rgba(255, 255, 255, 0.1) !important;
-    font-weight: 700 !important;
+    display: table-cell;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    padding: 8px 4px;
+    font-size: 11px;
+    border-right: 1px solid rgba(255,255,255,0.2);
 }
 
 .finance-table tbody tr {
@@ -131,9 +215,10 @@
 }
 
 .finance-table tbody td {
-    padding: 10px 8px;
+    padding: 8px 4px;
     text-align: center;
     border-right: 1px solid #e0e0e0;
+    font-size: 11px;
 }
 
 .finance-table tbody td:last-child {
@@ -146,12 +231,12 @@
 }
 
 .editable-cell input {
-    width: 90%;
-    padding: 5px;
+    width: 80%;
+    padding: 4px 4px;
     border: 1px solid #ddd;
     border-radius: 3px;
     text-align: center;
-    font-size: 12px;
+    font-size: 11px;
     transition: all 0.3s ease;
 }
 
@@ -183,7 +268,8 @@
 }
 
 .profit-cell {
-    font-size: 14px;
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .save-indicator {
@@ -221,21 +307,24 @@
     color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
-    transition: background 0.3s ease;
+    transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-weight: 500;
+    margin-bottom: 15px;
 }
 
 .export-button:hover {
     background: #218838;
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
 }
 
 .export-button:active {
     background: #1e7e34;
-    transform: translateY(1px);
+    transform: translateY(0);
 }
 
 /* ============================================
@@ -341,16 +430,17 @@
     }
     
     .finance-table-container {
-        font-size: 11px;
-    }
-    
-    .finance-table thead th {
-        padding: 8px 4px;
         font-size: 10px;
     }
     
+    .finance-table thead th {
+        padding: 6px 3px;
+        font-size: 9px;
+    }
+    
     .finance-table tbody td {
-        padding: 8px 4px;
+        padding: 6px 3px;
+        font-size: 10px;
     }
 }
 
@@ -362,7 +452,7 @@
     }
     
     .finance-table {
-        font-size: 10px;
+        font-size: 9px;
     }
     
     .editable-cell input {

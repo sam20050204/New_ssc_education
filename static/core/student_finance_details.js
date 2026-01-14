@@ -100,7 +100,7 @@ function exportToExcel() {
         console.log('Table found');
         
         // Create CSV content with headers
-        let csv = 'Sr.No.,Learner Name,Student ID,Mobile No.,Batch,Course,I Inst,II Inst,III Inst,Total Paid,Total Fees,Balance Fees,MKCL I Inst,MKCL II Inst,MKCL Total,Profit\n';
+        let csv = 'Sr.No.,Learner Name,Mobile No.,Batch,Course,I Inst,II Inst,III Inst,Total Paid,Total Fees,Balance Fees,MKCL I Inst,MKCL II Inst,MKCL Total,Profit\n';
         
         const rows = table.querySelectorAll('tbody tr');
         console.log('Total rows found:', rows.length);
@@ -127,21 +127,31 @@ function exportToExcel() {
             // Extract data from cells
             const srNo = rowCount;
             
-            // Learner Name and Student ID
-            const learnerNameCell = cells[1];
-            const learnerName = learnerNameCell.querySelector('strong') ? 
-                learnerNameCell.querySelector('strong').textContent.trim() : '';
-            const studentIdText = learnerNameCell.querySelector('small') ? 
-                learnerNameCell.querySelector('small').textContent.replace('ID:', '').trim() : '';
-            
+            // Learner Name
+            const learnerName = cells[1] ? cells[1].textContent.trim() : '';
             const mobile = cells[2] ? cells[2].textContent.trim() : '';
             const batch = cells[3] ? cells[3].textContent.trim() : '';
             const course = cells[4] ? cells[4].textContent.trim() : '';
             
-            // Get installment values (read-only cells)
-            const firstInst = cells[5] ? cells[5].textContent.replace('₹', '').trim() : '0';
-            const secondInst = cells[6] ? cells[6].textContent.replace('₹', '').trim() : '0';
-            const thirdInst = cells[7] ? cells[7].textContent.replace('₹', '').trim() : '0';
+            // Get installment values (from input fields in editable cells)
+            let firstInst = '0';
+            let secondInst = '0';
+            let thirdInst = '0';
+            
+            if (cells[5]) {
+                const firstInstInput = cells[5].querySelector('input');
+                firstInst = firstInstInput ? firstInstInput.value : cells[5].textContent.replace('₹', '').trim();
+            }
+            
+            if (cells[6]) {
+                const secondInstInput = cells[6].querySelector('input');
+                secondInst = secondInstInput ? secondInstInput.value : cells[6].textContent.replace('₹', '').trim();
+            }
+            
+            if (cells[7]) {
+                const thirdInstInput = cells[7].querySelector('input');
+                thirdInst = thirdInstInput ? thirdInstInput.value : cells[7].textContent.replace('₹', '').trim();
+            }
             
             // Get readonly values
             const totalPaid = cells[8] ? cells[8].textContent.replace('₹', '').trim() : '0';
@@ -167,7 +177,7 @@ function exportToExcel() {
             
             // Build CSV row - escape quotes in names
             const escapeName = (str) => String(str).replace(/"/g, '""');
-            csv += `${srNo},"${escapeName(learnerName)}","${escapeName(studentIdText)}","${escapeName(mobile)}","${escapeName(batch)}","${escapeName(course)}",${firstInst},${secondInst},${thirdInst},${totalPaid},${totalFees},${balanceFees},${mkclFirst},${mkclSecond},${mkclTotal},${profit}\n`;
+            csv += `${srNo},"${escapeName(learnerName)}","${escapeName(mobile)}","${escapeName(batch)}","${escapeName(course)}",${firstInst},${secondInst},${thirdInst},${totalPaid},${totalFees},${balanceFees},${mkclFirst},${mkclSecond},${mkclTotal},${profit}\n`;
         });
         
         console.log('Total rows processed:', rowCount);
