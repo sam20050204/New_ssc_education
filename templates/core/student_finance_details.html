@@ -1,28 +1,59 @@
+{% extends 'base/base.html' %}
 {% load static %}
 
+{% block title %}Student Finance Details - SSC Education{% endblock %}
+
+{% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/student_finance_details.css' %}">
+{% endblock %}
 
-<!-- Back Button -->
-<a href="{% url 'statistics' %}" class="back-button">← Back to Dashboard</a>
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">💰</div>
+            <div>
+                <h1 class="page-title">Student Finance Details</h1>
+                <p class="page-subtitle">{% if selected_year %}Year: {{ selected_year }}{% else %}Manage all student finance records{% endif %}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-<div class="main-content">
+{% block content %}
+<div class="finance-section">
+    <!-- Save Indicator -->
     <div class="save-indicator" id="saveIndicator">✓ Saved successfully!</div>
 
+    <!-- Finance Header with Export Button -->
     <div class="finance-header">
         <div>
-            <h2>Student Finance Details</h2>
+            <h2>Finance Overview</h2>
             <p>{% if selected_year %}Year: {{ selected_year }}{% else %}All Years{% endif %}</p>
         </div>
-        <div>
+        <div class="finance-header-actions">
             <div class="total-profit-box">
                 <h3>Total Profit</h3>
                 <p class="amount">₹ {{ total_profit|floatformat:2 }}</p>
             </div>
+            <form method="get" class="year-filter-form">
+                <label for="year-select">
+                    <span class="filter-label">Year:</span>
+                </label>
+                <select name="year" id="year-select" class="year-select" onchange="this.form.submit()">
+                    <option value="">All Years</option>
+                    {% for year in available_years %}
+                        <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+            <button class="export-button" onclick="exportToExcel()" title="Export to CSV (Ctrl+E)">
+                📥 Export to CSV
+            </button>
         </div>
-    </div>
-
-    <div style="margin-bottom: 15px; text-align: right;">
-        <button class="export-button" onclick="exportToExcel()">📊 Export to Excel</button>
     </div>
 
     <!-- Finance Table -->
@@ -80,24 +111,26 @@
                         </td>
                         
                         <!-- Auto-calculated fields -->
-                        <td class="readonly-cell">₹ {{ data.total_paid|floatformat:2 }}</td>
-                        <td class="readonly-cell">₹ {{ data.total_fees|floatformat:2 }}</td>
-                        <td class="readonly-cell">₹ {{ data.balance_fees|floatformat:2 }}</td>
+                        <td class="readonly-cell">{{ data.total_paid|floatformat:2 }}</td>
+                        <td class="readonly-cell">{{ data.total_fees|floatformat:2 }}</td>
+                        <td class="readonly-cell">{{ data.balance_fees|floatformat:2 }}</td>
                         
                         <!-- Fees Paid to MKCL - Editable with Defaults -->
                         <td class="editable-cell">
                             <input type="number" step="0.01" value="{{ data.mkcl_1 }}" 
                                    onchange="updateField({{ data.id }}, 'mkcl_1', this.value)"
+                                   oninput="updateFieldRealTime({{ data.id }}, 'mkcl_1', this.value)"
                                    class="finance-input">
                         </td>
                         <td class="editable-cell">
                             <input type="number" step="0.01" value="{{ data.mkcl_2 }}" 
                                    onchange="updateField({{ data.id }}, 'mkcl_2', this.value)"
+                                   oninput="updateFieldRealTime({{ data.id }}, 'mkcl_2', this.value)"
                                    class="finance-input">
                         </td>
                         
                         <!-- MKCL Total - Calculated -->
-                        <td class="readonly-cell mkcl-total-{{ data.id }}">₹ {{ data.mkcl_total|floatformat:2 }}</td>
+                        <td class="readonly-cell mkcl-total-{{ data.id }}">{{ data.mkcl_total|floatformat:2 }}</td>
                         <td class="readonly-cell profit-cell profit-{{ data.id }} {% if data.profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
                             ₹ {{ data.profit|floatformat:2 }}
                         </td>
@@ -113,6 +146,10 @@
             </table>
         </div>
     </div>
-
-    <script src="{% static 'core/student_finance_details.js' %}"></script>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/student_finance_details.js' %}"></script>
+{% endblock %}

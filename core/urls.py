@@ -48,4 +48,5 @@ urlpatterns = [
     path('statistics/', views.statistics_view, name='statistics'),
     path('student-finance-details/', views.student_finance_details, name='student_finance_details'),
     path('update-finance-detail/', views.update_finance_detail, name='update_finance_detail'),
+    path('month-wise-admission/', views.month_wise_admission, name='month_wise_admission'),
 ]

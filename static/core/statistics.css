@@ -105,9 +105,20 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 1px solid #f0f0f0;
     margin-top: 20px;
+    margin-left: 260px;
     animation: slideIn 0.3s ease-out;
     overflow-x: auto;
     overflow-y: visible;
+}
+
+/* Finance Section - Special styling */
+#financeSection {
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    background: #f5f7fa;
+    margin-left: 260px;
 }
 
 /* Custom Horizontal Scrollbar for Detail Section */

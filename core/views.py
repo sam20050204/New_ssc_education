@@ -1408,6 +1408,7 @@ def statistics_view(request):
         'available_years': available_years,
         'selected_year': selected_year,
         'total_profit': total_profit,
+        'total_admitted': students.count(),
         'student_count': students.count(),
     }
     return render(request, 'core/statistics.html', context)
@@ -1576,3 +1577,132 @@ def update_finance_detail(request):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@login_required
+def month_wise_admission(request):
+    """Month wise admission details view"""
+    selected_year = request.GET.get('year', '')
+    
+    # Get all years for filter
+    years = AdmittedStudent.objects.dates('admission_date', 'year', order='DESC')
+    available_years = [date.year for date in years]
+    
+    # Get admitted students
+    students = AdmittedStudent.objects.all()
+    if selected_year:
+        students = students.filter(admission_date__year=int(selected_year))
+    
+    # Get all unique courses dynamically from AdmittedStudent records
+    courses_qs = students.values_list('course', flat=True).distinct()
+    # Add custom courses if they exist
+    custom_courses_qs = students.values_list('custom_course', flat=True).distinct()
+    
+    # Combine and clean - remove None and empty strings
+    all_courses = set(courses_qs) | set(custom_courses_qs)
+    all_courses.discard(None)
+    all_courses.discard('')
+    all_courses = sorted(list(all_courses))
+    
+    months = ['jan', 'feb', 'march', 'april', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+    
+    # Initialize data structure
+    monthly_admission_data = []
+    monthly_totals = {month: 0 for month in months}
+    grand_total = 0
+    
+    # Count admissions by course and month
+    for course in all_courses:
+        course_data = {'course': course}
+        course_total = 0
+        
+        for month_num, month_key in enumerate(months, 1):
+            count = students.filter(
+                admission_date__month=month_num
+            ).filter(
+                Q(course=course) | Q(custom_course=course)
+            ).count()
+            
+            course_data[month_key] = count if count > 0 else '-'
+            if count > 0:
+                monthly_totals[month_key] += count
+                course_total += count
+        
+        course_data['total'] = course_total if course_total > 0 else '-'
+        monthly_admission_data.append(course_data)
+        grand_total += course_total
+    
+    # Convert monthly_totals zeros to '-'
+    for month_key in months:
+        if monthly_totals[month_key] == 0:
+            monthly_totals[month_key] = '-'
+    
+    # Calculate monthly profit data by course using StudentFinanceDetail
+    monthly_profit_data = []
+    profit_monthly_totals = {month: Decimal('0.00') for month in months}
+    profit_grand_total = Decimal('0.00')
+    
+    for course in all_courses:
+        course_profit = {'course': course}
+        course_profit_total = Decimal('0.00')
+        
+        for month_num, month_key in enumerate(months, 1):
+            # Get students for this course and month
+            course_students = students.filter(
+                admission_date__month=month_num
+            ).filter(
+                Q(course=course) | Q(custom_course=course)
+            )
+            
+            # Calculate profit for this month using StudentFinanceDetail
+            month_profit = Decimal('0.00')
+            for student in course_students:
+                # Use StudentFinanceDetail profit if available
+                if hasattr(student, 'finance_detail'):
+                    profit = student.finance_detail.profit or Decimal('0.00')
+                    month_profit += profit
+                else:
+                    # Fallback: calculate profit from paid_fees - mkcl_fees
+                    total_paid = student.paid_fees or Decimal('0.00')
+                    mkcl_fees = Decimal('0.00')
+                    
+                    if hasattr(student, 'finance_detail'):
+                        mkcl_1 = student.finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
+                        mkcl_2 = student.finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+                        mkcl_fees = mkcl_1 + mkcl_2
+                    
+                    month_profit += (total_paid - mkcl_fees)
+            
+            # Format and store
+            if month_profit > 0:
+                course_profit[month_key] = f"₹ {month_profit:.2f}"
+                profit_monthly_totals[month_key] += month_profit
+                course_profit_total += month_profit
+            else:
+                course_profit[month_key] = '-'
+        
+        course_profit['total'] = f"₹ {course_profit_total:.2f}" if course_profit_total > 0 else '-'
+        monthly_profit_data.append(course_profit)
+        profit_grand_total += course_profit_total
+    
+    # Format monthly profit totals
+    monthly_profit_totals_formatted = {}
+    for month_key in months:
+        if profit_monthly_totals[month_key] > 0:
+            monthly_profit_totals_formatted[month_key] = f"₹ {profit_monthly_totals[month_key]:.2f}"
+        else:
+            monthly_profit_totals_formatted[month_key] = '-'
+    
+    context = {
+        'monthly_admission_data': monthly_admission_data,
+        'monthly_totals': monthly_totals,
+        'grand_total': grand_total if grand_total > 0 else '-',
+        'monthly_profit_data': monthly_profit_data,
+        'monthly_profit_totals': monthly_profit_totals_formatted,
+        'profit_grand_total': f"₹ {profit_grand_total:.2f}" if profit_grand_total > 0 else '₹ 0.00',
+        'selected_year': selected_year or str(datetime.now().year),
+        'available_years': available_years,
+        'active_page': 'month_wise_admission',
+    }
+    
+    return render(request, 'core/month_wise_admission.html', context)

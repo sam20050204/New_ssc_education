@@ -1,0 +1,181 @@
+/* Month Wise Admission Page Styles */
+
+.admission-section {
+    flex: 1;
+    padding: 0;
+    margin: 0;
+    background: #f5f7fa;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Year Filter */
+.year-filter-wrapper {
+    padding: 20px 40px;
+    background: transparent;
+}
+
+.year-filter-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.year-filter-form label {
+    font-weight: 500;
+    color: #333;
+}
+
+.year-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.year-select:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.year-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Table Wrapper */
+.table-wrapper {
+    margin: 20px 40px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #f0f0f0;
+    overflow-x: auto;
+}
+
+.table-wrapper h2 {
+    margin: 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #7B3FF2 0%, #9D4EDD 100%);
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    border-radius: 8px 8px 0 0;
+}
+
+/* Tables */
+.admission-table,
+.profit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    background: white;
+}
+
+.admission-table thead,
+.profit-table thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid #7B3FF2;
+}
+
+.admission-table th,
+.profit-table th {
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    color: #333;
+    border-right: 1px solid #e0e0e0;
+    font-size: 13px;
+}
+
+.admission-table th:first-child,
+.profit-table th:first-child {
+    text-align: left;
+    background: #f0e8ff;
+    font-weight: 700;
+    color: #7B3FF2;
+}
+
+.admission-table td,
+.profit-table td {
+    padding: 12px;
+    text-align: center;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    color: #333;
+    font-size: 14px;
+}
+
+.admission-table td:first-child,
+.profit-table td:first-child {
+    text-align: left;
+    font-weight: 500;
+    background: #f9f9f9;
+}
+
+.course-name {
+    min-width: 120px;
+    font-weight: 500;
+}
+
+.total-cell {
+    font-weight: 600;
+    background: #f0e8ff;
+    color: #7B3FF2;
+}
+
+/* Total Row */
+.total-row {
+    background: #f0e8ff;
+    font-weight: 600;
+}
+
+.total-row td {
+    background: #f0e8ff;
+    color: #7B3FF2;
+    border-bottom: 2px solid #7B3FF2;
+}
+
+.total-row td:first-child {
+    background: #e8dcff;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .table-wrapper {
+        margin: 20px 20px;
+    }
+    
+    .year-filter-wrapper {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .year-filter-wrapper {
+        padding: 15px 20px;
+    }
+    
+    .table-wrapper {
+        margin: 15px 20px;
+    }
+    
+    .admission-table th,
+    .profit-table th,
+    .admission-table td,
+    .profit-table td {
+        padding: 8px;
+        font-size: 12px;
+    }
+    
+    .table-wrapper h2 {
+        padding: 15px;
+        font-size: 16px;
+    }
+}

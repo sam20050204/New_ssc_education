@@ -42,7 +42,7 @@ function updateField(studentId, field, value) {
             // Update calculated fields
             const mkclTotalCell = document.querySelector(`.mkcl-total-${studentId}`);
             if (mkclTotalCell) {
-                mkclTotalCell.textContent = '₹ ' + parseFloat(data.mkcl_total).toFixed(2);
+                mkclTotalCell.textContent = parseFloat(data.mkcl_total).toFixed(2);
             }
             
             const profitCell = document.querySelector(`.profit-${studentId}`);
@@ -72,6 +72,33 @@ function updateField(studentId, field, value) {
         console.error('Error:', error);
         showError('Network error. Please check your connection.');
     });
+}
+
+// Real-time update function for Excel-like experience
+function updateFieldRealTime(studentId, field, value) {
+    // Update MKCL total in real-time (before saving to server)
+    if (field === 'mkcl_1' || field === 'mkcl_2') {
+        // Get both MKCL input values
+        const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+        if (row) {
+            const inputs = row.querySelectorAll('.editable-cell input');
+            let mkcl1 = 0, mkcl2 = 0;
+            
+            // Find MKCL 1 and MKCL 2 inputs (last two editable cells before readonly MKCL Total)
+            const editableCells = row.querySelectorAll('.editable-cell');
+            if (editableCells.length >= 8) {
+                mkcl1 = parseFloat(editableCells[5].querySelector('input').value) || 0;
+                mkcl2 = parseFloat(editableCells[6].querySelector('input').value) || 0;
+            }
+            
+            // Calculate and display MKCL total immediately
+            const mkclTotal = mkcl1 + mkcl2;
+            const mkclTotalCell = document.querySelector(`.mkcl-total-${studentId}`);
+            if (mkclTotalCell) {
+                mkclTotalCell.textContent = mkclTotal.toFixed(2);
+            }
+        }
+    }
 }
 
 function showError(message) {

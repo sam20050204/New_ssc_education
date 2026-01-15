@@ -1,0 +1,163 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Month Wise Admission Details - SSC Education{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/month_wise_admission.css' %}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">📅</div>
+            <div>
+                <h1 class="page-title">Admission Details of Year {{ selected_year|default:'2025' }}</h1>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="admission-section">
+    <!-- Year Filter -->
+    <div class="year-filter-wrapper">
+        <form method="get" class="year-filter-form">
+            <label for="year-select">Select Year:</label>
+            <select name="year" id="year-select" class="year-select" onchange="this.form.submit()">
+                <option value="">All Years</option>
+                {% for year in available_years %}
+                    <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>
+                        {{ year }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <!-- Month Wise Admission Table -->
+    <div class="table-wrapper">
+        <h2>Admission Details of Year {{ selected_year|default:'2025' }}</h2>
+        <table class="admission-table">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Jan</th>
+                    <th>Feb</th>
+                    <th>March</th>
+                    <th>April</th>
+                    <th>May</th>
+                    <th>Jun</th>
+                    <th>July</th>
+                    <th>Aug</th>
+                    <th>Sep</th>
+                    <th>Oct</th>
+                    <th>Nov</th>
+                    <th>Dec</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course_data in monthly_admission_data %}
+                <tr>
+                    <td class="course-name">{{ course_data.course }}</td>
+                    <td>{{ course_data.jan|default:'-' }}</td>
+                    <td>{{ course_data.feb|default:'-' }}</td>
+                    <td>{{ course_data.march|default:'-' }}</td>
+                    <td>{{ course_data.april|default:'-' }}</td>
+                    <td>{{ course_data.may|default:'-' }}</td>
+                    <td>{{ course_data.jun|default:'-' }}</td>
+                    <td>{{ course_data.jul|default:'-' }}</td>
+                    <td>{{ course_data.aug|default:'-' }}</td>
+                    <td>{{ course_data.sep|default:'-' }}</td>
+                    <td>{{ course_data.oct|default:'-' }}</td>
+                    <td>{{ course_data.nov|default:'-' }}</td>
+                    <td>{{ course_data.dec|default:'-' }}</td>
+                    <td class="total-cell">{{ course_data.total|default:'0' }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td class="course-name"><strong>Total</strong></td>
+                    <td>{{ monthly_totals.jan|default:'-' }}</td>
+                    <td>{{ monthly_totals.feb|default:'-' }}</td>
+                    <td>{{ monthly_totals.march|default:'-' }}</td>
+                    <td>{{ monthly_totals.april|default:'-' }}</td>
+                    <td>{{ monthly_totals.may|default:'-' }}</td>
+                    <td>{{ monthly_totals.jun|default:'-' }}</td>
+                    <td>{{ monthly_totals.jul|default:'-' }}</td>
+                    <td>{{ monthly_totals.aug|default:'-' }}</td>
+                    <td>{{ monthly_totals.sep|default:'-' }}</td>
+                    <td>{{ monthly_totals.oct|default:'-' }}</td>
+                    <td>{{ monthly_totals.nov|default:'-' }}</td>
+                    <td>{{ monthly_totals.dec|default:'-' }}</td>
+                    <td class="total-cell"><strong>{{ grand_total|default:'0' }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Course Wise Gross Profit Table -->
+    <div class="table-wrapper">
+        <h2>Course wise Gross Profit of Year {{ selected_year|default:'2025' }}</h2>
+        <table class="profit-table">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Jan</th>
+                    <th>Feb</th>
+                    <th>Mar</th>
+                    <th>Apr</th>
+                    <th>May</th>
+                    <th>Jun</th>
+                    <th>Jul</th>
+                    <th>Aug</th>
+                    <th>Sep</th>
+                    <th>Oct</th>
+                    <th>Nov</th>
+                    <th>Dec</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course_profit in monthly_profit_data %}
+                <tr>
+                    <td class="course-name">{{ course_profit.course }}</td>
+                    <td>{{ course_profit.jan|default:'-' }}</td>
+                    <td>{{ course_profit.feb|default:'-' }}</td>
+                    <td>{{ course_profit.march|default:'-' }}</td>
+                    <td>{{ course_profit.april|default:'-' }}</td>
+                    <td>{{ course_profit.may|default:'-' }}</td>
+                    <td>{{ course_profit.jun|default:'-' }}</td>
+                    <td>{{ course_profit.jul|default:'-' }}</td>
+                    <td>{{ course_profit.aug|default:'-' }}</td>
+                    <td>{{ course_profit.sep|default:'-' }}</td>
+                    <td>{{ course_profit.oct|default:'-' }}</td>
+                    <td>{{ course_profit.nov|default:'-' }}</td>
+                    <td>{{ course_profit.dec|default:'-' }}</td>
+                    <td class="total-cell">{{ course_profit.total|default:'-' }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td class="course-name"><strong>Total</strong></td>
+                    <td>{{ monthly_profit_totals.jan|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.feb|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.march|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.april|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.may|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.jun|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.jul|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.aug|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.sep|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.oct|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.nov|default:'-' }}</td>
+                    <td>{{ monthly_profit_totals.dec|default:'-' }}</td>
+                    <td class="total-cell"><strong>{{ profit_grand_total|default:'₹ 0.00' }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

@@ -36,12 +36,19 @@
 {% block content %}
 
 <div class="stats-grid">
-    <div class="stat-card clickable-card" onclick="loadFinanceSection()">
+    <a href="{% url 'student_finance_details' %}" class="stat-card clickable-card" style="text-decoration: none; color: inherit;">
         <div class="stat-icon">💰</div>
         <div class="stat-label">Student Finance Details</div>
         <div class="stat-number">₹{{ total_profit|floatformat:2 }}</div>
         <div class="stat-sublabel">Total Profit</div>
-    </div>
+    </a>
+
+    <a href="{% url 'month_wise_admission' %}" class="stat-card clickable-card" style="text-decoration: none; color: inherit;">
+        <div class="stat-icon">📅</div>
+        <div class="stat-label">Month Wise Admission Details</div>
+        <div class="stat-number">{{ total_admitted|default:"0" }}</div>
+        <div class="stat-sublabel">Total Admissions</div>
+    </a>
 
     <div class="stat-card clickable-card" onclick="loadPerformanceSection()">
         <div class="stat-icon">📊</div>
@@ -64,7 +71,6 @@
 
 <!-- Detail Sections -->
 <div id="financeSection" class="detail-section" style="display: none;">
-    <button class="back-button" onclick="hideDetailSection()">← Back to Dashboard</button>
     <div id="financeContent">
         <p style="text-align: center; padding: 40px; color: #666;">
             <span class="loading-spinner"></span>
@@ -74,19 +80,16 @@
 </div>
 
 <div id="performanceSection" class="detail-section" style="display: none;">
-    <button class="back-button" onclick="hideDetailSection()">← Back to Dashboard</button>
     <h2>Student Performance</h2>
     <p style="padding: 40px; text-align: center; color: #666;">Coming soon...</p>
 </div>
 
 <div id="attendanceSection" class="detail-section" style="display: none;">
-    <button class="back-button" onclick="hideDetailSection()">← Back to Dashboard</button>
     <h2>Attendance Records</h2>
     <p style="padding: 40px; text-align: center; color: #666;">Coming soon...</p>
 </div>
 
 <div id="coursesSection" class="detail-section" style="display: none;">
-    <button class="back-button" onclick="hideDetailSection()">← Back to Dashboard</button>
     <h2>Course Analytics</h2>
     <p style="padding: 40px; text-align: center; color: #666;">Coming soon...</p>
 </div>
