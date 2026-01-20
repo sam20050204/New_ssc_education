@@ -41,8 +41,10 @@ urlpatterns = [
     # Courses
     path('add-course/', views.add_course_ajax, name='add_course_ajax'),
     
-    # Database Management
-    path('backup/database/', views.backup_database, name='backup_database'),
+    # Database Management / Backup
+    path('backup/', views.backup_page, name='backup_page'),
+    path('backup/export/', views.export_database, name='export_database'),
+    path('backup/import/', views.import_database, name='import_database'),
     
     #Statistics URLs
     path('statistics/', views.statistics_view, name='statistics'),

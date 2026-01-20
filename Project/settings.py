@@ -1,6 +1,5 @@
 from pathlib import Path
-from pathlib import Path
-import os  # Add this if not present
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,15 +22,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',  # Make sure this is here
 ]
-
-# Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Media files (User uploaded files)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 
 # =====================
 # MIDDLEWARE
@@ -134,12 +124,11 @@ USE_TZ = True
 # =====================
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 # =====================
-# MEDIA FILES (for image uploads)
+# MEDIA FILES
 # =====================
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-

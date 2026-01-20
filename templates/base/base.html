@@ -40,7 +40,9 @@
 <div class="layout">
 
     <!-- SIDEBAR -->
-    {% include 'includes/sidebar.html' %}
+    {% block sidebar %}
+        {% include 'includes/sidebar.html' %}
+    {% endblock %}
 
     <!-- PAGE CONTENT -->
     <main class="main-content">

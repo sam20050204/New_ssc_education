@@ -21,8 +21,7 @@ import json
 import shutil
 import os
 from django.db.models import Sum, Count, Q
-from .models import Student, FeePayment, StudentFinanceDetail
-from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment
+from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course
 
 # ================= CUSTOM LOGOUT =================
 def custom_logout(request):
@@ -574,20 +573,54 @@ def student_detail_admitted(request, student_id):
     try:
         student = AdmittedStudent.objects.get(id=student_id)
         
-        # ✅ Ensure batch fields are included
+        # Get payment history
+        fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
+        payment_history = []
+        
+        for payment in fee_payments:
+            # Extract time from datetime
+            payment_time = payment.payment_date.strftime('%H:%M') if payment.payment_date else 'N/A'
+            
+            payment_history.append({
+                'id': payment.id,
+                'payment_date': payment.payment_date.strftime('%d-%m-%Y') if payment.payment_date else '',
+                'payment_time': payment_time,
+                'amount': float(payment.amount),
+                'payment_mode': payment.payment_mode,
+                'receipt_no': payment.receipt_no or '',
+                'remaining_after': float(payment.remaining_after_this),
+            })
+        
+        # ✅ Include ALL fields from the form
         data = {
             'id': student.id,
+            'student_name': student.student_name,
+            'father_name': student.father_name,
+            'surname': student.surname,
+            'mother_name': student.mother_name,
             'full_name': student.full_name,
-            'course': student.course,
-            'custom_course': student.custom_course,
+            'date_of_birth': student.date_of_birth.strftime('%Y-%m-%d') if student.date_of_birth else '',
+            'gender': student.gender,
+            'marital_status': student.marital_status,
             'mobile_own': student.mobile_own,
+            'parent_mobile': student.parent_mobile or '',
+            'course': student.course,
+            'custom_course': student.custom_course or '',
+            'educational_qualification': student.educational_qualification,
+            'batch_month': student.batch_month or '',
+            'batch_year': student.batch_year or '',
+            'batch_display': student.batch_display or 'Not Assigned',
+            'address': student.address,
+            'city': student.city,
+            'tehsil_block': student.tehsil_block,
+            'district': student.district,
+            'pin_code': student.pin_code,
             'photo': student.photo.url if student.photo else None,
             'total_fees': float(student.total_fees),
             'paid_fees': float(student.paid_fees),
             'remaining_fees': float(student.remaining_fees),
-            # ✅ ADD BATCH FIELDS
-            'batch_month': student.batch_month or '',
-            'batch_year': student.batch_year or '',
+            'admission_date': student.admission_date.strftime('%Y-%m-%d') if student.admission_date else '',
+            'payment_history': payment_history,
         }
         
         return JsonResponse(data)
@@ -626,10 +659,26 @@ def update_student_admitted(request, student_id):
         student.batch_month = request.POST.get('batch_month', '')
         student.batch_year = request.POST.get('batch_year', '')
         
+        # Update fees information
+        total_fees = request.POST.get('total_fees')
+        paid_fees = request.POST.get('paid_fees')
+        
+        if total_fees:
+            student.total_fees = Decimal(total_fees)
+        
+        if paid_fees:
+            student.paid_fees = Decimal(paid_fees)
+        
         if request.FILES.get('photo'):
             student.photo = request.FILES['photo']
         
         student.save()
+        
+        # Update StudentFinanceDetail if total_fees changed
+        if total_fees or paid_fees:
+            finance_detail, created = StudentFinanceDetail.objects.get_or_create(student=student)
+            # The profit will be calculated dynamically based on student.paid_fees and total_mkcl_fees
+            finance_detail.save()
         
         messages.success(request, 'Student details updated successfully!')
         return JsonResponse({'success': True})
@@ -1350,28 +1399,95 @@ def delete_admitted_students(request):
 
 # ================= DATABASE BACKUP =================
 @login_required
-def backup_database(request):
-    try:
-        db_path = settings.DATABASES['default']['NAME']
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_name = f'database_backup_{timestamp}.db'
-        backup_path = os.path.join(settings.BASE_DIR, backup_name)
-
-        shutil.copy2(db_path, backup_path)
-
-        with open(backup_path, 'rb') as f:
-            response = HttpResponse(f.read(), content_type='application/x-sqlite3')
-            response['Content-Disposition'] = f'attachment; filename="{backup_name}"'
-
-        os.remove(backup_path)
-        return response
-
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-    
+def backup_page(request):
+    """Display the backup and restore page"""
+    context = {
+        'active_page': 'backup',
+    }
+    return render(request, 'core/backup.html', context)
 
 
 @login_required
+def export_database(request):
+    """Export database as SQLite file"""
+    try:
+        db_path = settings.DATABASES['default']['NAME']
+        
+        # Convert Path object to string
+        db_path = str(db_path)
+        
+        # Check if file exists
+        if not os.path.exists(db_path):
+            return JsonResponse({'success': False, 'error': 'Database file not found'}, status=500)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_name = f'database_backup_{timestamp}.db'
+        
+        with open(db_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/x-sqlite3')
+            response['Content-Disposition'] = f'attachment; filename="{backup_name}"'
+        
+        return response
+    
+    except Exception as e:
+        print(f"Export database error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def import_database(request):
+    """Import database from uploaded file"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
+    
+    if 'database_file' not in request.FILES:
+        return JsonResponse({'success': False, 'error': 'No file provided'}, status=400)
+    
+    uploaded_file = request.FILES['database_file']
+    
+    # Validate file
+    valid_extensions = ['db', 'sqlite', 'sqlite3']
+    file_extension = uploaded_file.name.split('.')[-1].lower()
+    
+    if file_extension not in valid_extensions:
+        return JsonResponse({'success': False, 'error': 'Invalid file type. Only .db, .sqlite, or .sqlite3 files are allowed.'}, status=400)
+    
+    max_size = 100 * 1024 * 1024  # 100 MB
+    if uploaded_file.size > max_size:
+        return JsonResponse({'success': False, 'error': 'File too large. Maximum size is 100 MB.'}, status=400)
+    
+    try:
+        db_path = settings.DATABASES['default']['NAME']
+        
+        # Create backup of current database before importing
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_name = f'database_backup_before_import_{timestamp}.db'
+        backup_path = os.path.join(settings.BASE_DIR, backup_name)
+        shutil.copy2(db_path, backup_path)
+        
+        # Read the uploaded file and write to database location
+        db_data = uploaded_file.read()
+        
+        # Close all database connections
+        from django.db import connections
+        connections.close_all()
+        
+        # Write the new database
+        with open(db_path, 'wb') as f:
+            f.write(db_data)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Database imported successfully! Backup saved as {backup_name}'
+        })
+    
+    except Exception as e:
+        print(f"Import error: {str(e)}")
+        return JsonResponse({'success': False, 'error': f'Error importing database: {str(e)}'}, status=500)
+    
+
 @login_required
 def statistics_view(request):
     """Main statistics page with year selection"""
@@ -1417,6 +1533,15 @@ def statistics_view(request):
 def student_finance_details(request):
     """Student Finance Details section"""
     selected_year = request.GET.get('year', '')
+    
+    # Get available years from AdmittedStudent
+    available_years = (
+        AdmittedStudent.objects
+        .annotate(year=ExtractYear('admission_date'))
+        .values_list('year', flat=True)
+        .distinct()
+        .order_by('-year')
+    )
     
     # Get all admitted students for the selected year
     students = AdmittedStudent.objects.all()
@@ -1524,6 +1649,7 @@ def student_finance_details(request):
         'finance_data': finance_data,
         'total_profit': total_profit,
         'selected_year': selected_year,
+        'available_years': available_years,
         'active_page': 'student_finance_details',
     }
     
@@ -1637,7 +1763,9 @@ def month_wise_admission(request):
         if monthly_totals[month_key] == 0:
             monthly_totals[month_key] = '-'
     
-    # Calculate monthly profit data by course using StudentFinanceDetail
+    # Calculate monthly profit data by course
+    # Logic: For each student, calculate their total profit = (all installments paid) - (MKCL fees)
+    # Then allocate that profit proportionally to the months when installments were paid
     monthly_profit_data = []
     profit_monthly_totals = {month: Decimal('0.00') for month in months}
     profit_grand_total = Decimal('0.00')
@@ -1647,31 +1775,67 @@ def month_wise_admission(request):
         course_profit_total = Decimal('0.00')
         
         for month_num, month_key in enumerate(months, 1):
-            # Get students for this course and month
+            # Get all students for this course
             course_students = students.filter(
-                admission_date__month=month_num
-            ).filter(
                 Q(course=course) | Q(custom_course=course)
             )
             
-            # Calculate profit for this month using StudentFinanceDetail
+            # Calculate profit for this month from FeePayment records
             month_profit = Decimal('0.00')
+            
             for student in course_students:
-                # Use StudentFinanceDetail profit if available
-                if hasattr(student, 'finance_detail'):
-                    profit = student.finance_detail.profit or Decimal('0.00')
-                    month_profit += profit
-                else:
-                    # Fallback: calculate profit from paid_fees - mkcl_fees
-                    total_paid = student.paid_fees or Decimal('0.00')
-                    mkcl_fees = Decimal('0.00')
+                # Get ALL fee payments for this student
+                all_fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
+                
+                if not all_fee_payments.exists():
+                    continue
+                
+                # Calculate total profit for this student (same as student_finance_details view)
+                # Get or create finance detail to get MKCL fees
+                finance_detail, _ = StudentFinanceDetail.objects.get_or_create(
+                    student=student,
+                    defaults={
+                        'fees_paid_to_mkcl_1': Decimal('0.00'),
+                        'fees_paid_to_mkcl_2': Decimal('0.00'),
+                    }
+                )
+                
+                # Get course name for MKCL defaults
+                course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+                
+                # Get MKCL fees with defaults (same logic as student_finance_details)
+                mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
+                mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+                
+                if mkcl_1 == Decimal('0.00'):
+                    mkcl_1 = Decimal('1230.00') if course_name == 'MS-CIT' else Decimal('500.00')
+                
+                if mkcl_2 == Decimal('0.00'):
+                    mkcl_2 = Decimal('570.00') if course_name == 'MS-CIT' else Decimal('500.00')
+                
+                mkcl_total = mkcl_1 + mkcl_2
+                
+                # Calculate total fees paid (sum of all installments)
+                total_fees_paid = all_fee_payments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+                
+                # Calculate total profit = total fees paid - MKCL fees
+                total_profit_student = total_fees_paid - mkcl_total
+                
+                # Now allocate this profit proportionally based on which payments were made in this month
+                # Get payments made in this specific month
+                payments_in_month = all_fee_payments.filter(payment_date__month=month_num)
+                
+                if selected_year:
+                    payments_in_month = payments_in_month.filter(payment_date__year=int(selected_year))
+                
+                if payments_in_month.exists():
+                    # Calculate what portion of total fees were paid in this month
+                    fees_paid_this_month = payments_in_month.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
                     
-                    if hasattr(student, 'finance_detail'):
-                        mkcl_1 = student.finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
-                        mkcl_2 = student.finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
-                        mkcl_fees = mkcl_1 + mkcl_2
-                    
-                    month_profit += (total_paid - mkcl_fees)
+                    # Allocate profit proportionally
+                    if total_fees_paid > 0:
+                        profit_this_month = (fees_paid_this_month / total_fees_paid) * total_profit_student
+                        month_profit += profit_this_month
             
             # Format and store
             if month_profit > 0:

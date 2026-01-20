@@ -399,6 +399,73 @@
     gap: 25px;
 }
 
+/* ===================== TOP SECTION: PERSONAL INFO + PHOTO ===================== */
+.top-section {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 30px;
+    align-items: start;
+}
+
+.personal-info-left {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border-left: 4px solid #667eea;
+    margin: 0 !important;
+}
+
+.personal-info-left h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.photo-section-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.admission-date-box {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    border: 2px solid #0284c7;
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+}
+
+.admission-date-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0c4a6e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.admission-date-value {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0284c7;
+}
+
+.photo-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+}
+
 /* Custom scrollbar for form grid */
 .form-grid::-webkit-scrollbar {
     width: 8px;
@@ -525,6 +592,52 @@
 .change-photo-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* ===================== QUICK FIELDS BELOW PHOTO ===================== */
+.quick-fields-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.quick-fields-section .form-row {
+    margin: 0;
+}
+
+.quick-fields-section .form-group {
+    margin: 0;
+}
+
+.quick-fields-section label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.quick-fields-section .form-control,
+.quick-fields-section input,
+.quick-fields-section select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.quick-fields-section .form-control:focus,
+.quick-fields-section input:focus,
+.quick-fields-section select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* ===================== FORM SECTIONS ===================== */

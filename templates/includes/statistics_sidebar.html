@@ -1,0 +1,77 @@
+<nav class="sidebar">
+    <!-- Dashboard Link -->
+    <a href="{% url 'dashboard' %}"
+       class="menu-item">
+        📊 Dashboard
+    </a>
+
+    <hr class="sidebar-divider">
+
+    <!-- Student Finance Details -->
+    <a href="{% url 'student_finance_details' %}"
+       class="menu-item {% if active_page == 'student_finance_details' %}active{% endif %}">
+        💰 Student Finance Details
+    </a>
+
+    <!-- Month Wise Admission -->
+    <a href="{% url 'month_wise_admission' %}"
+       class="menu-item {% if active_page == 'month_wise_admission' %}active{% endif %}">
+        📅 Month Wise Admission
+    </a>
+
+    <!-- Student Performance (Coming Soon) -->
+    <a href="#"
+       class="menu-item disabled"
+       style="opacity: 0.5; cursor: not-allowed;"
+       title="Coming Soon">
+        � Student Performance
+    </a>
+
+    <!-- Attendance Records (Coming Soon) -->
+    <a href="#"
+       class="menu-item disabled"
+       style="opacity: 0.5; cursor: not-allowed;"
+       title="Coming Soon">
+        📅 Attendance Records
+    </a>
+
+    <!-- Course Analytics (Coming Soon) -->
+    <a href="#"
+       class="menu-item disabled"
+       style="opacity: 0.5; cursor: not-allowed;"
+       title="Coming Soon">
+        � Course Analytics
+    </a>
+
+    <hr class="sidebar-divider">
+
+    <!-- Logout as a form to handle POST request properly -->
+    <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit" class="menu-item logout-item">
+            🚪 Logout
+        </button>
+    </form>
+</nav>
+
+<style>
+    .sidebar-divider {
+        border: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        margin: 10px 0;
+    }
+
+    .section-header {
+        padding: 10px 15px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 5px;
+    }
+
+    .menu-item.disabled {
+        color: rgba(255, 255, 255, 0.4);
+    }
+</style>

@@ -49,17 +49,33 @@ function openStudentModal(studentId) {
         document.getElementById('motherName').value = data.mother_name;
         document.getElementById('fullName').value = data.full_name;
         document.getElementById('dob').value = data.date_of_birth;
-        document.getElementById('mobileOwn').value = data.mobile_own;
-        document.getElementById('parentMobile').value = data.parent_mobile || '';
         document.getElementById('gender').value = data.gender;
-        document.getElementById('maritalStatus').value = data.marital_status;
+        
+        // Set the right-side fields (Marital Status, Mobile, Parent Mobile)
+        document.getElementById('maritalStatusRight').value = data.marital_status;
+        document.getElementById('mobileOwnRight').value = data.mobile_own;
+        document.getElementById('parentMobileRight').value = data.parent_mobile || '';
+        
+        // Display admission date
+        const admissionDateDisplay = document.getElementById('admissionDateDisplay');
+        if (data.admission_date) {
+            const date = new Date(data.admission_date);
+            const formattedDate = date.toLocaleDateString('en-IN', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            admissionDateDisplay.textContent = formattedDate;
+        } else {
+            admissionDateDisplay.textContent = '-';
+        }
         
         // Photo
         const modalPhoto = document.getElementById('modalPhoto');
         if (data.photo) {
             modalPhoto.src = data.photo;
         } else {
-            const firstLetter = data.student_name.charAt(0).toUpperCase();
+            const firstLetter = (data.student_name || data.full_name || 'S').charAt(0).toUpperCase();
             modalPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23667eea"/><text x="50%" y="50%" font-size="60" fill="white" text-anchor="middle" dy=".3em">${firstLetter}</text></svg>`;
         }
         
@@ -373,11 +389,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const studentId = document.getElementById('studentId').value;
             const formData = new FormData(studentForm);
             
-            // Validate
-            const mobileOwn = document.getElementById('mobileOwn').value;
-            if (mobileOwn.length !== 10) {
+            // Validate mobile from the right-side field
+            const mobileOwnRight = document.getElementById('mobileOwnRight').value;
+            if (mobileOwnRight.length !== 10) {
                 alert('⚠️ Please enter a valid 10-digit mobile number');
-                document.getElementById('mobileOwn').focus();
+                document.getElementById('mobileOwnRight').focus();
                 return;
             }
             
@@ -584,3 +600,30 @@ function deleteSelectedStudents() {
         deleteBtn.disabled = false;
     });
 }
+
+// ===================== FIELD SYNC FUNCTIONS =====================
+// Initialize field event listeners when document loads
+document.addEventListener('DOMContentLoaded', function() {
+    const maritalStatusRight = document.getElementById('maritalStatusRight');
+    const mobileOwnRight = document.getElementById('mobileOwnRight');
+    const parentMobileRight = document.getElementById('parentMobileRight');
+    
+    // Add change event listeners for form submission
+    if (maritalStatusRight) {
+        maritalStatusRight.addEventListener('change', function() {
+            console.log('Marital Status changed to:', this.value);
+        });
+    }
+    
+    if (mobileOwnRight) {
+        mobileOwnRight.addEventListener('input', function() {
+            console.log('Mobile changed to:', this.value);
+        });
+    }
+    
+    if (parentMobileRight) {
+        parentMobileRight.addEventListener('input', function() {
+            console.log('Parent Mobile changed to:', this.value);
+        });
+    }
+});

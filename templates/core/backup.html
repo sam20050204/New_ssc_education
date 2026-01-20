@@ -1,0 +1,168 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Database Backup - SSC Education{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/backup.css' %}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">💾</div>
+            <div>
+                <h1 class="page-title">Database Backup & Restore</h1>
+                <p class="page-subtitle">Export or import your database safely</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="backup-container">
+    <!-- Export Section -->
+    <div class="backup-section export-section">
+        <div class="section-header">
+            <div class="section-icon">📥</div>
+            <div>
+                <h2>Export Database</h2>
+                <p>Download a complete backup of your database</p>
+            </div>
+        </div>
+
+        <div class="section-content">
+            <div class="export-info">
+                <div class="info-item">
+                    <span class="info-icon">📦</span>
+                    <div class="info-text">
+                        <strong>What will be exported:</strong>
+                        <ul>
+                            <li>All admitted students data</li>
+                            <li>Fee payment records</li>
+                            <li>Student finance details</li>
+                            <li>Enquiries data</li>
+                            <li>Course information</li>
+                            <li>All other database records</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-icon">📋</span>
+                    <div class="info-text">
+                        <strong>File Format:</strong>
+                        <p>SQLite Database File (.db)</p>
+                        <p class="text-muted">Can be opened with SQLite tools or imported back into this system</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-actions">
+                <button id="exportBtn" class="btn btn-primary btn-large" onclick="exportDatabase()">
+                    <span class="btn-icon">📥</span>
+                    <span class="btn-text">Export Database</span>
+                </button>
+                <div id="exportStatus" class="status-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="section-divider">
+        <span>OR</span>
+    </div>
+
+    <!-- Import Section -->
+    <div class="backup-section import-section">
+        <div class="section-header">
+            <div class="section-icon">📤</div>
+            <div>
+                <h2>Import Database</h2>
+                <p>Restore your system from a backup file</p>
+            </div>
+        </div>
+
+        <div class="section-content">
+            <div class="import-info">
+                <div class="info-item">
+                    <span class="info-icon">⚠️</span>
+                    <div class="info-text">
+                        <strong>Important Warning:</strong>
+                        <p>Importing a database will <span class="highlight">replace all current data</span>. Make sure you have a backup of your current database before proceeding.</p>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-icon">✓</span>
+                    <div class="info-text">
+                        <strong>Supported Files:</strong>
+                        <p>SQLite Database files (.db, .sqlite, .sqlite3)</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="upload-area" id="uploadArea" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <div class="upload-icon">📂</div>
+                <p class="upload-text">Drag & drop your database file here</p>
+                <p class="upload-subtext">or</p>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+                    Choose File
+                </button>
+                <input 
+                    type="file" 
+                    id="fileInput" 
+                    accept=".db,.sqlite,.sqlite3" 
+                    style="display: none;"
+                    onchange="handleFileSelect(event)"
+                >
+                <p class="upload-subtext file-size">Maximum file size: 100 MB</p>
+            </div>
+
+            <div id="selectedFile" class="selected-file hidden">
+                <div class="file-info">
+                    <span class="file-icon">📄</span>
+                    <div class="file-details">
+                        <p class="file-name" id="fileName"></p>
+                        <p class="file-size-display" id="fileSize"></p>
+                    </div>
+                </div>
+                <button type="button" class="btn-clear" onclick="clearFileSelection()">✕</button>
+            </div>
+
+            <div class="section-actions">
+                <button id="importBtn" class="btn btn-danger btn-large" onclick="importDatabase()" disabled>
+                    <span class="btn-icon">📤</span>
+                    <span class="btn-text">Import Database</span>
+                </button>
+                <div id="importStatus" class="status-message"></div>
+            </div>
+
+            <div id="confirmDialog" class="confirm-dialog hidden">
+                <div class="dialog-content">
+                    <div class="dialog-icon">⚠️</div>
+                    <h3>Confirm Database Import</h3>
+                    <p>This will <strong>replace all existing data</strong> with the data from the selected backup file.</p>
+                    <p class="highlight">This action cannot be undone!</p>
+                    <div class="dialog-actions">
+                        <button class="btn btn-secondary" onclick="cancelImport()">Cancel</button>
+                        <button class="btn btn-danger" onclick="proceedImport()">Yes, Import Database</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Define URLs for backup operations
+    const EXPORT_URL = '{% url "export_database" %}';
+    const IMPORT_URL = '{% url "import_database" %}';
+</script>
+<script src="{% static 'core/backup.js' %}"></script>
+{% endblock %}

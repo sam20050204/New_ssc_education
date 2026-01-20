@@ -1,6 +1,9 @@
+// Global flag to prevent double form submission
+let formSubmitted = false;
+
 function confirmDelete(id){
     if(confirm("Are you sure you want to delete this enquiry?")){
-        window.location.href = `/enquiries/delete/${id}/`;
+        window.location.href = `/enquiry/${id}/delete/`;
     }
 }
 
@@ -40,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // View Enquiry Details
 function viewEnquiry(enquiryId) {
-    fetch(`/enquiries/detail/${enquiryId}/`)
+    fetch(`/enquiry/${enquiryId}/`)
         .then(response => response.json())
         .then(data => {
             // Determine display course
@@ -146,10 +149,6 @@ function closeNewEnquiryModal() {
         otherField.required = false;
     }
 }
-
-// Handle New Enquiry Form Submission with AJAX
-// ================= DUPLICATE PREVENTION FLAG =================
-let formSubmitted = false;
 
 // Handle New Enquiry Form Submission with AJAX
 document.addEventListener('DOMContentLoaded', function() {

@@ -9,46 +9,6 @@
     flex-direction: column;
 }
 
-/* Year Filter */
-.year-filter-wrapper {
-    padding: 20px 40px;
-    background: transparent;
-}
-
-.year-filter-form {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.year-filter-form label {
-    font-weight: 500;
-    color: #333;
-}
-
-.year-select {
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    background: white;
-    color: #333;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.year-select:hover {
-    border-color: #667eea;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-}
-
-.year-select:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
 /* Table Wrapper */
 .table-wrapper {
     margin: 20px 40px;

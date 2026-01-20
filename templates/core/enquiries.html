@@ -609,7 +609,7 @@ document.getElementById('courseEnquiry').addEventListener('change', function() {
 
 // View Enquiry Details
 function viewEnquiry(enquiryId) {
-    fetch(`/enquiries/detail/${enquiryId}/`)
+    fetch(`/enquiry/${enquiryId}/`)
         .then(response => response.json())
         .then(data => {
             // Determine display course - prioritize custom_course if "Other" was selected
@@ -721,74 +721,8 @@ function closeNewEnquiryModal() {
     document.getElementById('successMessageEnquiry').style.display = 'none';
 }
 
-// Handle New Enquiry Form Submission with AJAX
-// Handle New Enquiry Form Submission with AJAX
-document.getElementById('newEnquiryForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    e.stopPropagation(); // Prevent event bubbling
-    
-    const submitBtn = this.querySelector('.btn-submit');
-    
-    // Prevent double submission
-    if (submitBtn.disabled) {
-        return false;
-    }
-    
-    const formData = new FormData(this);
-    const originalText = submitBtn.textContent;
-    
-    // Show loading state
-    submitBtn.textContent = '⏳ Submitting...';
-    submitBtn.disabled = true;
-    
-    fetch('{% url "enquiry_list" %}', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            // Show success message
-            const successMsg = document.getElementById('successMessageEnquiry');
-            successMsg.textContent = '✅ Enquiry added successfully!';
-            successMsg.style.display = 'block';
-            
-            // Clear form fields
-            document.getElementById('newEnquiryForm').reset();
-            
-            // Hide "Other" course field if shown
-            const otherField = document.getElementById('otherCourseEnquiry');
-            if (otherField) {
-                otherField.style.display = 'none';
-                otherField.required = false;
-            }
-            
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                successMsg.style.display = 'none';
-            }, 3000);
-            
-            // Reset submit button
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-            
-            // Note: Modal stays open for next entry
-        } else {
-            throw new Error('Submission failed');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('❌ Error adding enquiry. Please try again.');
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    });
-    
-    return false; // Extra safety to prevent form submission
-});
+// Form submission is handled by enquiries.js to prevent duplicate handling
+// This file had a duplicate handler that was removed to use the centralized one
 
 // Close modals on ESC key
 document.addEventListener('keydown', function(e) {

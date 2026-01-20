@@ -35,11 +35,10 @@
         🧾 Receipts
     </a>
 
-    <!-- NEW: Database Backup Button -->
-    <a href="{% url 'backup_database' %}"
-       class="menu-item backup-item"
-       onclick="return confirm('📦 Create database backup?\n\nThis will download a copy of your entire database.')">
-        💾 Backup Database
+    <!-- Database Backup Management -->
+    <a href="{% url 'backup_page' %}"
+       class="menu-item {% if active_page == 'backup' %}active{% endif %}">
+        💾 Backup
     </a>
 
     <!-- Logout as a form to handle POST request properly -->

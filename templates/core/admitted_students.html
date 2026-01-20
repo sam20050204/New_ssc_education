@@ -233,86 +233,102 @@
             <input type="hidden" id="studentId" name="student_id">
             
             <div class="form-grid">
-                <!-- Photo Section -->
-                <div class="photo-section">
-                    <label class="photo-label">Student Photo</label>
-                    <div class="modal-photo">
-                        <img id="modalPhoto" src="" alt="Student Photo">
-                    </div>
-                    <input type="file" id="photoInput" name="photo" accept="image/*" style="display:none;">
-                    <button type="button" class="change-photo-btn" onclick="document.getElementById('photoInput').click()">
-                        📷 Change Photo
-                    </button>
-                </div>
+                <!-- Top Section: Personal Info on Left, Photo on Right -->
+                <div class="top-section">
+                    <!-- Personal Information (Left Side) -->
+                    <div class="form-section personal-info-left">
+                        <h3>👤 Personal Information</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Student Name <span class="required">*</span></label>
+                                <input type="text" id="studentName" name="student_name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Father Name <span class="required">*</span></label>
+                                <input type="text" id="fatherName" name="father_name" required>
+                            </div>
+                        </div>
 
-                <!-- Personal Information -->
-                <div class="form-section">
-                    <h3>👤 Personal Information</h3>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Student Name <span class="required">*</span></label>
-                            <input type="text" id="studentName" name="student_name" required>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Surname <span class="required">*</span></label>
+                                <input type="text" id="surname" name="surname" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Mother Name <span class="required">*</span></label>
+                                <input type="text" id="motherName" name="mother_name" required>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Father Name <span class="required">*</span></label>
-                            <input type="text" id="fatherName" name="father_name" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Surname <span class="required">*</span></label>
-                            <input type="text" id="surname" name="surname" required>
-                        </div>
-                    </div>
 
-                    <div class="form-row">
-                        <div class="form-group full-width">
-                            <label>Full Name (Auto-generated)</label>
-                            <input type="text" id="fullName" name="full_name" readonly class="readonly">
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>Full Name (Auto-generated)</label>
+                                <input type="text" id="fullName" name="full_name" readonly class="readonly">
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Mother Name <span class="required">*</span></label>
-                            <input type="text" id="motherName" name="mother_name" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Date of Birth <span class="required">*</span></label>
-                            <input type="date" id="dob" name="date_of_birth" required>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Gender <span class="required">*</span></label>
-                            <select id="gender" name="gender" required>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Marital Status <span class="required">*</span></label>
-                            <select id="maritalStatus" name="marital_status" required>
-                                <option value="Single">Single</option>
-                                <option value="Married">Married</option>
-                            </select>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Date of Birth <span class="required">*</span></label>
+                                <input type="date" id="dob" name="date_of_birth" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Gender <span class="required">*</span></label>
+                                <select id="gender" name="gender" required>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Contact Information -->
-                <div class="form-section">
-                    <h3>📞 Contact Information</h3>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Mobile (Own) <span class="required">*</span></label>
-                            <input type="tel" id="mobileOwn" name="mobile_own" pattern="[0-9]{10}" required>
+                    <!-- Photo Section (Right Side) -->
+                    <div class="photo-section-right">
+                        <!-- Admission Date Display (Top Right) -->
+                        <div class="admission-date-box">
+                            <span class="admission-date-label">📅 Admission Date:</span>
+                            <span id="admissionDateDisplay" class="admission-date-value">-</span>
                         </div>
-                        <div class="form-group">
-                            <label>Parent Mobile</label>
-                            <input type="tel" id="parentMobile" name="parent_mobile" pattern="[0-9]{10}">
+
+                        <!-- Photo -->
+                        <div class="photo-section">
+                            <label class="photo-label">Student Photo</label>
+                            <div class="modal-photo">
+                                <img id="modalPhoto" src="" alt="Student Photo">
+                            </div>
+                            <input type="file" id="photoInput" name="photo" accept="image/*" style="display:none;">
+                            <button type="button" class="change-photo-btn" onclick="document.getElementById('photoInput').click()">
+                                📷 Change Photo
+                            </button>
+                        </div>
+
+                        <!-- Quick Fields Below Photo -->
+                        <div class="quick-fields-section">
+                            <div class="form-row">
+                                <div class="form-group full-width">
+                                    <label>Marital Status <span class="required">*</span></label>
+                                    <select id="maritalStatusRight" name="marital_status" class="form-control">
+                                        <option value="Single">Single</option>
+                                        <option value="Married">Married</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group full-width">
+                                    <label>📞 Mobile (Own) <span class="required">*</span></label>
+                                    <input type="tel" id="mobileOwnRight" name="mobile_own" pattern="[0-9]{10}" class="form-control" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group full-width">
+                                    <label>Parent Mobile</label>
+                                    <input type="tel" id="parentMobileRight" name="parent_mobile" pattern="[0-9]{10}" class="form-control">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
