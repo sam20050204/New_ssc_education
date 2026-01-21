@@ -1507,17 +1507,61 @@ def statistics_view(request):
     if selected_year:
         students = students.filter(admission_date__year=selected_year)
     
-    # Calculate total profit (Total Paid Fees - Fees Paid to MKCL)
+    # Calculate total profit from StudentFinanceDetail table using same logic as student_finance_details view
     total_profit = Decimal('0.00')
     for student in students:
-        mkcl_fees = Decimal('0.00')
-        if hasattr(student, 'finance_detail'):
-            mkcl_1 = student.finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
-            mkcl_2 = student.finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
-            mkcl_fees = mkcl_1 + mkcl_2
+        # Get or create finance detail record
+        finance_detail, created = StudentFinanceDetail.objects.get_or_create(
+            student=student,
+            defaults={
+                'first_installment': Decimal('0.00'),
+                'second_installment': Decimal('0.00'),
+                'third_installment': Decimal('0.00'),
+                'fees_paid_to_mkcl_1': Decimal('0.00'),
+                'fees_paid_to_mkcl_2': Decimal('0.00'),
+            }
+        )
         
-        total_paid = student.paid_fees or Decimal('0.00')
-        profit = total_paid - mkcl_fees
+        # Get course name for defaults logic
+        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+        
+        # Calculate fees paid to MKCL with course-based defaults
+        mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
+        mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+        
+        # Apply course-based defaults only if values are 0
+        if mkcl_1 == Decimal('0.00') or mkcl_1 is None:
+            if course_name == 'MS-CIT':
+                mkcl_1 = Decimal('1230.00')
+            else:
+                mkcl_1 = Decimal('500.00')
+        
+        if mkcl_2 == Decimal('0.00') or mkcl_2 is None:
+            if course_name == 'MS-CIT':
+                mkcl_2 = Decimal('570.00')
+            else:
+                mkcl_2 = Decimal('500.00')
+        
+        mkcl_total = mkcl_1 + mkcl_2
+        
+        # Get fee payments for this student - ordered by payment_date (oldest first)
+        fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
+        
+        # Extract installment amounts from FeePayment records
+        first_inst = Decimal('0.00')
+        second_inst = Decimal('0.00')
+        third_inst = Decimal('0.00')
+        
+        if len(fee_payments) >= 1:
+            first_inst = fee_payments[0].amount
+        if len(fee_payments) >= 2:
+            second_inst = fee_payments[1].amount
+        if len(fee_payments) >= 3:
+            third_inst = fee_payments[2].amount
+        
+        # Calculate profit as (Total Fees Paid By Learner) - (Total Fees Paid to MKCL)
+        learner_total_paid = first_inst + second_inst + third_inst
+        profit = learner_total_paid - mkcl_total
         total_profit += profit
     
     context = {
