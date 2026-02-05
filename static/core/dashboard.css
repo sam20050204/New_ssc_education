@@ -14,10 +14,10 @@ html, body {
 /* ===================== TOP HEADER ===================== */
 /* ===================== TOP HEADER ===================== */
 .top-header {
-    height: 70px;
+    height: auto;
     background: linear-gradient(135deg, #2c3e50, #3498db);
     color: white;
-    padding: 0 30px;
+    padding: 15px 30px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -27,6 +27,15 @@ html, body {
     right: 0;
     z-index: 1000; /* Make sure header is on top */
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.header-title-section {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex: 1;
 }
 
 .top-header h1 {
@@ -35,10 +44,53 @@ html, body {
     margin: 0;
 }
 
+.module-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.module-btn {
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.module-btn:hover {
+    background: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.5);
+    transform: translateY(-2px);
+}
+
+.module-btn.sales-btn {
+    background: rgba(255, 107, 107, 0.3);
+    border-color: rgba(255, 107, 107, 0.5);
+}
+
+.module-btn.sales-btn:hover {
+    background: rgba(255, 107, 107, 0.5);
+}
+
+.module-btn.education-btn {
+    background: rgba(100, 200, 255, 0.3);
+    border-color: rgba(100, 200, 255, 0.5);
+}
+
+.module-btn.education-btn:hover {
+    background: rgba(100, 200, 255, 0.5);
+}
+
 .user-info {
     display: flex;
     align-items: center;
     gap: 15px;
+    margin-left: auto;
 }
 
 .user-info span {

@@ -146,12 +146,26 @@
     <form method="post" action="{% url 'new_admission' %}" enctype="multipart/form-data" class="admission-form" id="admissionForm">
         {% csrf_token %}
         
-        <!-- Course Selection -->
-        <div class="form-section">
-            <h3 class="section-title">📚 Course Information</h3>
+        <!-- Admission Date Selection -->
+        <div class="form-section" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left-color: #f59e0b; padding: 15px 20px; margin-bottom: 15px;">
+            <h3 class="section-title" style="color: #92400e; margin-bottom: 8px; font-size: 16px;">📆 Admission Date</h3>
             
-            <div class="form-group full-width">
-                <label for="course">Course <span class="required">*</span></label>
+            <div class="form-group full-width" style="margin-bottom: 8px;">
+                <label for="admission_date" style="font-size: 13px; margin-bottom: 4px; display: block;">Admission Date <span class="required">*</span></label>
+                <input type="date" name="admission_date" id="admission_date" required>
+            </div>
+            
+            <small style="color: #92400e; font-size: 12px; margin-top: 6px; display: block; font-weight: 600;">
+                💡 Select the date when the student was admitted
+            </small>
+        </div>
+        
+        <!-- Course Selection -->
+        <div class="form-section" style="padding: 15px 20px; margin-bottom: 15px;">
+            <h3 class="section-title" style="margin-bottom: 8px; font-size: 16px;">📚 Course Information</h3>
+            
+            <div class="form-group full-width" style="margin-bottom: 8px;">
+                <label for="course" style="font-size: 13px; margin-bottom: 4px; display: block;">Course <span class="required">*</span></label>
                 <select name="course" id="course" required>
                     <option value="">-- Select Course --</option>
                     <option value="MS-CIT" {% if enquiry_data.course == "MS-CIT" %}selected{% endif %}>MS-CIT</option>
@@ -178,19 +192,19 @@
                 </button>
             </div>
             
-            <div class="form-group full-width" id="customCourseGroup" style="display: {% if enquiry_data.course == 'Other' %}block{% else %}none{% endif %};">
-                <label for="custom_course">Specify Course Name <span class="required">*</span></label>
+            <div class="form-group full-width" id="customCourseGroup" style="display: none; margin-bottom: 0;">
+                <label for="custom_course" style="font-size: 13px; margin-bottom: 4px; display: block;">Specify Course Name <span class="required">*</span></label>
                 <input type="text" name="custom_course" id="custom_course" value="{{ enquiry_data.custom_course|default:'' }}" placeholder="Enter course name">
             </div>
         </div>
 
         <!-- Batch Information -->
-        <div class="form-section" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left-color: #0284c7;">
-            <h3 class="section-title" style="color: #0c4a6e;">📅 Batch Information</h3>
+        <div class="form-section" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left-color: #0284c7; padding: 15px 20px; margin-bottom: 15px;">
+            <h3 class="section-title" style="color: #0c4a6e; margin-bottom: 8px; font-size: 16px;">📅 Batch Information</h3>
             
             <div class="form-row double">
                 <div class="form-group">
-                    <label for="batch_month">Batch Month <span class="required">*</span></label>
+                    <label for="batch_month" style="font-size: 13px; margin-bottom: 4px; display: block;">Batch Month <span class="required">*</span></label>
                     <select name="batch_month" id="batch_month" required>
                         <option value="">-- Select Month --</option>
                         <option value="January">January</option>
@@ -209,7 +223,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="batch_year">Batch Year <span class="required">*</span></label>
+                    <label for="batch_year" style="font-size: 13px; margin-bottom: 4px; display: block;">Batch Year <span class="required">*</span></label>
                     <select name="batch_year" id="batch_year" required>
                         <option value="">-- Select Year --</option>
                         <!-- Years will be populated by JavaScript -->
@@ -217,16 +231,16 @@
                 </div>
             </div>
             
-            <div class="form-group full-width">
-                <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #0284c7;">
-                    <strong style="color: #0c4a6e;">Selected Batch:</strong> 
-                    <span id="batchPreview" style="color: #0284c7; font-weight: 700; font-size: 16px;">
+            <div class="form-group full-width" style="margin-bottom: 6px;">
+                <div style="background: white; padding: 10px; border-radius: 8px; border: 2px solid #0284c7;">
+                    <strong style="color: #0c4a6e; font-size: 13px;">Selected Batch:</strong> 
+                    <span id="batchPreview" style="color: #0284c7; font-weight: 700; font-size: 14px;">
                         Not Selected
                     </span>
                 </div>
             </div>
             
-            <small style="color: #0c4a6e; font-size: 13px; margin-top: 10px; display: block; font-weight: 600;">
+            <small style="color: #0c4a6e; font-size: 12px; margin-top: 4px; display: block; font-weight: 600;">
                 💡 Select the month and year when this student's batch starts
             </small>
         </div>
@@ -236,74 +250,82 @@
         <div class="form-section">
             <h3 class="section-title">👤 Personal Information</h3>
             
-            <div class="name-photo-container">
-                <div class="name-fields">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="student_name">Student Name <span class="required">*</span></label>
-                            <input type="text" name="student_name" id="student_name" value="{{ enquiry_data.name|default:'' }}" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="father_name">Father Name <span class="required">*</span></label>
-                            <input type="text" name="father_name" id="father_name" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="surname">Surname <span class="required">*</span></label>
-                            <input type="text" name="surname" id="surname" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group full-width">
-                        <label for="full_name">Full Name (Auto-generated) <span class="required">*</span></label>
-                        <input type="text" name="full_name" id="full_name" readonly required>
-                    </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="student_name">Student Name <span class="required">*</span></label>
+                    <input type="text" name="student_name" id="student_name" value="{{ enquiry_data.name|default:'' }}" required>
                 </div>
                 
-                <div class="photo-upload-container">
-                    <label class="photo-label">Student Photo</label>
-                    <div class="photo-preview">
-                        <span class="photo-placeholder">📷</span>
-                        <img id="previewImage" style="display: none;">
-                    </div>
-                    <input type="file" name="photo" id="photo" accept="image/*" class="photo-input">
-                    <label for="photo" class="photo-upload-btn">Choose Photo</label>
-                    <small class="photo-hint">Passport size photo (Optional)</small>
+                <div class="form-group">
+                    <label for="father_name">Father Name <span class="required">*</span></label>
+                    <input type="text" name="father_name" id="father_name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="surname">Surname <span class="required">*</span></label>
+                    <input type="text" name="surname" id="surname" required>
                 </div>
             </div>
             
             <div class="form-group full-width">
-                <label for="mother_name">Mother Name <span class="required">*</span></label>
-                <input type="text" name="mother_name" id="mother_name" required>
+                <label for="full_name">Full Name (Auto-generated) <span class="required">*</span></label>
+                <input type="text" name="full_name" id="full_name" readonly required>
             </div>
-            
-            <div class="form-row double">
-                <div class="form-group">
-                    <label for="date_of_birth">Date of Birth <span class="required">*</span></label>
-                    <input type="date" name="date_of_birth" id="date_of_birth" required>
+
+            <!-- Mother Name, Date of Birth, Gender (Left) and Photo (Right) -->
+            <div style="display: flex; gap: 30px; align-items: flex-start;">
+                <!-- Left Side: Form Fields (Stacked Vertically) -->
+                <div style="flex: 1;">
+                    <div class="form-group full-width">
+                        <label for="mother_name">Mother Name <span class="required">*</span></label>
+                        <input type="text" name="mother_name" id="mother_name" required>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="date_of_birth">Date of Birth <span class="required">*</span></label>
+                        <input type="date" name="date_of_birth" id="date_of_birth" required>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="gender">Gender <span class="required">*</span></label>
+                        <select name="gender" id="gender" required>
+                            <option value="">-- Select Gender --</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="marital_status">Marital Status <span class="required">*</span></label>
+                        <select name="marital_status" id="marital_status" required>
+                            <option value="">-- Select Status --</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                        </select>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="gender">Gender <span class="required">*</span></label>
-                    <select name="gender" id="gender" required>
-                        <option value="">-- Select Gender --</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
+
+                <!-- Right Side: Photo Upload -->
+                <div class="photo-upload-container" style="flex: 0 0 auto; display: flex; flex-direction: column;">
+                    <label class="photo-label" style="font-size: 14px; font-weight: 600; margin-bottom: 10px; display: block;">📷 Student Photo</label>
+                    <div class="photo-preview" style="width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; min-height: 250px; border-radius: 8px; overflow: hidden; background: #e2e8f0;">
+                        <span class="photo-placeholder" style="font-size: 60px; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">📷</span>
+                        <img id="previewImage" style="display: none; width: 100%; height: 100%; object-fit: contain;">
+                        <video id="cameraVideo" style="display: none; width: 100%; height: 100%; object-fit: cover; background: #000;" playsinline autoplay muted></video>
+                    </div>
+                    <input type="file" name="photo" id="photo" accept="image/*" class="photo-input" style="display: none;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <label for="photo" class="photo-upload-btn" style="text-align: center; cursor: pointer; flex: 1; min-width: 140px; padding: 10px;">📁 Choose Photo</label>
+                        <button type="button" id="cameraBtn" class="photo-upload-btn" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); flex: 1; min-width: 140px; padding: 10px;">📷 Take Photo</button>
+                    </div>
+                    <div id="cameraControls" style="display: none; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                        <button type="button" id="captureBtn" class="photo-upload-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); flex: 1; min-width: 140px; padding: 10px;">✓ Capture</button>
+                        <button type="button" id="cancelCameraBtn" class="photo-upload-btn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); flex: 1; min-width: 140px; padding: 10px;">✕ Cancel</button>
+                    </div>
+                    <canvas id="photoCanvas" style="display: none;"></canvas>
                 </div>
             </div>
-            
-            <div class="form-group">
-                <label for="marital_status">Marital Status <span class="required">*</span></label>
-                <select name="marital_status" id="marital_status" required>
-                    <option value="">-- Select Status --</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                </select>
-            </div>
-        </div>
 
         <!-- Contact Information -->
         <div class="form-section">
@@ -492,6 +514,249 @@ document.addEventListener('DOMContentLoaded', function() {
     
     batchMonthSelect.addEventListener('change', updateBatchPreview);
     batchYearSelect.addEventListener('change', updateBatchPreview);
+});
+
+// Camera functionality for photo capture
+document.addEventListener('DOMContentLoaded', function() {
+    const cameraBtn = document.getElementById('cameraBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const cancelCameraBtn = document.getElementById('cancelCameraBtn');
+    const cameraVideo = document.getElementById('cameraVideo');
+    const photoCanvas = document.getElementById('photoCanvas');
+    const photoInput = document.getElementById('photo');
+    const previewImage = document.getElementById('previewImage');
+    const photoPlaceholder = document.querySelector('.photo-placeholder');
+    const cameraControls = document.getElementById('cameraControls');
+    let stream = null;
+
+    // Open camera
+    cameraBtn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        try {
+            console.log('Requesting camera access...');
+            
+            // Request camera access
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'user',
+                    width: { min: 320, ideal: 640, max: 1280 },
+                    height: { min: 240, ideal: 480, max: 720 }
+                }
+            });
+            
+            console.log('Camera stream received:', stream);
+            console.log('Video tracks:', stream.getVideoTracks());
+            
+            // Display video stream
+            cameraVideo.srcObject = stream;
+            console.log('srcObject assigned to video element');
+            
+            // Wait for video to be ready
+            cameraVideo.onloadedmetadata = function() {
+                console.log('Video metadata loaded, video ready');
+                cameraVideo.style.display = 'block';
+            };
+            
+            // Also display immediately in case onloadedmetadata fires before assignment
+            cameraVideo.style.display = 'block';
+            photoPlaceholder.style.display = 'none';
+            previewImage.style.display = 'none';
+            
+            // Show capture and cancel buttons
+            cameraControls.style.display = 'flex';
+            cameraBtn.style.display = 'none';
+            
+            console.log('Camera UI updated');
+            
+        } catch (error) {
+            console.error('Camera error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
+            
+            let errorMsg = '❌ Unable to access camera. Please check permissions.\n\n';
+            
+            if (error.name === 'NotAllowedError') {
+                errorMsg += 'Camera permission was denied. Please allow camera access in browser settings.';
+            } else if (error.name === 'NotFoundError') {
+                errorMsg += 'No camera found on this device.';
+            } else if (error.name === 'NotReadableError') {
+                errorMsg += 'Camera is in use by another application.';
+            } else {
+                errorMsg += error.message;
+            }
+            
+            alert(errorMsg);
+        }
+    });
+
+    // Capture photo from camera
+    captureBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const context = photoCanvas.getContext('2d');
+        photoCanvas.width = cameraVideo.videoWidth;
+        photoCanvas.height = cameraVideo.videoHeight;
+        
+        // Draw video frame to canvas
+        context.drawImage(cameraVideo, 0, 0);
+        
+        // Stop camera stream
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Resize and optimize captured photo
+        const maxWidth = 600;
+        const maxHeight = 800;
+        let newWidth = photoCanvas.width;
+        let newHeight = photoCanvas.height;
+        
+        // Scale down if too large while maintaining aspect ratio
+        if (newWidth > maxWidth || newHeight > maxHeight) {
+            const aspectRatio = photoCanvas.width / photoCanvas.height;
+            if (newWidth > maxWidth) {
+                newWidth = maxWidth;
+                newHeight = newWidth / aspectRatio;
+            }
+            if (newHeight > maxHeight) {
+                newHeight = maxHeight;
+                newWidth = newHeight * aspectRatio;
+            }
+        }
+        
+        // Create resized canvas (not cropped, just optimized)
+        const resizeCanvas = document.createElement('canvas');
+        resizeCanvas.width = newWidth;
+        resizeCanvas.height = newHeight;
+        const resizeContext = resizeCanvas.getContext('2d');
+        resizeContext.drawImage(photoCanvas, 0, 0, newWidth, newHeight);
+        
+        console.log('Camera capture - Original:', photoCanvas.width, 'x', photoCanvas.height);
+        console.log('Camera capture - Optimized:', newWidth, 'x', newHeight);
+        
+        // Convert to blob and create file
+        resizeCanvas.toBlob(function(blob) {
+            // Create a File object from blob
+            const file = new File([blob], 'camera_photo.jpg', { type: 'image/jpeg' });
+            
+            // Create DataTransfer to set files on input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            photoInput.files = dataTransfer.files;
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewImage.style.display = 'block';
+            };
+            reader.readAsDataURL(blob);
+            
+            // Reset camera UI
+            cameraVideo.style.display = 'none';
+            photoPlaceholder.style.display = 'none';
+            cameraControls.style.display = 'none';
+            cameraBtn.style.display = 'block';
+            
+            // Show success message
+            alert('✅ Photo captured and automatically cropped to passport size!');
+            console.log('Photo automatically cropped to passport size (2:3 ratio)');
+        }, 'image/jpeg', 0.95); // 95% quality JPEG
+    });
+
+    // Cancel camera
+    cancelCameraBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        console.log('Camera cancelled');
+        
+        // Stop camera stream
+        if (stream) {
+            console.log('Stopping camera stream');
+            stream.getTracks().forEach(track => {
+                track.stop();
+                console.log('Track stopped:', track.kind);
+            });
+            stream = null;
+        }
+        
+        // Reset UI
+        cameraVideo.srcObject = null;
+        cameraVideo.style.display = 'none';
+        photoPlaceholder.style.display = 'block';
+        cameraControls.style.display = 'none';
+        cameraBtn.style.display = 'block';
+    });
+
+    // Handle file input change for preview - Auto-crop to passport size
+    photoInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(loadEvent) {
+                const img = new Image();
+                
+                img.onload = function() {
+                    // Passport size ratio: 2x3 (width:height = 2:3)
+                    const passportRatio = 2 / 3; // width/height
+                    let srcWidth = img.width;
+                    let srcHeight = img.height;
+                    let srcX = 0;
+                    let srcY = 0;
+                    
+                    const imgRatio = srcWidth / srcHeight;
+                    
+                    // Calculate crop dimensions to maintain passport aspect ratio
+                    if (imgRatio > passportRatio) {
+                        // Image is too wide - crop sides
+                        srcWidth = srcHeight * passportRatio;
+                        srcX = (img.width - srcWidth) / 2;
+                    } else {
+                        // Image is too tall - crop top/bottom
+                        srcHeight = srcWidth / passportRatio;
+                        srcY = (img.height - srcHeight) / 2;
+                    }
+                    
+                    // Create canvas and crop image
+                    const cropCanvas = document.createElement('canvas');
+                    cropCanvas.width = srcWidth;
+                    cropCanvas.height = srcHeight;
+                    const ctx = cropCanvas.getContext('2d');
+                    ctx.drawImage(img, srcX, srcY, srcWidth, srcHeight, 0, 0, srcWidth, srcHeight);
+                    
+                    // Convert cropped image to blob and update file input
+                    cropCanvas.toBlob(function(blob) {
+                        // Create new File object with cropped image
+                        const croppedFile = new File([blob], 'passport_photo.jpg', { type: 'image/jpeg' });
+                        
+                        // Update file input with cropped file
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(croppedFile);
+                        photoInput.files = dataTransfer.files;
+                        
+                        // Display cropped preview
+                        const previewReader = new FileReader();
+                        previewReader.onload = function(previewEvent) {
+                            previewImage.src = previewEvent.target.result;
+                            previewImage.style.display = 'block';
+                            photoPlaceholder.style.display = 'none';
+                            cameraVideo.style.display = 'none';
+                        };
+                        previewReader.readAsDataURL(blob);
+                        
+                        console.log('Photo automatically cropped to passport size (2:3 ratio)');
+                    }, 'image/jpeg', 0.95); // 95% quality JPEG
+                };
+                
+                img.src = loadEvent.target.result;
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    });
 });
 </script>
 {% endblock %}

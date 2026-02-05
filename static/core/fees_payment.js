@@ -21,6 +21,16 @@ function getCookie(name) {
 
 // Search students
 document.addEventListener('DOMContentLoaded', function() {
+    // Set default payment date to today
+    const paymentDateInput = document.getElementById('paymentDate');
+    if (paymentDateInput) {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        paymentDateInput.value = `${year}-${month}-${day}`;
+    }
+    
     const studentSearch = document.getElementById('studentSearch');
     
     if (studentSearch) {
@@ -318,6 +328,11 @@ function submitPayment() {
     formData.append('student_id', selectedStudentId);
     formData.append('amount', amount);
     formData.append('payment_mode', paymentMode);
+    
+    const paymentDateInput = document.getElementById('paymentDate');
+    if (paymentDateInput && paymentDateInput.value) {
+        formData.append('payment_date', paymentDateInput.value);
+    }
     
     const remarksInput = document.getElementById('remarks');
     if (remarksInput) {

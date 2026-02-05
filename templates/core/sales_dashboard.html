@@ -1,0 +1,49 @@
+{% extends 'base/sales_base.html' %}
+{% load static %}
+
+{% block title %}Sales and Services Dashboard{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">🖥️</div>
+            <div>
+                <h1 class="page-title">Sales and Services Dashboard</h1>
+                <p class="page-subtitle">Manage your sales and services operations</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="stats-grid">
+    <a href="{% url 'sales_items' %}" class="stat-card clickable-card" style="text-decoration: none; color: inherit;">
+        <div class="stat-icon">📦</div>
+        <div class="stat-label">Items</div>
+        <div class="stat-number">0</div>
+        <div class="stat-sublabel">Total Items</div>
+    </a>
+
+    <div class="stat-card clickable-card">
+        <div class="stat-icon">💼</div>
+        <div class="stat-label">Orders</div>
+        <p class="coming-soon">Coming Soon</p>
+    </div>
+
+    <div class="stat-card clickable-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-label">Sales Analytics</div>
+        <p class="coming-soon">Coming Soon</p>
+    </div>
+
+    <div class="stat-card clickable-card">
+        <div class="stat-icon">💰</div>
+        <div class="stat-label">Revenue</div>
+        <p class="coming-soon">Coming Soon</p>
+    </div>
+</div>
+
+{% endblock %}

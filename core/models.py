@@ -1,6 +1,7 @@
 from django.db import models, transaction
 from django.core.validators import MinValueValidator
 from decimal import Decimal
+from datetime import date
 
 class Enquiry(models.Model):
     name = models.CharField(max_length=100)
@@ -115,7 +116,7 @@ class AdmittedStudent(models.Model):
     )
     
     # Metadata
-    admission_date = models.DateTimeField(auto_now_add=True)
+    admission_date = models.DateField(default=date.today, help_text="Date of admission")
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
@@ -240,7 +241,7 @@ class FeePayment(models.Model):
         validators=[MinValueValidator(0.01)]
     )
     payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES)
-    payment_date = models.DateTimeField(auto_now_add=True)
+    payment_date = models.DateField(default=date.today, help_text="Date of payment")
     
     # Additional info
     remarks = models.TextField(blank=True, null=True)
@@ -307,3 +308,27 @@ class StudentFinanceDetail(models.Model):
         """Calculate profit (Total Paid - MKCL Fees)"""
         total_paid = self.student.paid_fees or 0
         return total_paid - self.total_mkcl_fees
+
+
+class SalesItem(models.Model):
+    """Model to store sales items information"""
+    item_name = models.CharField(max_length=200)
+    quantity = models.PositiveIntegerField()
+    purchase_rate = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    purchased_from = models.CharField(max_length=200)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Sales Item'
+        verbose_name_plural = 'Sales Items'
+    
+    def __str__(self):
+        return f"{self.item_name} (Qty: {self.quantity})"
+    
+    @property
+    def calculated_total(self):
+        """Calculate total amount based on quantity and purchase rate"""
+        return self.quantity * self.purchase_rate

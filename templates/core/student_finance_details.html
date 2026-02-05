@@ -97,22 +97,10 @@
                         <td>{{ data.batch }}</td>
                         <td>{{ data.course }}</td>
                         
-                        <!-- Fees Paid By Learner - Editable -->
-                        <td class="editable-cell">
-                            <input type="number" step="0.01" value="{{ data.first_inst }}" 
-                                   onchange="updateField({{ data.id }}, 'first_inst', this.value)"
-                                   class="finance-input">
-                        </td>
-                        <td class="editable-cell">
-                            <input type="number" step="0.01" value="{{ data.second_inst }}" 
-                                   onchange="updateField({{ data.id }}, 'second_inst', this.value)"
-                                   class="finance-input">
-                        </td>
-                        <td class="editable-cell">
-                            <input type="number" step="0.01" value="{{ data.third_inst }}" 
-                                   onchange="updateField({{ data.id }}, 'third_inst', this.value)"
-                                   class="finance-input">
-                        </td>
+                        <!-- Fees Paid By Learner - Read Only -->
+                        <td class="readonly-cell">{{ data.first_inst|floatformat:2 }}</td>
+                        <td class="readonly-cell">{{ data.second_inst|floatformat:2 }}</td>
+                        <td class="readonly-cell">{{ data.third_inst|floatformat:2 }}</td>
                         
                         <!-- Auto-calculated fields -->
                         <td class="readonly-cell">{{ data.total_paid|floatformat:2 }}</td>

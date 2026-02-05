@@ -51,4 +51,9 @@ urlpatterns = [
     path('student-finance-details/', views.student_finance_details, name='student_finance_details'),
     path('update-finance-detail/', views.update_finance_detail, name='update_finance_detail'),
     path('month-wise-admission/', views.month_wise_admission, name='month_wise_admission'),
+    
+    # Sales and Services URLs
+    path('sales/', views.sales_services_dashboard, name='sales_services_dashboard'),
+    path('sales/items/', views.sales_items, name='sales_items'),
+    path('sales/items/add/', views.add_sales_item, name='add_sales_item'),
 ]

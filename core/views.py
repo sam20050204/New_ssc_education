@@ -21,7 +21,7 @@ import json
 import shutil
 import os
 from django.db.models import Sum, Count, Q
-from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course
+from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem
 
 # ================= CUSTOM LOGOUT =================
 def custom_logout(request):
@@ -105,8 +105,10 @@ def dashboard(request):
         year_students = AdmittedStudent.objects.filter(admission_date__year=current_year)
     
     for student in year_students:
-        month = str(student.admission_date.month)
-        monthly_data[month] = monthly_data.get(month, 0) + 1
+        # Handle None admission_date
+        if student.admission_date:
+            month = str(student.admission_date.month)
+            monthly_data[month] = monthly_data.get(month, 0) + 1
     
     course_distribution_json = json.dumps(course_distribution)
     monthly_data_json = json.dumps(monthly_data)
@@ -390,7 +392,10 @@ def new_admission(request):
             total_fees = request.POST.get("total_fees", 5000)
             photo = request.FILES.get("photo")
             
-            # NEW: Get batch information
+            # Get admission date from form
+            admission_date = request.POST.get("admission_date")
+            
+            # Get batch information
             batch_month = request.POST.get("batch_month", "")
             batch_year = request.POST.get("batch_year", "")
             
@@ -415,8 +420,9 @@ def new_admission(request):
                 educational_qualification=educational_qualification,
                 total_fees=total_fees,
                 photo=photo,
-                batch_month=batch_month,  # NEW
-                batch_year=batch_year,    # NEW
+                admission_date=admission_date,
+                batch_month=batch_month,
+                batch_year=batch_year,
             )
             
             messages.success(request, f"Admission for {full_name} has been successfully recorded! Total Fees: ₹{total_fees}")
@@ -578,13 +584,11 @@ def student_detail_admitted(request, student_id):
         payment_history = []
         
         for payment in fee_payments:
-            # Extract time from datetime
-            payment_time = payment.payment_date.strftime('%H:%M') if payment.payment_date else 'N/A'
-            
+            # Note: payment_date is now a DateField (no time component)
             payment_history.append({
                 'id': payment.id,
                 'payment_date': payment.payment_date.strftime('%d-%m-%Y') if payment.payment_date else '',
-                'payment_time': payment_time,
+                'payment_time': '',  # No time for DateField
                 'amount': float(payment.amount),
                 'payment_mode': payment.payment_mode,
                 'receipt_no': payment.receipt_no or '',
@@ -661,13 +665,12 @@ def update_student_admitted(request, student_id):
         
         # Update fees information
         total_fees = request.POST.get('total_fees')
-        paid_fees = request.POST.get('paid_fees')
         
         if total_fees:
             student.total_fees = Decimal(total_fees)
         
-        if paid_fees:
-            student.paid_fees = Decimal(paid_fees)
+        # Note: paid_fees is now readonly and should not be edited here
+        # It's calculated from FeePayment records only
         
         if request.FILES.get('photo'):
             student.photo = request.FILES['photo']
@@ -675,7 +678,7 @@ def update_student_admitted(request, student_id):
         student.save()
         
         # Update StudentFinanceDetail if total_fees changed
-        if total_fees or paid_fees:
+        if total_fees:
             finance_detail, created = StudentFinanceDetail.objects.get_or_create(student=student)
             # The profit will be calculated dynamically based on student.paid_fees and total_mkcl_fees
             finance_detail.save()
@@ -729,10 +732,11 @@ def submit_fee_payment(request):
             student_id = request.POST.get('student_id')
             amount = request.POST.get('amount')
             payment_mode = request.POST.get('payment_mode')
+            payment_date = request.POST.get('payment_date')
             remarks = request.POST.get('remarks', '')
             
             # Debug logging
-            print(f"Received payment data: student_id={student_id}, amount={amount}, payment_mode={payment_mode}")
+            print(f"Received payment data: student_id={student_id}, amount={amount}, payment_mode={payment_mode}, payment_date={payment_date}")
             
             # Validate inputs
             if not student_id:
@@ -751,6 +755,23 @@ def submit_fee_payment(request):
                 return JsonResponse({
                     'success': False,
                     'error': 'Payment mode is required'
+                }, status=400)
+            
+            if not payment_date:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Payment date is required'
+                }, status=400)
+            
+            # Parse payment_date string (YYYY-MM-DD format) to date object
+            try:
+                from datetime import datetime
+                payment_date_obj = datetime.strptime(payment_date, '%Y-%m-%d').date()
+                payment_date_formatted = payment_date_obj.strftime('%d-%m-%Y')
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid payment date format'
                 }, status=400)
             
             # Convert amount to Decimal
@@ -787,11 +808,12 @@ def submit_fee_payment(request):
                         'error': f'Payment amount (₹{amount}) cannot exceed remaining fees (₹{student.remaining_fees})'
                     }, status=400)
                 
-                # Create payment record
+                # Create payment record with user-selected payment date
                 payment = FeePayment.objects.create(
                     student=student,
                     amount=amount,
                     payment_mode=payment_mode,
+                    payment_date=payment_date_obj,
                     remarks=remarks,
                     total_fees_at_payment=student.total_fees,
                     paid_before_this=student.paid_fees,
@@ -817,8 +839,8 @@ def submit_fee_payment(request):
                 
                 receipt_data = {
                     'receipt_no': payment.receipt_no,
-                    'date': payment.payment_date.strftime('%d-%m-%Y'),
-                    'time': payment.payment_date.strftime('%I:%M %p'),
+                    'date': payment_date_formatted,
+                    'time': '',  # No time for DateField
                     'student_name': student.full_name,
                     'course': course_name,
                     'batch': batch_display,  # ✅ CORRECTED: Use batch_display
@@ -994,8 +1016,8 @@ def get_receipts(request):
                 'batch_display': batch_display,  # ✅ Fallback
                 'mobile': student.mobile_own,
                 'payment_mode': receipt.payment_mode,
-                'payment_date': receipt.payment_date.strftime('%Y-%m-%d'),
-                'payment_time': receipt.payment_date.strftime('%I:%M %p'),
+                'payment_date': str(receipt.payment_date),  # Convert DateField to string (YYYY-MM-DD)
+                'payment_time': '',  # No time for DateField
                 'paid_fees': float(receipt.amount),
                 'paid_before_this': float(receipt.paid_before_this),
                 'total_fees': float(student.total_fees),
@@ -1027,7 +1049,19 @@ def update_receipt(request, receipt_id):
         
         # Update only allowed fields
         if 'payment_date' in data:
-            payment.payment_date = data['payment_date']
+            # Parse date string if it comes in YYYY-MM-DD format
+            try:
+                from datetime import datetime
+                payment_date_str = data['payment_date']
+                if isinstance(payment_date_str, str):
+                    payment.payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d').date()
+                else:
+                    payment.payment_date = payment_date_str
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid payment date format'
+                }, status=400)
         
         if 'amount' in data or 'paid_fees' in data:
             old_amount = payment.amount
@@ -1177,7 +1211,7 @@ def export_receipts(request):
             ws.cell(row=row_num, column=2).value = payment.student.full_name
             ws.cell(row=row_num, column=3).value = payment.student.mobile_own
             ws.cell(row=row_num, column=4).value = course_name
-            ws.cell(row=row_num, column=5).value = payment.payment_date.strftime('%d-%m-%Y %I:%M %p')
+            ws.cell(row=row_num, column=5).value = payment.payment_date.strftime('%d-%m-%Y')
             ws.cell(row=row_num, column=6).value = payment.payment_mode
             ws.cell(row=row_num, column=7).value = float(payment.total_fees_at_payment)
             ws.cell(row=row_num, column=8).value = float(payment.paid_before_this)
@@ -1507,67 +1541,69 @@ def statistics_view(request):
     if selected_year:
         students = students.filter(admission_date__year=selected_year)
     
-    # Calculate total profit from StudentFinanceDetail table using same logic as student_finance_details view
-    total_profit = Decimal('0.00')
-    for student in students:
-        # Get or create finance detail record
-        finance_detail, created = StudentFinanceDetail.objects.get_or_create(
-            student=student,
-            defaults={
-                'first_installment': Decimal('0.00'),
-                'second_installment': Decimal('0.00'),
-                'third_installment': Decimal('0.00'),
-                'fees_paid_to_mkcl_1': Decimal('0.00'),
-                'fees_paid_to_mkcl_2': Decimal('0.00'),
-            }
-        )
+    # Helper function to calculate total profit
+    def calculate_total_profit(student_queryset):
+        total = Decimal('0.00')
+        for student in student_queryset:
+            # Get or create finance detail record
+            finance_detail, created = StudentFinanceDetail.objects.get_or_create(
+                student=student,
+                defaults={
+                    'first_installment': Decimal('0.00'),
+                    'second_installment': Decimal('0.00'),
+                    'third_installment': Decimal('0.00'),
+                    'fees_paid_to_mkcl_1': Decimal('0.00'),
+                    'fees_paid_to_mkcl_2': Decimal('0.00'),
+                }
+            )
+            
+            # Calculate fees paid to MKCL - default to 0
+            mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
+            mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+            
+            mkcl_total = mkcl_1 + mkcl_2
+            
+            # Get fee payments for this student - ordered by payment_date (oldest first)
+            fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
+            
+            # Extract installment amounts from FeePayment records
+            first_inst = Decimal('0.00')
+            second_inst = Decimal('0.00')
+            third_inst = Decimal('0.00')
+            
+            if len(fee_payments) >= 1:
+                first_inst = fee_payments[0].amount
+            if len(fee_payments) >= 2:
+                second_inst = fee_payments[1].amount
+            if len(fee_payments) >= 3:
+                third_inst = fee_payments[2].amount
+            
+            # Calculate profit as (Total Fees Paid By Learner) - (Total Fees Paid to MKCL)
+            learner_total_paid = first_inst + second_inst + third_inst
+            profit = learner_total_paid - mkcl_total
+            total += profit
         
-        # Get course name for defaults logic
-        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
-        
-        # Calculate fees paid to MKCL with course-based defaults
-        mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
-        mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
-        
-        # Apply course-based defaults only if values are 0
-        if mkcl_1 == Decimal('0.00') or mkcl_1 is None:
-            if course_name == 'MS-CIT':
-                mkcl_1 = Decimal('1230.00')
-            else:
-                mkcl_1 = Decimal('500.00')
-        
-        if mkcl_2 == Decimal('0.00') or mkcl_2 is None:
-            if course_name == 'MS-CIT':
-                mkcl_2 = Decimal('570.00')
-            else:
-                mkcl_2 = Decimal('500.00')
-        
-        mkcl_total = mkcl_1 + mkcl_2
-        
-        # Get fee payments for this student - ordered by payment_date (oldest first)
-        fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
-        
-        # Extract installment amounts from FeePayment records
-        first_inst = Decimal('0.00')
-        second_inst = Decimal('0.00')
-        third_inst = Decimal('0.00')
-        
-        if len(fee_payments) >= 1:
-            first_inst = fee_payments[0].amount
-        if len(fee_payments) >= 2:
-            second_inst = fee_payments[1].amount
-        if len(fee_payments) >= 3:
-            third_inst = fee_payments[2].amount
-        
-        # Calculate profit as (Total Fees Paid By Learner) - (Total Fees Paid to MKCL)
-        learner_total_paid = first_inst + second_inst + third_inst
-        profit = learner_total_paid - mkcl_total
-        total_profit += profit
+        return total
+    
+    # Calculate total profit for selected year (or current year if no selection)
+    total_profit = calculate_total_profit(students)
+    
+    # Calculate total profit for all years
+    all_students = AdmittedStudent.objects.all()
+    total_profit_all_years = calculate_total_profit(all_students)
+    
+    # Get current year
+    current_year = datetime.now().year
+    current_year_students = AdmittedStudent.objects.filter(admission_date__year=current_year)
+    total_profit_current_year = calculate_total_profit(current_year_students)
     
     context = {
         'available_years': available_years,
         'selected_year': selected_year,
         'total_profit': total_profit,
+        'total_profit_current_year': total_profit_current_year,
+        'total_profit_all_years': total_profit_all_years,
+        'current_year': current_year,
         'total_admitted': students.count(),
         'student_count': students.count(),
     }
@@ -1616,22 +1652,9 @@ def student_finance_details(request):
         # Get course name for defaults logic
         course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
         
-        # Calculate fees paid to MKCL with course-based defaults
+        # Calculate fees paid to MKCL - default to 0
         mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
         mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
-        
-        # Apply course-based defaults only if values are 0
-        if mkcl_1 == Decimal('0.00') or mkcl_1 is None:
-            if course_name == 'MS-CIT':
-                mkcl_1 = Decimal('1230.00')
-            else:
-                mkcl_1 = Decimal('500.00')
-        
-        if mkcl_2 == Decimal('0.00') or mkcl_2 is None:
-            if course_name == 'MS-CIT':
-                mkcl_2 = Decimal('570.00')
-            else:
-                mkcl_2 = Decimal('500.00')
         
         mkcl_total = mkcl_1 + mkcl_2
         
@@ -1718,17 +1741,14 @@ def update_finance_detail(request):
             student = AdmittedStudent.objects.get(id=student_id)
             finance_detail, created = StudentFinanceDetail.objects.get_or_create(student=student)
             
-            # Update the appropriate field
-            if field == 'first_inst':
-                finance_detail.first_installment = value
-            elif field == 'second_inst':
-                finance_detail.second_installment = value
-            elif field == 'third_inst':
-                finance_detail.third_installment = value
-            elif field == 'mkcl_1':
+            # Only allow updates to MKCL fees (learner fees are read-only based on FeePayment records)
+            if field == 'mkcl_1':
                 finance_detail.fees_paid_to_mkcl_1 = value
             elif field == 'mkcl_2':
                 finance_detail.fees_paid_to_mkcl_2 = value
+            else:
+                # Reject attempts to update learner fees (first_inst, second_inst, third_inst)
+                return JsonResponse({'success': False, 'error': 'Cannot update learner fees. These are based on actual payment records.'})
             
             finance_detail.save()
             
@@ -1914,3 +1934,52 @@ def month_wise_admission(request):
     }
     
     return render(request, 'core/month_wise_admission.html', context)
+
+
+# ================= SALES AND SERVICES VIEWS =================
+
+@login_required
+def sales_services_dashboard(request):
+    """Sales and Services Dashboard"""
+    context = {
+        'active_page': 'sales_dashboard',
+    }
+    return render(request, 'core/sales_dashboard.html', context)
+
+
+@login_required
+def sales_items(request):
+    """Sales Items Management"""
+    items = SalesItem.objects.all()
+    context = {
+        'active_page': 'sales_items',
+        'items': items,
+    }
+    return render(request, 'core/sales_items.html', context)
+
+
+@login_required
+def add_sales_item(request):
+    """Add new sales item"""
+    if request.method == 'POST':
+        item_name = request.POST.get('item_name')
+        quantity = request.POST.get('quantity')
+        purchase_rate = request.POST.get('purchase_rate')
+        purchased_from = request.POST.get('purchased_from')
+        total_amount = request.POST.get('total_amount')
+        
+        try:
+            SalesItem.objects.create(
+                item_name=item_name,
+                quantity=int(quantity),
+                purchase_rate=Decimal(purchase_rate),
+                purchased_from=purchased_from,
+                total_amount=Decimal(total_amount)
+            )
+            messages.success(request, f"Item '{item_name}' added successfully!")
+        except Exception as e:
+            messages.error(request, f"Error adding item: {str(e)}")
+        
+        return redirect('sales_items')
+    
+    return redirect('sales_items')

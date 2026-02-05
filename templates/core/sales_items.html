@@ -1,0 +1,400 @@
+{% extends 'base/sales_base.html' %}
+{% load static %}
+
+{% block title %}Sales Items{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">📦</div>
+            <div>
+                <h1 class="page-title">Sales Items</h1>
+                <p class="page-subtitle">Manage all your sales items</p>
+            </div>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-primary" id="add-item-btn">➕ Add New Item</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Add Item Modal -->
+<div id="add-item-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New Item</h2>
+            <button class="modal-close" id="close-modal">&times;</button>
+        </div>
+        
+        <form id="add-item-form" method="post" action="{% url 'add_sales_item' %}">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="item-name">Item Name *</label>
+                <input type="text" id="item-name" name="item_name" required placeholder="Enter item name" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="quantity">Quantity *</label>
+                <input type="number" id="quantity" name="quantity" required placeholder="Enter quantity" class="form-control" step="1" min="1">
+            </div>
+
+            <div class="form-group">
+                <label for="purchase-rate">Purchase Rate (per item) *</label>
+                <input type="number" id="purchase-rate" name="purchase_rate" required placeholder="Enter purchase rate" class="form-control" step="0.01" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="purchased-from">Purchased From *</label>
+                <input type="text" id="purchased-from" name="purchased_from" required placeholder="Enter vendor/supplier name" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="total-amount">Total Amount (Auto-calculated) *</label>
+                <input type="number" id="total-amount" name="total_amount" readonly placeholder="Auto-calculated" class="form-control" step="0.01">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success">✅ Add Item</button>
+                <button type="button" class="btn btn-cancel" id="cancel-btn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Items Table -->
+<div class="content-container">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>S. No.</th>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
+                    <th>Purchase Rate</th>
+                    <th>Purchased From</th>
+                    <th>Total Amount</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if items %}
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.item_name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>₹ {{ item.purchase_rate }}</td>
+                        <td>{{ item.purchased_from }}</td>
+                        <td><strong>₹ {{ item.total_amount }}</strong></td>
+                        <td>
+                            <button class="btn btn-sm btn-edit" data-id="{{ item.id }}">✏️ Edit</button>
+                            <button class="btn btn-sm btn-delete" data-id="{{ item.id }}">🗑️ Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center" style="padding: 40px; color: #666;">
+                        No items found. Click "Add New Item" to get started.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.page-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.page-icon {
+    font-size: 40px;
+}
+
+.page-title {
+    font-size: 28px;
+    margin: 0;
+    font-weight: 600;
+}
+
+.page-subtitle {
+    color: rgba(255,255,255,0.8);
+    margin: 5px 0 0 0;
+    font-size: 14px;
+}
+
+.page-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.content-container {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-success {
+    background: #27ae60;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #229954;
+}
+
+.btn-cancel {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #7f8c8d;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #2c3e50;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #7f8c8d;
+}
+
+.modal-close:hover {
+    color: #2c3e50;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.form-actions .btn {
+    flex: 1;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.data-table th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.data-table td {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.data-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.text-center {
+    text-align: center;
+}
+</style>
+
+<script>
+// Get modal elements
+const modal = document.getElementById('add-item-modal');
+const addBtn = document.getElementById('add-item-btn');
+const closeBtn = document.getElementById('close-modal');
+const cancelBtn = document.getElementById('cancel-btn');
+const form = document.getElementById('add-item-form');
+
+// Get form inputs
+const quantityInput = document.getElementById('quantity');
+const purchaseRateInput = document.getElementById('purchase-rate');
+const totalAmountInput = document.getElementById('total-amount');
+
+// Open modal
+addBtn.addEventListener('click', () => {
+    modal.style.display = 'flex';
+});
+
+// Close modal
+closeBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+});
+
+cancelBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+});
+
+// Close modal when clicking outside
+modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+        modal.style.display = 'none';
+    }
+});
+
+// Auto-calculate total amount
+function calculateTotal() {
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const purchaseRate = parseFloat(purchaseRateInput.value) || 0;
+    const total = (quantity * purchaseRate).toFixed(2);
+    totalAmountInput.value = total;
+}
+
+quantityInput.addEventListener('input', calculateTotal);
+purchaseRateInput.addEventListener('input', calculateTotal);
+
+// Handle form submission
+form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    // Form will submit to the backend
+    form.submit();
+});
+</script>
+
+{% endblock %}

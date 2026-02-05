@@ -1,0 +1,19 @@
+<nav class="sidebar">
+    <a href="{% url 'sales_services_dashboard' %}"
+       class="menu-item {% if active_page == 'sales_dashboard' %}active{% endif %}">
+        🏠 Dashboard
+    </a>
+
+    <a href="{% url 'sales_items' %}"
+       class="menu-item {% if active_page == 'sales_items' %}active{% endif %}">
+        📦 Items
+    </a>
+
+    <!-- Logout as a form to handle POST request properly -->
+    <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit" class="menu-item logout-item">
+            🚪 Logout
+        </button>
+    </form>
+</nav>

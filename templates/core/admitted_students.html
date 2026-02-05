@@ -297,11 +297,26 @@
                             <label class="photo-label">Student Photo</label>
                             <div class="modal-photo">
                                 <img id="modalPhoto" src="" alt="Student Photo">
+                                <video id="cameraVideoModal" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; background: #000;" playsinline autoplay muted></video>
+                                <canvas id="photoCameraCanvas" style="display: none;"></canvas>
                             </div>
                             <input type="file" id="photoInput" name="photo" accept="image/*" style="display:none;">
-                            <button type="button" class="change-photo-btn" onclick="document.getElementById('photoInput').click()">
-                                📷 Change Photo
-                            </button>
+                            <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                                <button type="button" class="change-photo-btn" onclick="document.getElementById('photoInput').click()">
+                                    � Change Photo
+                                </button>
+                                <button type="button" class="change-photo-btn" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);" id="cameraBtnModal" onclick="openCameraModal()">
+                                    �📷 Take Photo
+                                </button>
+                            </div>
+                            <div id="cameraControlsModal" style="display: none; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                                <button type="button" class="change-photo-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);" id="captureBtnModal" onclick="capturePhotoModal()">
+                                    ✓ Capture
+                                </button>
+                                <button type="button" class="change-photo-btn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);" id="cancelCameraBtnModal" onclick="cancelCameraModal()">
+                                    ✕ Cancel
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Quick Fields Below Photo -->
@@ -455,7 +470,7 @@
                         </div>
                         <div class="form-group">
                             <label>Paid Fees (₹)</label>
-                            <input type="number" id="paidFees" name="paid_fees" step="0.01" min="0" value="0">
+                            <input type="number" id="paidFees" name="paid_fees" step="0.01" min="0" value="0" readonly class="readonly">
                         </div>
                         <div class="form-group">
                             <label>Remaining Fees (₹)</label>

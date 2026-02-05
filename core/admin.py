@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment, StudentFinanceDetail
+from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment, StudentFinanceDetail, SalesItem
 
 
 class BasicAdmin(admin.ModelAdmin):
@@ -34,4 +34,9 @@ class FeePaymentAdmin(BasicAdmin):
 
 @admin.register(StudentFinanceDetail)
 class StudentFinanceDetailAdmin(BasicAdmin):
+    pass
+
+
+@admin.register(SalesItem)
+class SalesItemAdmin(BasicAdmin):
     pass

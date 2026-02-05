@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Dashboard{% endblock %}</title>
+    <title>{% block title %}Sales and Services{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Base CSS -->
@@ -15,9 +15,9 @@
 <!-- 🔹 TOP NAVBAR -->
 <header class="top-header">
     <div class="header-title-section">
-        <h1>🖥️ Shri Samarth Computer Education</h1>
+        <h1>🛒 Shri Samarth Sales and Services</h1>
         <div class="module-buttons">
-            <a href="{% url 'sales_services_dashboard' %}" class="module-btn sales-btn">🛒 Sales and Services</a>
+            <a href="{% url 'dashboard' %}" class="module-btn education-btn">🖥️ Computer Education</a>
         </div>
     </div>
 
@@ -46,7 +46,7 @@
 
     <!-- SIDEBAR -->
     {% block sidebar %}
-        {% include 'includes/sidebar.html' %}
+        {% include 'includes/sales_sidebar.html' %}
     {% endblock %}
 
     <!-- PAGE CONTENT -->

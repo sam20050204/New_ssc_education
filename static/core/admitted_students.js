@@ -300,15 +300,11 @@ function validatePinCode(input) {
 // Document ready
 document.addEventListener('DOMContentLoaded', function() {
     
-    // Fees calculation
+    // Fees calculation - only on totalFees change (paidFees is readonly)
     const totalFeesInput = document.getElementById('totalFees');
-    const paidFeesInput = document.getElementById('paidFees');
     
     if (totalFeesInput) {
         totalFeesInput.addEventListener('input', calculateRemainingFees);
-    }
-    if (paidFeesInput) {
-        paidFeesInput.addEventListener('input', calculateRemainingFees);
     }
     
     // Auto-generate full name
@@ -599,6 +595,130 @@ function deleteSelectedStudents() {
         deleteBtn.innerHTML = originalText;
         deleteBtn.disabled = false;
     });
+}
+
+// ===================== CAMERA FUNCTIONALITY FOR ADMITTED STUDENTS =====================
+let cameraStreamModal = null;
+
+function openCameraModal() {
+    const cameraBtnModal = document.getElementById('cameraBtnModal');
+    const cameraControlsModal = document.getElementById('cameraControlsModal');
+    const cameraVideoModal = document.getElementById('cameraVideoModal');
+    const modalPhoto = document.getElementById('modalPhoto');
+    
+    cameraBtnModal.style.display = 'none';
+    cameraControlsModal.style.display = 'flex';
+    cameraVideoModal.style.display = 'block';
+    modalPhoto.style.display = 'none';
+    
+    navigator.mediaDevices.getUserMedia({
+        video: { 
+            facingMode: 'user',
+            width: { min: 320, ideal: 640, max: 1280 },
+            height: { min: 240, ideal: 480, max: 720 }
+        }
+    }).then(stream => {
+        cameraStreamModal = stream;
+        cameraVideoModal.srcObject = stream;
+        cameraVideoModal.onloadedmetadata = function() {
+            cameraVideoModal.play();
+        };
+        console.log('Camera opened successfully');
+    }).catch(error => {
+        console.error('Camera error:', error);
+        alert('❌ Unable to access camera. Please check permissions.\n\n' + error.message);
+        cameraBtnModal.style.display = 'block';
+        cameraControlsModal.style.display = 'none';
+        cameraVideoModal.style.display = 'none';
+        modalPhoto.style.display = 'block';
+    });
+}
+
+function capturePhotoModal() {
+    const cameraVideoModal = document.getElementById('cameraVideoModal');
+    const photoCameraCanvas = document.getElementById('photoCameraCanvas');
+    const photoInput = document.getElementById('photoInput');
+    const modalPhoto = document.getElementById('modalPhoto');
+    const cameraBtnModal = document.getElementById('cameraBtnModal');
+    const cameraControlsModal = document.getElementById('cameraControlsModal');
+    
+    // Draw video frame to canvas
+    const context = photoCameraCanvas.getContext('2d');
+    photoCameraCanvas.width = cameraVideoModal.videoWidth;
+    photoCameraCanvas.height = cameraVideoModal.videoHeight;
+    context.drawImage(cameraVideoModal, 0, 0);
+    
+    // Stop camera stream
+    if (cameraStreamModal) {
+        cameraStreamModal.getTracks().forEach(track => track.stop());
+        cameraStreamModal = null;
+    }
+    
+    // Resize and optimize captured photo
+    const maxWidth = 600;
+    const maxHeight = 800;
+    let newWidth = photoCameraCanvas.width;
+    let newHeight = photoCameraCanvas.height;
+    
+    if (newWidth > maxWidth || newHeight > maxHeight) {
+        const aspectRatio = photoCameraCanvas.width / photoCameraCanvas.height;
+        if (newWidth > maxWidth) {
+            newWidth = maxWidth;
+            newHeight = newWidth / aspectRatio;
+        }
+        if (newHeight > maxHeight) {
+            newHeight = maxHeight;
+            newWidth = newHeight * aspectRatio;
+        }
+    }
+    
+    // Create resized canvas
+    const resizeCanvas = document.createElement('canvas');
+    resizeCanvas.width = newWidth;
+    resizeCanvas.height = newHeight;
+    const resizeContext = resizeCanvas.getContext('2d');
+    resizeContext.drawImage(photoCameraCanvas, 0, 0, newWidth, newHeight);
+    
+    // Convert to blob and create file
+    resizeCanvas.toBlob(function(blob) {
+        const file = new File([blob], 'camera_photo.jpg', { type: 'image/jpeg' });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        photoInput.files = dataTransfer.files;
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            modalPhoto.src = e.target.result;
+            modalPhoto.style.display = 'block';
+        };
+        reader.readAsDataURL(blob);
+        
+        // Reset UI
+        cameraVideoModal.style.display = 'none';
+        cameraControlsModal.style.display = 'none';
+        cameraBtnModal.style.display = 'block';
+        
+        alert('✅ Photo captured successfully!');
+    }, 'image/jpeg', 0.95);
+}
+
+function cancelCameraModal() {
+    const cameraVideoModal = document.getElementById('cameraVideoModal');
+    const cameraBtnModal = document.getElementById('cameraBtnModal');
+    const cameraControlsModal = document.getElementById('cameraControlsModal');
+    const modalPhoto = document.getElementById('modalPhoto');
+    
+    if (cameraStreamModal) {
+        cameraStreamModal.getTracks().forEach(track => track.stop());
+        cameraStreamModal = null;
+    }
+    
+    cameraVideoModal.srcObject = null;
+    cameraVideoModal.style.display = 'none';
+    cameraControlsModal.style.display = 'none';
+    cameraBtnModal.style.display = 'block';
+    modalPhoto.style.display = 'block';
 }
 
 // ===================== FIELD SYNC FUNCTIONS =====================

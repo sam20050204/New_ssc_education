@@ -76,26 +76,47 @@ function updateField(studentId, field, value) {
 
 // Real-time update function for Excel-like experience
 function updateFieldRealTime(studentId, field, value) {
-    // Update MKCL total in real-time (before saving to server)
+    // Update MKCL total and profit in real-time (before saving to server)
     if (field === 'mkcl_1' || field === 'mkcl_2') {
-        // Get both MKCL input values
+        // Get the row for this student
         const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
         if (row) {
-            const inputs = row.querySelectorAll('.editable-cell input');
-            let mkcl1 = 0, mkcl2 = 0;
-            
             // Find MKCL 1 and MKCL 2 inputs (last two editable cells before readonly MKCL Total)
             const editableCells = row.querySelectorAll('.editable-cell');
-            if (editableCells.length >= 8) {
-                mkcl1 = parseFloat(editableCells[5].querySelector('input').value) || 0;
-                mkcl2 = parseFloat(editableCells[6].querySelector('input').value) || 0;
+            let mkcl1 = 0, mkcl2 = 0;
+            
+            if (editableCells.length >= 2) {
+                mkcl1 = parseFloat(editableCells[editableCells.length - 2].querySelector('input').value) || 0;
+                mkcl2 = parseFloat(editableCells[editableCells.length - 1].querySelector('input').value) || 0;
             }
             
-            // Calculate and display MKCL total immediately
+            // Calculate MKCL total immediately
             const mkclTotal = mkcl1 + mkcl2;
             const mkclTotalCell = document.querySelector(`.mkcl-total-${studentId}`);
             if (mkclTotalCell) {
                 mkclTotalCell.textContent = mkclTotal.toFixed(2);
+            }
+            
+            // Calculate profit: get the total paid from readonly cell
+            // Find the "Total Paid" cell (4th readonly cell in Fees Paid By Learner section)
+            const readonlyCells = row.querySelectorAll('.readonly-cell');
+            if (readonlyCells.length >= 4) {
+                // Total Paid is in the 4th readonly cell (after first_inst, second_inst, third_inst)
+                const totalPaidText = readonlyCells[3].textContent.trim();
+                const totalPaid = parseFloat(totalPaidText) || 0;
+                
+                // Calculate profit: Total Paid - MKCL Total
+                const profit = totalPaid - mkclTotal;
+                
+                // Update profit cell
+                const profitCell = document.querySelector(`.profit-${studentId}`);
+                if (profitCell) {
+                    profitCell.textContent = '₹ ' + profit.toFixed(2);
+                    
+                    // Update profit color based on positive/negative
+                    profitCell.classList.remove('profit-positive', 'profit-negative');
+                    profitCell.classList.add(profit >= 0 ? 'profit-positive' : 'profit-negative');
+                }
             }
         }
     }
