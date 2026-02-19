@@ -576,7 +576,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'core/enquiries.js' %}"></script>
+<script src="{% static 'core/enquiries.js' %}?v={{ STATIC_VERSION }}"></script>
 <script>
 // Get CSRF token
 function getCookie(name) {

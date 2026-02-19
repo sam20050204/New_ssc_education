@@ -132,13 +132,6 @@ class AdmittedStudent(models.Model):
             return (self.paid_fees / self.total_fees) * Decimal('100')
         return Decimal('0')
     
-    @property
-    def batch_display(self):
-        """Return formatted batch name"""
-        if self.batch_month and self.batch_year:
-            return f"{self.batch_month} {self.batch_year}"
-        return "Not Assigned"
-    
     class Meta:
         ordering = ['-admission_date']
         verbose_name = 'Admitted Student'
@@ -162,7 +155,7 @@ class Student(models.Model):
     
     # Course Information
     course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True)
-    admission_date = models.DateField()
+    admission_date = models.DateField(default=date.today, help_text="Date of admission")
     
     # Address
     address = models.TextField(blank=True, null=True)

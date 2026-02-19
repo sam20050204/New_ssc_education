@@ -34,6 +34,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.CacheControlMiddleware',  # Cache control for all responses
+    'core.middleware.NoCacheMiddleware',  # No-cache for sensitive pages
 ]
 
 
@@ -57,6 +59,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.static_version',  # Custom context processor for cache busting
             ],
         },
     },
@@ -125,6 +128,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Version tag for cache busting - increment when deploying
+STATIC_VERSION = '1.0.0'
 
 
 # =====================

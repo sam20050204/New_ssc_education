@@ -46,7 +46,9 @@
     </div>
 
     <div class="stat-card">
-        <div class="stat-icon">🎓</div>
+        <div class="stat-icon">
+            <img src="{% static 'logos/mscit-logo.png' %}" alt="MSCIT" class="mscit-logo-img">
+        </div>
         <div class="stat-number">{{ mscit_count|default:0 }}</div>
         <div class="stat-label">MSCIT Students</div>
         {% if selected_year %}
@@ -66,23 +68,23 @@
 
 <div class="charts-container">
     <div class="chart-container">
-        <h3>Course Distribution</h3>
-        <canvas id="pieChart"></canvas>
+        <h3>Student Admissions by Course (Monthly)</h3>
+        <canvas id="clusteredBarChart"></canvas>
     </div>
 
     <div class="chart-container">
-        <h3>Monthly Admissions</h3>
-        <canvas id="barChart"></canvas>
+        <h3>Total Monthly Admissions</h3>
+        <canvas id="monthlyTotalChart"></canvas>
     </div>
 </div>
 
 <!-- Pass data to JavaScript -->
 <script>
-    // Course distribution data from Django
+    // Course distribution data from Django (kept for reference if needed)
     const courseDistribution = {{ course_distribution|safe }};
     
-    // Monthly admissions data from Django
-    const monthlyData = {{ monthly_data|safe }};
+    // Monthly admissions by course data from Django
+    const monthlyByCourse = {{ monthly_by_course|safe }};
     
     // Selected year (if any)
     const selectedYear = "{{ selected_year|default:'' }}";
@@ -92,5 +94,5 @@
 
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-<script src="{% static 'core/dashboard.js' %}"></script>
+<script src="{% static 'core/dashboard.js' %}?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

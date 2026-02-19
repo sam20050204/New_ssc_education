@@ -11,29 +11,38 @@
 
     <a href="{% url 'enquiry_list' %}"
        class="menu-item {% if active_page == 'enquiries' %}active{% endif %}">
-        � Enquiries
+        🔍 Enquiries
     </a>
 
-    <a href="{% url 'new_admission' %}"
-       class="menu-item {% if active_page == 'new_admission' %}active{% endif %}">
-        ➕ New Admission
-    </a>
-
-    <a href="{% url 'admitted_students' %}"
-       class="menu-item {% if active_page == 'admitted_students' %}active{% endif %}">
-        👨‍🎓 Students
-    </a>
-
-    <a href="{% url 'fees_payment' %}"
-       class="menu-item {% if active_page == 'fees_payment' %}active{% endif %}">
-        � Fees Payment
-    </a>
-
-    <!-- Receipts Link -->
-    <a href="{% url 'receipts_view' %}"
-       class="menu-item {% if active_page == 'receipts' %}active{% endif %}">
-        📄 Receipts
-    </a>
+    <!-- Students Section with Submenu -->
+    <div class="menu-section">
+        <button class="menu-item menu-toggle" onclick="toggleStudentsMenu(this)">
+            👨‍🎓 Students
+            <span class="toggle-icon">▶</span>
+        </button>
+        <div class="submenu">
+            <a href="{% url 'new_admission' %}"
+               class="submenu-item {% if active_page == 'new_admission' %}active{% endif %}">
+                ➕ New Admission
+            </a>
+            <a href="{% url 'admitted_students' %}"
+               class="submenu-item {% if active_page == 'admitted_students' %}active{% endif %}">
+                👥 All Students
+            </a>
+            <a href="{% url 'fees_payment' %}"
+               class="submenu-item {% if active_page == 'fees_payment' %}active{% endif %}">
+                💳 Fees Payment
+            </a>
+            <a href="{% url 'receipts_view' %}"
+               class="submenu-item {% if active_page == 'receipts' %}active{% endif %}">
+                📄 Receipts
+            </a>
+            <a href="{% url 'payment_tracking' %}"
+               class="submenu-item {% if active_page == 'payment_tracking' %}active{% endif %}">
+                💰 Payment Tracking
+            </a>
+        </div>
+    </div>
 
     <!-- Database Backup Management -->
     <a href="{% url 'backup_page' %}"
@@ -50,3 +59,25 @@
     </form>
 </nav>
 
+<script>
+function toggleStudentsMenu(button) {
+    const submenu = button.nextElementSibling;
+    const icon = button.querySelector('.toggle-icon');
+    
+    submenu.classList.toggle('active');
+    icon.classList.toggle('rotated');
+}
+
+// On page load, expand Students menu if we're on a student-related page
+document.addEventListener('DOMContentLoaded', function() {
+    const activeSubmenuItem = document.querySelector('.submenu-item.active');
+    if (activeSubmenuItem) {
+        const submenu = activeSubmenuItem.closest('.submenu');
+        const button = submenu.previousElementSibling;
+        
+        // Keep the submenu expanded
+        submenu.classList.add('active');
+        button.querySelector('.toggle-icon').classList.add('rotated');
+    }
+});
+</script>

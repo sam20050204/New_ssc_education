@@ -15,7 +15,7 @@ import csv
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from io import BytesIO
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 import json
 import shutil
@@ -33,15 +33,37 @@ def custom_logout(request):
 # ================= HOME PAGE =================
 def home(request):
     if request.method == "POST":
-        name = request.POST.get("name")
-        mobile = request.POST.get("mobile")
-        education = request.POST.get("education")
-        course = request.POST.get("course")
-        custom_course = request.POST.get("other_course", "")
-        address = request.POST.get("address", "")
-        city = request.POST.get("city", "")
-        taluka = request.POST.get("taluka", "")
-        district = request.POST.get("district", "")
+        name = request.POST.get("name", "").strip()
+        mobile = request.POST.get("mobile", "").strip()
+        education = request.POST.get("education", "").strip()
+        course = request.POST.get("course", "").strip()
+        custom_course = request.POST.get("other_course", "").strip()
+        address = request.POST.get("address", "").strip()
+        city = request.POST.get("city", "").strip()
+        taluka = request.POST.get("taluka", "").strip()
+        district = request.POST.get("district", "").strip()
+
+        # Validate required fields
+        if not name or not mobile or not education or not course:
+            messages.error(request, "❌ Please fill all required fields (Name, Mobile, Education, Course)!")
+            return redirect("home")
+        
+        # Validate mobile number (10 digits)
+        if len(mobile) != 10 or not mobile.isdigit():
+            messages.error(request, "❌ Mobile number must be exactly 10 digits!")
+            return redirect("home")
+        
+        # Check for duplicate enquiry (within last 5 minutes)
+        five_minutes_ago = timezone.now() - timedelta(minutes=5)
+        duplicate = Enquiry.objects.filter(
+            name__iexact=name,
+            mobile=mobile,
+            created_at__gte=five_minutes_ago
+        ).exists()
+        
+        if duplicate:
+            messages.warning(request, "⚠️ Similar enquiry already submitted recently!")
+            return redirect("home")
 
         Enquiry.objects.create(
             name=name,
@@ -55,7 +77,7 @@ def home(request):
             district=district
         )
 
-        messages.success(request, "Enquiry submitted successfully!")
+        messages.success(request, "✅ Enquiry submitted successfully!")
         return redirect("home")
 
     all_courses = Course.objects.all().order_by('name')
@@ -96,22 +118,35 @@ def dashboard(request):
         course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
         course_distribution[course_name] = course_distribution.get(course_name, 0) + 1
     
-    monthly_data = {str(i): 0 for i in range(1, 13)}
-    
+    # Prepare data for clustered bar chart: admissions by course for each month
     if selected_year:
         year_students = AdmittedStudent.objects.filter(admission_date__year=selected_year)
     else:
         current_year = datetime.now().year
         year_students = AdmittedStudent.objects.filter(admission_date__year=current_year)
     
+    # Get unique courses
+    unique_courses = set()
     for student in year_students:
-        # Handle None admission_date
+        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+        unique_courses.add(course_name)
+    unique_courses = sorted(list(unique_courses))
+    
+    # Create monthly data by course
+    monthly_by_course = {}
+    for course in unique_courses:
+        monthly_by_course[course] = {str(i): 0 for i in range(1, 13)}
+    
+    # Populate with actual data
+    for student in year_students:
         if student.admission_date:
+            course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
             month = str(student.admission_date.month)
-            monthly_data[month] = monthly_data.get(month, 0) + 1
+            if course_name in monthly_by_course:
+                monthly_by_course[course_name][month] += 1
     
     course_distribution_json = json.dumps(course_distribution)
-    monthly_data_json = json.dumps(monthly_data)
+    monthly_by_course_json = json.dumps(monthly_by_course)
     
     context = {
         "enquiry_count": enquiry_count,
@@ -121,7 +156,7 @@ def dashboard(request):
         "selected_year": selected_year,
         "active_page": "dashboard",
         "course_distribution": course_distribution_json,
-        "monthly_data": monthly_data_json,
+        "monthly_by_course": monthly_by_course_json,
     }
     
     return render(request, "core/dashboard.html", context)
@@ -393,11 +428,27 @@ def new_admission(request):
             photo = request.FILES.get("photo")
             
             # Get admission date from form
-            admission_date = request.POST.get("admission_date")
+            admission_date_str = request.POST.get("admission_date")
+            
+            # Validate and parse admission date
+            if not admission_date_str:
+                messages.error(request, "❌ Admission date is required!")
+                return redirect("new_admission")
+            
+            try:
+                admission_date = datetime.strptime(admission_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                messages.error(request, "❌ Invalid admission date format!")
+                return redirect("new_admission")
             
             # Get batch information
-            batch_month = request.POST.get("batch_month", "")
-            batch_year = request.POST.get("batch_year", "")
+            batch_month = request.POST.get("batch_month", "").strip()
+            batch_year = request.POST.get("batch_year", "").strip()
+            
+            # Validate required admission fields
+            if not full_name or not course or not date_of_birth or not mobile_own:
+                messages.error(request, "❌ Please fill all required fields!")
+                return redirect("new_admission")
             
             admission = AdmittedStudent.objects.create(
                 course=course,
@@ -1112,6 +1163,8 @@ def update_receipt(request, receipt_id):
 @login_required
 def delete_receipt(request, receipt_id):
     """API endpoint to delete a receipt"""
+    from datetime import date
+    
     if request.method != 'POST':
         return JsonResponse({
             'success': False,
@@ -1125,6 +1178,10 @@ def delete_receipt(request, receipt_id):
         receipt_no = payment.receipt_no
         
         with transaction.atomic():
+            # Ensure admission_date is set before saving
+            if not student.admission_date:
+                student.admission_date = date.today()
+            
             student.paid_fees = max(0, student.paid_fees - payment_amount)
             student.save()
             payment.delete()
@@ -1772,7 +1829,10 @@ def update_finance_detail(request):
 @login_required
 def month_wise_admission(request):
     """Month wise admission details view"""
-    selected_year = request.GET.get('year', '')
+    from datetime import datetime
+    
+    current_year = datetime.now().year
+    selected_year = request.GET.get('year', str(current_year))  # Default to current year
     
     # Get all years for filter
     years = AdmittedStudent.objects.dates('admission_date', 'year', order='DESC')
@@ -1827,9 +1887,8 @@ def month_wise_admission(request):
         if monthly_totals[month_key] == 0:
             monthly_totals[month_key] = '-'
     
-    # Calculate monthly profit data by course
-    # Logic: For each student, calculate their total profit = (all installments paid) - (MKCL fees)
-    # Then allocate that profit proportionally to the months when installments were paid
+    # Calculate monthly profit data by course using StudentFinanceDetail
+    # This takes the total profit from each student's finance detail and adds it up by course and admission month
     monthly_profit_data = []
     profit_monthly_totals = {month: Decimal('0.00') for month in months}
     profit_grand_total = Decimal('0.00')
@@ -1839,67 +1898,27 @@ def month_wise_admission(request):
         course_profit_total = Decimal('0.00')
         
         for month_num, month_key in enumerate(months, 1):
-            # Get all students for this course
+            # Get all students for this course admitted in this month
             course_students = students.filter(
+                admission_date__month=month_num,
+                admission_date__year=int(selected_year) if selected_year else datetime.now().year
+            ).filter(
                 Q(course=course) | Q(custom_course=course)
             )
             
-            # Calculate profit for this month from FeePayment records
+            # Sum the profit from StudentFinanceDetail for these students
             month_profit = Decimal('0.00')
             
             for student in course_students:
-                # Get ALL fee payments for this student
-                all_fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
-                
-                if not all_fee_payments.exists():
-                    continue
-                
-                # Calculate total profit for this student (same as student_finance_details view)
-                # Get or create finance detail to get MKCL fees
-                finance_detail, _ = StudentFinanceDetail.objects.get_or_create(
-                    student=student,
-                    defaults={
-                        'fees_paid_to_mkcl_1': Decimal('0.00'),
-                        'fees_paid_to_mkcl_2': Decimal('0.00'),
-                    }
-                )
-                
-                # Get course name for MKCL defaults
-                course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
-                
-                # Get MKCL fees with defaults (same logic as student_finance_details)
-                mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
-                mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
-                
-                if mkcl_1 == Decimal('0.00'):
-                    mkcl_1 = Decimal('1230.00') if course_name == 'MS-CIT' else Decimal('500.00')
-                
-                if mkcl_2 == Decimal('0.00'):
-                    mkcl_2 = Decimal('570.00') if course_name == 'MS-CIT' else Decimal('500.00')
-                
-                mkcl_total = mkcl_1 + mkcl_2
-                
-                # Calculate total fees paid (sum of all installments)
-                total_fees_paid = all_fee_payments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-                
-                # Calculate total profit = total fees paid - MKCL fees
-                total_profit_student = total_fees_paid - mkcl_total
-                
-                # Now allocate this profit proportionally based on which payments were made in this month
-                # Get payments made in this specific month
-                payments_in_month = all_fee_payments.filter(payment_date__month=month_num)
-                
-                if selected_year:
-                    payments_in_month = payments_in_month.filter(payment_date__year=int(selected_year))
-                
-                if payments_in_month.exists():
-                    # Calculate what portion of total fees were paid in this month
-                    fees_paid_this_month = payments_in_month.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-                    
-                    # Allocate profit proportionally
-                    if total_fees_paid > 0:
-                        profit_this_month = (fees_paid_this_month / total_fees_paid) * total_profit_student
-                        month_profit += profit_this_month
+                # Get the finance detail for this student
+                try:
+                    finance_detail = StudentFinanceDetail.objects.get(student=student)
+                    # Use the profit property which calculates: paid_fees - total_mkcl_fees
+                    student_profit = Decimal(str(finance_detail.profit or 0))
+                    month_profit += student_profit
+                except StudentFinanceDetail.DoesNotExist:
+                    # If no finance detail exists, calculate it manually
+                    pass
             
             # Format and store
             if month_profit > 0:
@@ -1968,6 +1987,7 @@ def add_sales_item(request):
         purchased_from = request.POST.get('purchased_from')
         total_amount = request.POST.get('total_amount')
         
+        
         try:
             SalesItem.objects.create(
                 item_name=item_name,
@@ -1983,3 +2003,127 @@ def add_sales_item(request):
         return redirect('sales_items')
     
     return redirect('sales_items')
+
+
+# ================= PAYMENT TRACKING PAGE =================
+@login_required(login_url='login')
+def payment_tracking(request):
+    """Show students whose 1st installment was paid before X days"""
+    from datetime import date, timedelta
+    
+    # Get number of days from request, default to 25
+    days = request.GET.get('days', '25')
+    try:
+        days = int(days)
+        if days < 1:
+            days = 25
+    except (ValueError, TypeError):
+        days = 25
+    
+    # Get date X days ago
+    cutoff_date = date.today() - timedelta(days=days)
+    
+    # Get all students who have at least one payment
+    students_with_payments = AdmittedStudent.objects.filter(
+        fee_payments__isnull=False
+    ).distinct()
+    
+    # Filter students where the earliest (1st) payment was before 25 days
+    eligible_students = []
+    for student in students_with_payments:
+        all_payments = student.fee_payments.all()
+        if not all_payments.exists():
+            continue
+            
+        first_payment = all_payments.order_by('payment_date').first()
+        if not first_payment or not first_payment.payment_date:
+            continue
+            
+        if first_payment.payment_date <= cutoff_date:
+            # Get payment summary
+            total_paid = all_payments.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
+            total_fees = student.total_fees or Decimal('0')
+            remaining = total_fees - total_paid
+            
+            # Only include students with remaining fees to pay
+            if remaining > 0:
+                last_payment = all_payments.order_by('-payment_date').first()
+                last_payment_date = last_payment.payment_date if last_payment and last_payment.payment_date else None
+                
+                eligible_students.append({
+                    'student': student,
+                    'first_payment_date': first_payment.payment_date,
+                    'total_paid': total_paid,
+                    'total_fees': total_fees,
+                    'remaining': remaining,
+                    'payment_count': all_payments.count(),
+                    'last_payment_date': last_payment_date,
+                })
+    
+    # Sort by first payment date
+    eligible_students = sorted(eligible_students, key=lambda x: x['first_payment_date'])
+    
+    # Pagination
+    paginator = Paginator(eligible_students, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'eligible_students': page_obj.object_list,
+        'total_count': len(eligible_students),
+        'days': days,
+        'cutoff_date': cutoff_date,
+        'active_page': 'payment_tracking',
+    }
+    
+    return render(request, 'core/payment_tracking.html', context)
+
+
+@login_required(login_url='login')
+def payment_tracking_student_detail(request, student_id):
+    """Get student details for modal display in payment tracking"""
+    student = get_object_or_404(AdmittedStudent, id=student_id)
+    
+    # Get payment summary
+    all_payments = student.fee_payments.all()
+    total_paid = all_payments.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
+    total_fees = student.total_fees or Decimal('0')
+    remaining = total_fees - total_paid
+    
+    # Get payment history
+    payments = all_payments.order_by('-payment_date').values(
+        'receipt_no', 'amount', 'payment_date', 'payment_mode'
+    )
+    
+    data = {
+        'id': student.id,
+        'full_name': student.full_name,
+        'student_name': student.student_name,
+        'father_name': student.father_name,
+        'mother_name': student.mother_name,
+        'date_of_birth': str(student.date_of_birth) if student.date_of_birth else '',
+        'gender': student.gender,
+        'marital_status': student.marital_status,
+        'mobile_own': student.mobile_own,
+        'parent_mobile': student.parent_mobile,
+        'address': student.address or '',
+        'city': student.city or '',
+        'tehsil_block': student.tehsil_block or '',
+        'district': student.district or '',
+        'pin_code': student.pin_code or '',
+        'educational_qualification': student.educational_qualification or '',
+        'course': student.course or '',
+        'batch_month': student.batch_month or '',
+        'batch_year': student.batch_year or '',
+        'admission_date': str(student.admission_date) if student.admission_date else '',
+        'photo': student.photo.url if student.photo else '',
+        'total_fees': str(total_fees),
+        'total_paid': str(total_paid),
+        'remaining': str(remaining),
+        'payment_count': all_payments.count(),
+        'payments': list(payments),
+    }
+    
+    return JsonResponse(data)
+

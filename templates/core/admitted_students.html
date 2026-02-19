@@ -289,7 +289,7 @@
                         <!-- Admission Date Display (Top Right) -->
                         <div class="admission-date-box">
                             <span class="admission-date-label">📅 Admission Date:</span>
-                            <span id="admissionDateDisplay" class="admission-date-value">-</span>
+                            <input type="date" id="admissionDateInput" name="admission_date" class="admission-date-input" required>
                         </div>
 
                         <!-- Photo -->
@@ -507,7 +507,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'core/admitted_students.js' %}"></script>
+<script src="{% static 'core/admitted_students.js' %}?v={{ STATIC_VERSION }}"></script>
 <script>
 // ===================== SELECTION AND DELETION FUNCTIONS =====================
 

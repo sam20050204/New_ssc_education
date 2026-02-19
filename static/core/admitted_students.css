@@ -456,6 +456,26 @@
     color: #0284c7;
 }
 
+.admission-date-input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0284c7;
+    border: 2px solid #0284c7;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.admission-date-input:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+    background: #f0f9ff;
+}
+
 .photo-section {
     display: flex;
     flex-direction: column;

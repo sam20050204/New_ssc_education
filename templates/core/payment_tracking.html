@@ -1,0 +1,304 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Payment Tracking{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/payment_tracking.css' %}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">💰</div>
+            <div>
+                <h1 class="page-title">Payment Tracking</h1>
+                <p class="page-subtitle">Track students by payment date</p>
+            </div>
+        </div>
+        <div class="page-actions">
+            <span class="badge badge-info">{{ total_count }} Students</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="tracking-container">
+    <!-- Days Filter Section -->
+    <div class="filter-section">
+        <div class="filter-card">
+            <h3>🔍 Filter by Days</h3>
+            <form method="get" class="filter-form">
+                <div class="filter-group">
+                    <label for="daysInput">Days since 1st payment:</label>
+                    <input 
+                        type="number" 
+                        id="daysInput" 
+                        name="days" 
+                        value="{{ days }}" 
+                        min="1" 
+                        max="365"
+                        placeholder="25"
+                    >
+                    <span class="days-info">Show students whose 1st payment was before <strong id="cutoffDisplay">{{ cutoff_date|date:"d-m-Y" }}</strong></span>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn-filter">
+                        🔎 Apply Filter
+                    </button>
+                    <a href="{% url 'payment_tracking' %}?days=25" class="btn-reset">
+                        🔄 Reset (25 days)
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if eligible_students %}
+    <div class="students-list">
+        <table class="tracking-table">
+            <thead>
+                <tr>
+                    <th>📝 Student Name</th>
+                    <th>📱 Mobile</th>
+                    <th>📅 1st Payment Date</th>
+                    <th>💳 Last Payment Date</th>
+                    <th>✅ Paid Installments</th>
+                    <th>💰 Amount Paid</th>
+                    <th>⏳ Remaining</th>
+                    <th>💯 Total Fees</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in eligible_students %}
+                <tr class="student-row">
+                    <td class="student-name-cell" onclick="openPaymentTrackingModal({{ item.student.id }})">
+                        <strong>{{ item.student.full_name }}</strong>
+                    </td>
+                    <td>{{ item.student.mobile_own }}</td>
+                    <td>
+                        <span class="date-badge">{{ item.first_payment_date|date:"d-m-Y" }}</span>
+                    </td>
+                    <td>
+                        {% if item.last_payment_date %}
+                            <span class="date-badge recent">{{ item.last_payment_date|date:"d-m-Y" }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-success">{{ item.payment_count }}</span>
+                    </td>
+                    <td class="amount-cell">
+                        <span class="amount-paid">₹{{ item.total_paid }}</span>
+                    </td>
+                    <td class="amount-cell">
+                        {% if item.remaining > 0 %}
+                            <span class="amount-remaining">₹{{ item.remaining }}</span>
+                        {% else %}
+                            <span class="amount-paid">Paid</span>
+                        {% endif %}
+                    </td>
+                    <td class="amount-cell">
+                        <span class="total-fees">₹{{ item.total_fees }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-wrapper">
+        <nav class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1" class="pagination-btn">« First</a>
+                <a href="?page={{ page_obj.previous_page_number }}" class="pagination-btn">‹ Previous</a>
+            {% endif %}
+
+            <span class="pagination-info">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="pagination-btn">Next ›</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}" class="pagination-btn">Last »</a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>No Students Found</h3>
+        <p>There are no students whose 1st installment was paid before 25 days ago.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Student Detail Modal -->
+<div id="paymentTrackingModal" class="modal" style="display: none;">
+    <div class="modal-content payment-tracking-modal">
+        <button class="modal-close" onclick="closePaymentTrackingModal()">✕</button>
+        
+        <div class="modal-header">
+            <h2>Student Payment Details</h2>
+        </div>
+
+        <div class="modal-body">
+            <div class="student-info-grid">
+                <!-- Photo Section -->
+                <div class="photo-section-tracking">
+                    <div class="modal-photo">
+                        <img id="trackingPhoto" src="" alt="Student Photo">
+                    </div>
+                </div>
+
+                <!-- Personal Information -->
+                <div class="info-section">
+                    <h3>👤 Personal Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Full Name</label>
+                            <span id="trackingFullName"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Student Name</label>
+                            <span id="trackingStudentName"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Father Name</label>
+                            <span id="trackingFatherName"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Mother Name</label>
+                            <span id="trackingMotherName"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Gender</label>
+                            <span id="trackingGender"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Date of Birth</label>
+                            <span id="trackingDOB"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="info-section">
+                    <h3>📞 Contact Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Mobile (Own)</label>
+                            <span id="trackingMobileOwn"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Parent Mobile</label>
+                            <span id="trackingParentMobile"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Address Information -->
+                <div class="info-section">
+                    <h3>🏠 Address Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Address</label>
+                            <span id="trackingAddress"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>City</label>
+                            <span id="trackingCity"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>District</label>
+                            <span id="trackingDistrict"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Pin Code</label>
+                            <span id="trackingPinCode"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Course Information -->
+                <div class="info-section">
+                    <h3>📚 Course Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Course</label>
+                            <span id="trackingCourse"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Batch</label>
+                            <span id="trackingBatch"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Admission Date</label>
+                            <span id="trackingAdmissionDate"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Summary -->
+                <div class="info-section payment-summary">
+                    <h3>💰 Payment Summary</h3>
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <div class="summary-label">Total Fees</div>
+                            <div class="summary-value" id="trackingTotalFees">₹0.00</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">Total Paid</div>
+                            <div class="summary-value paid" id="trackingTotalPaid">₹0.00</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">Remaining</div>
+                            <div class="summary-value remaining" id="trackingRemaining">₹0.00</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">Installments Paid</div>
+                            <div class="summary-value" id="trackingPaymentCount">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment History -->
+                <div class="info-section payment-history">
+                    <h3>📋 Payment History</h3>
+                    <div class="history-table-wrapper">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Receipt No.</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Mode</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentHistoryBody">
+                                <tr><td colspan="4" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closePaymentTrackingModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'core/payment_tracking.js' %}?v={{ STATIC_VERSION }}"></script>
+
+{% endblock %}

@@ -3,7 +3,7 @@
     flex: 1;
     padding: 0;
     margin: 0;
-    background: #f5f7fa;
+    background: transparent;
     display: flex;
     flex-direction: column;
 }
@@ -11,38 +11,39 @@
 /* Page Header - Purple Section */
 .page-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 16px;
-    padding: 0;
-    margin: 20px 40px 15px 40px;
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    padding: 15px 25px;
+    margin: 0 0 20px 0;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     overflow: hidden;
 }
 
 .page-header-content {
-    padding: 15px 35px;
+    padding: 10px 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 15px;
 }
 
 .page-title-wrapper {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 12px;
+    flex: 1;
 }
 
 .page-icon {
-    font-size: 48px;
+    font-size: 40px;
     background: rgba(255, 255, 255, 0.2);
-    padding: 15px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 10px;
     backdrop-filter: blur(10px);
 }
 
 .page-title {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 700;
     color: white;
     margin: 0;
@@ -50,71 +51,56 @@
 }
 
 .page-subtitle {
-    font-size: 15px;
+    font-size: 13px;
     color: rgba(255, 255, 255, 0.9);
-    margin: 5px 0 0 0;
+    margin: 2px 0 0 0;
     font-weight: 400;
 }
 
-/* Finance Details Styles - Content Section */
-.finance-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    margin-left: 0;
-    padding: 10px 30px;
-    background: transparent;
-    border-radius: 0;
-    box-shadow: none;
-    border: none;
-    border-bottom: 1px solid #e0e0e0;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
+/* Finance Header Actions in Header */
 .finance-header-actions {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
 .year-filter-form {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .year-filter-form label {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     font-weight: 500;
-    color: #333;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
 }
 
 .year-select {
-    padding: 8px 12px;
-    border: 1px solid #ddd;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 6px;
-    background: white;
+    background: rgba(255, 255, 255, 0.95);
     color: #333;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
 .year-select:hover {
-    border-color: #667eea;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .year-select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: white;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
 }
 
 .finance-header h2 {
@@ -136,22 +122,22 @@
 .total-profit-box {
     background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
     color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
+    padding: 8px 15px;
+    border-radius: 6px;
     text-align: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    min-width: 150px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    min-width: 130px;
 }
 
 .total-profit-box h3 {
-    margin: 0 0 4px 0;
-    font-size: 12px;
+    margin: 0 0 2px 0;
+    font-size: 11px;
     font-weight: 500;
     opacity: 0.95;
 }
 
 .total-profit-box .amount {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
     margin: 0;
 }
@@ -163,38 +149,54 @@
     margin-right: 0;
     margin-bottom: 40px;
     background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     width: 100%;
     height: auto;
     display: flex;
     flex-direction: column;
-    overflow: visible;
-    align-items: stretch;
+    overflow-x: visible;
     border: 1px solid #f0f0f0;
-    padding: 15px 30px 15px 30px;
+    padding: 0;
+    max-width: 100%;
 }
 
 .finance-table-container {
     flex: 1 1 auto;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
     background: white;
     width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    border-radius: 8px;
-    padding: 0 0 15px 0;
+    border-radius: 0;
+    padding: 15px 30px 15px 30px;
+    min-width: 0;
 }
 
-/* Hide scrollbar for all browsers */
+/* Custom Scrollbar Styling - Only on Table Container */
 .finance-table-container::-webkit-scrollbar {
-    display: none;
+    height: 8px;
 }
 
+.finance-table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.finance-table-container::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.finance-table-container::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+}
+
+/* Firefox Scrollbar - Only on Table Container */
 .finance-table-container {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    scrollbar-color: #667eea #f1f1f1;
+    scrollbar-width: thin;
 }
 
 .finance-table {
@@ -202,15 +204,16 @@
     border-collapse: collapse;
     font-size: 12px;
     background: white;
-    table-layout: fixed;
+    table-layout: auto;
+    min-width: max-content;
 }
 
 /* Allow columns to size responsively */
 .finance-table th,
 .finance-table td {
-    white-space: normal;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
+    white-space: nowrap;
+    word-wrap: normal;
+    overflow-wrap: normal;
     padding: 6px 2px;
 }
 
@@ -223,20 +226,22 @@
 }
 
 .finance-table thead th {
-    padding: 8px 2px;
+    padding: 6px 2px;
     text-align: center;
     font-weight: 600;
     font-size: 11px;
     border-right: 1px solid rgba(255,255,255,0.2);
-    white-space: normal;
-    word-break: break-word;
-    line-height: 1.2;
+    white-space: nowrap;
+    word-break: normal;
+    line-height: 1.4;
+    height: auto;
+    vertical-align: middle;
+    min-height: 32px;
 }
 
 .finance-table thead th:last-child {
     border-right: none;
 }
-
 .section-header {
     display: table-cell;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -251,6 +256,8 @@
 .finance-table tbody tr {
     border-bottom: 1px solid #e0e0e0;
     transition: background-color 0.2s ease;
+    height: auto;
+    min-height: 32px;
 }
 
 .finance-table tbody tr:hover {
@@ -266,13 +273,25 @@
 }
 
 .finance-table tbody td {
-    padding: 6px 2px;
+    padding: 4px 2px;
     text-align: center;
     border-right: 1px solid #e0e0e0;
     font-size: 12px;
     vertical-align: middle;
+    height: auto;
+    min-height: 32px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: visible;
 }
 
+.finance-table .w-n{
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: normal;
+    padding: 4px 8px;
+}
 .finance-table tbody td:last-child {
     border-right: none;
 }
@@ -291,6 +310,8 @@
     font-size: 11px;
     transition: all 0.3s ease;
     box-sizing: border-box;
+    height: 24px;
+    line-height: 24px;
 }
 
 .editable-cell input:focus {
@@ -359,14 +380,13 @@
     background: #28a745;
     color: white;
     border: none;
-    padding: 10px 20px;
+    padding: 7px 15px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 12px;
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     font-weight: 500;
-    margin-bottom: 20px;
 }
 
 .export-button:hover {

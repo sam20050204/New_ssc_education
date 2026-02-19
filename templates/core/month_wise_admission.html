@@ -27,7 +27,6 @@
                     <span class="filter-label">Select Year:</span>
                 </label>
                 <select name="year" id="year-select" class="year-select" onchange="this.form.submit()">
-                    <option value="">All Years</option>
                     {% for year in available_years %}
                         <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>
                             {{ year }}
@@ -68,18 +67,66 @@
                 {% for course_data in monthly_admission_data %}
                 <tr>
                     <td class="course-name">{{ course_data.course }}</td>
-                    <td>{{ course_data.jan|default:'-' }}</td>
-                    <td>{{ course_data.feb|default:'-' }}</td>
-                    <td>{{ course_data.march|default:'-' }}</td>
-                    <td>{{ course_data.april|default:'-' }}</td>
-                    <td>{{ course_data.may|default:'-' }}</td>
-                    <td>{{ course_data.jun|default:'-' }}</td>
-                    <td>{{ course_data.jul|default:'-' }}</td>
-                    <td>{{ course_data.aug|default:'-' }}</td>
-                    <td>{{ course_data.sep|default:'-' }}</td>
-                    <td>{{ course_data.oct|default:'-' }}</td>
-                    <td>{{ course_data.nov|default:'-' }}</td>
-                    <td>{{ course_data.dec|default:'-' }}</td>
+                    <td class="clickable-cell">
+                        {% if course_data.jan != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=1&year={{ selected_year }}">{{ course_data.jan }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.feb != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=2&year={{ selected_year }}">{{ course_data.feb }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.march != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=3&year={{ selected_year }}">{{ course_data.march }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.april != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=4&year={{ selected_year }}">{{ course_data.april }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.may != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=5&year={{ selected_year }}">{{ course_data.may }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.jun != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=6&year={{ selected_year }}">{{ course_data.jun }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.jul != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=7&year={{ selected_year }}">{{ course_data.jul }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.aug != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=8&year={{ selected_year }}">{{ course_data.aug }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.sep != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=9&year={{ selected_year }}">{{ course_data.sep }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.oct != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=10&year={{ selected_year }}">{{ course_data.oct }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.nov != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=11&year={{ selected_year }}">{{ course_data.nov }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="clickable-cell">
+                        {% if course_data.dec != '-' %}
+                            <a href="{% url 'admitted_students' %}?course={{ course_data.course }}&month=12&year={{ selected_year }}">{{ course_data.dec }}</a>
+                        {% else %}-{% endif %}
+                    </td>
                     <td class="total-cell">{{ course_data.total|default:'0' }}</td>
                 </tr>
                 {% endfor %}

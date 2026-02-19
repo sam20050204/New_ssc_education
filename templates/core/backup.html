@@ -164,5 +164,5 @@
     const EXPORT_URL = '{% url "export_database" %}';
     const IMPORT_URL = '{% url "import_database" %}';
 </script>
-<script src="{% static 'core/backup.js' %}"></script>
+<script src="{% static 'core/backup.js' %}?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

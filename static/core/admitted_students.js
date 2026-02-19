@@ -57,17 +57,11 @@ function openStudentModal(studentId) {
         document.getElementById('parentMobileRight').value = data.parent_mobile || '';
         
         // Display admission date
-        const admissionDateDisplay = document.getElementById('admissionDateDisplay');
+        const admissionDateInput = document.getElementById('admissionDateInput');
         if (data.admission_date) {
-            const date = new Date(data.admission_date);
-            const formattedDate = date.toLocaleDateString('en-IN', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            });
-            admissionDateDisplay.textContent = formattedDate;
+            admissionDateInput.value = data.admission_date;
         } else {
-            admissionDateDisplay.textContent = '-';
+            admissionDateInput.value = '';
         }
         
         // Photo
@@ -418,9 +412,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     showNotification('✅ Student details updated successfully!', 'success');
                     closeModal();
                     
+                    // Refresh the student table without reloading the page
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
+                        refreshStudentTable();
+                    }, 500);
                 } else {
                     alert('❌ Error: ' + (data.error || 'Failed to update student details'));
                 }
@@ -719,6 +714,55 @@ function cancelCameraModal() {
     cameraControlsModal.style.display = 'none';
     cameraBtnModal.style.display = 'block';
     modalPhoto.style.display = 'block';
+}
+
+// ===================== REFRESH TABLE WITHOUT RELOAD =====================
+// Function to refresh the student table without reloading the page
+function refreshStudentTable() {
+    // Get current filter values from the form
+    const filterForm = document.getElementById('filterForm');
+    if (!filterForm) return;
+    
+    const searchValue = document.getElementById('search').value || '';
+    const monthValue = document.getElementById('month').value || '';
+    const yearValue = document.getElementById('year').value || '';
+    const courseValue = document.getElementById('course').value || '';
+    
+    // Build query string
+    const params = new URLSearchParams({
+        search: searchValue,
+        month: monthValue,
+        year: yearValue,
+        course: courseValue
+    });
+    
+    // Fetch the updated table HTML
+    fetch(`/admitted-students/?${params}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'text/html'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        // Parse the HTML to extract just the table body
+        const parser = new DOMParser();
+        const newDoc = parser.parseFromString(html, 'text/html');
+        const newTableBody = newDoc.querySelector('table tbody');
+        const currentTableBody = document.querySelector('table tbody');
+        
+        if (newTableBody && currentTableBody) {
+            // Replace the table body with the new one
+            currentTableBody.innerHTML = newTableBody.innerHTML;
+            showNotification('📋 Table updated instantly!', 'info');
+        }
+    })
+    .catch(error => {
+        console.error('Error refreshing table:', error);
+        // Fallback to page reload if refresh fails
+        window.location.reload();
+    });
 }
 
 // ===================== FIELD SYNC FUNCTIONS =====================

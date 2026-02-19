@@ -34,6 +34,11 @@ urlpatterns = [
     path('receipts/<int:receipt_id>/update/', views.update_receipt, name='update_receipt'),  # ✅ ADD THIS
     path('receipts/<int:receipt_id>/delete/', views.delete_receipt, name='delete_receipt'),
     path('receipts/export/', views.export_receipts, name='export_receipts'),
+    
+    # Payment Tracking URLs
+    path('payment-tracking/', views.payment_tracking, name='payment_tracking'),
+    path('payment-tracking/<int:student_id>/detail/', views.payment_tracking_student_detail, name='payment_tracking_student_detail'),
+    
     # Export Functions
     path('export/students/', views.export_students_excel, name='export_students_excel'),
     path('export/admitted-students/', views.export_admitted_students_excel, name='export_admitted_students_excel'),

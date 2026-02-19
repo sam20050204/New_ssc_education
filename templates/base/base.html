@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Base CSS -->
-    <link rel="stylesheet" href="{% static 'core/dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'core/dashboard.css' %}?v={{ STATIC_VERSION }}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -56,9 +56,11 @@
         <!-- Page heading goes here -->
         {% endblock %}
 
-        {% block content %}
-        <!-- Page content goes here -->
-        {% endblock %}
+        <div class="content-wrapper">
+            {% block content %}
+            <!-- Page content goes here -->
+            {% endblock %}
+        </div>
 
     </main>
 

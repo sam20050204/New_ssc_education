@@ -21,26 +21,9 @@
                 <p class="page-subtitle">{% if selected_year %}Year: {{ selected_year }}{% else %}Manage all student finance records{% endif %}</p>
             </div>
         </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block content %}
-<div class="finance-section">
-    <!-- Save Indicator -->
-    <div class="save-indicator" id="saveIndicator">✓ Saved successfully!</div>
-
-    <!-- Finance Header with Export Button -->
-    <div class="finance-header">
-        <div>
-            <h2>Finance Overview</h2>
-            <p>{% if selected_year %}Year: {{ selected_year }}{% else %}All Years{% endif %}</p>
-        </div>
+        
+        <!-- Year Filter and Export in Header -->
         <div class="finance-header-actions">
-            <div class="total-profit-box">
-                <h3>Total Profit</h3>
-                <p class="amount">₹ {{ total_profit|floatformat:2 }}</p>
-            </div>
             <form method="get" class="year-filter-form">
                 <label for="year-select">
                     <span class="filter-label">Year:</span>
@@ -54,11 +37,25 @@
                     {% endfor %}
                 </select>
             </form>
+            
+            <!-- Total Profit Display -->
+            <div class="total-profit-box">
+                <h3>Total Profit</h3>
+                <p class="amount">₹ {{ total_profit|floatformat:2 }}</p>
+            </div>
+            
             <button class="export-button" onclick="exportToExcel()" title="Export to CSV (Ctrl+E)">
                 📥 Export to CSV
             </button>
         </div>
     </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="finance-section">
+    <!-- Save Indicator -->
+    <div class="save-indicator" id="saveIndicator">✓ Saved successfully!</div>
 
     <!-- Finance Table -->
     <div class="scrollbar-wrapper">
@@ -73,7 +70,7 @@
                     </tr>
                     <tr>
                         <th>Sr.No.</th>
-                        <th>Learner Name</th>
+                        <th class="w-n">Learner Name</th>
                         <th>Mobile No.</th>
                         <th>Batch</th>
                         <th>Course</th>
@@ -92,7 +89,7 @@
                     {% for data in finance_data %}
                     <tr data-student-id="{{ data.id }}">
                         <td>{{ forloop.counter }}</td>
-                        <td><strong>{{ data.learner_name }}</strong></td>
+                        <td class="w-n"><strong>{{ data.learner_name }}</strong></td>
                         <td>{{ data.mobile_no }}</td>
                         <td>{{ data.batch }}</td>
                         <td>{{ data.course }}</td>
@@ -143,5 +140,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'core/student_finance_details.js' %}"></script>
+<script src="{% static 'core/student_finance_details.js' %}?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

@@ -448,7 +448,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'core/admission.js' %}"></script>
+<script src="{% static 'core/admission.js' %}?v={{ STATIC_VERSION }}"></script>
 <script>
 // Add Course Modal Form Handler
 document.addEventListener('DOMContentLoaded', function() {

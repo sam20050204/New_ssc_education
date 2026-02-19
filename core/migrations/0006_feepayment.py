@@ -1,5 +1,6 @@
 # Generated migration file - Save as: core/migrations/0006_feepayment.py
 
+import datetime
 from django.db import migrations, models
 import django.core.validators
 import django.db.models.deletion
@@ -19,7 +20,7 @@ class Migration(migrations.Migration):
                 ('receipt_no', models.CharField(editable=False, max_length=20, unique=True)),
                 ('amount', models.DecimalField(decimal_places=2, max_digits=10, validators=[django.core.validators.MinValueValidator(0.01)])),
                 ('payment_mode', models.CharField(choices=[('Cash', 'Cash'), ('UPI', 'UPI'), ('Card', 'Card'), ('Bank Transfer', 'Bank Transfer')], max_length=20)),
-                ('payment_date', models.DateTimeField(auto_now_add=True)),
+                ('payment_date', models.DateField(default=datetime.date.today, help_text='Date of payment')),
                 ('remarks', models.TextField(blank=True, null=True)),
                 ('total_fees_at_payment', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('paid_before_this', models.DecimalField(decimal_places=2, max_digits=10)),

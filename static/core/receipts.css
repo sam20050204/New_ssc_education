@@ -166,19 +166,56 @@
 }
 
 .data-table th {
-    padding: 16px;
+    padding: 12px 14px;
     text-align: left;
     font-weight: 600;
     color: white;
     text-transform: uppercase;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.5px;
 }
 
 .data-table td {
-    padding: 14px 16px;
+    padding: 10px 12px;
     border-bottom: 1px solid #f0f0f0;
-    font-size: 14px;
+    font-size: 13px;
+}
+
+/* Column width specifications */
+.data-table th:nth-child(1),
+.data-table td:nth-child(1) {
+    width: 12%;
+    /* Receipt No. */
+}
+
+.data-table th:nth-child(2),
+.data-table td:nth-child(2) {
+    width: 25%;
+    /* Student Name */
+}
+
+.data-table th:nth-child(3),
+.data-table td:nth-child(3) {
+    width: 10%;
+    /* Payment Date */
+}
+
+.data-table th:nth-child(4),
+.data-table td:nth-child(4) {
+    width: 10%;
+    /* Paid Fees */
+}
+
+.data-table th:nth-child(5),
+.data-table td:nth-child(5) {
+    width: 10%;
+    /* Remaining Fees */
+}
+
+.data-table th:nth-child(6),
+.data-table td:nth-child(6) {
+    width: 33%;
+    /* Actions */
 }
 
 .data-table tbody tr {
@@ -213,10 +250,10 @@
 }
 
 .btn {
-    padding: 7px 14px;
+    padding: 5px 10px;
     border: none;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;

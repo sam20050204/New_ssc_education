@@ -9,10 +9,12 @@ html, body {
     height: 100%;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #f5f7fa;
+    display: flex;
+    flex-direction: column;
 }
 
-/* ===================== TOP HEADER ===================== */
-/* ===================== TOP HEADER ===================== */
+/* ===================== TOP HEADER - HORIZONTAL FRAME ===================== */
+/* ===================== TOP HEADER - HORIZONTAL FRAME ===================== */
 .top-header {
     height: auto;
     background: linear-gradient(135deg, #2c3e50, #3498db);
@@ -21,14 +23,13 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000; /* Make sure header is on top */
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     flex-wrap: wrap;
     gap: 10px;
+    flex-shrink: 0;
+    border-bottom: 3px solid #667eea;
 }
 
 .header-title-section {
@@ -114,21 +115,23 @@ html, body {
 /* ===================== LAYOUT ===================== */
 .layout {
     display: flex;
-    padding-top: 70px; /* Space for fixed header */
-    min-height: 100vh;
+    flex: 1;
+    min-height: 0;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: #f5f7fa;
 }
 
-/* ===================== SIDEBAR ===================== */
+/* ===================== SIDEBAR - LEFT FRAME ===================== */
 .sidebar {
     width: 260px;
     background: white;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.08);
-    position: fixed;
-    left: 0;
-    top: 70px;
-    bottom: 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     overflow-y: auto;
     padding: 20px 0;
+    flex-shrink: 0;
+    border-right: 2px solid #e0e0e0;
+    border-radius: 8px;
 }
 
 .menu-item {
@@ -171,50 +174,120 @@ html, body {
     color: #e74c3c;
 }
 
-/* ===================== MAIN CONTENT ===================== */
+/* Menu Section with Submenu */
+.menu-section {
+    margin: 10px 0;
+}
+
+.menu-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+}
+
+.menu-toggle .toggle-icon {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.menu-toggle .toggle-icon.rotated {
+    transform: rotate(90deg);
+}
+
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background: #f9f9f9;
+}
+
+.submenu.active {
+    max-height: 500px;
+}
+
+.submenu-item {
+    display: block;
+    padding: 12px 25px 12px 50px;
+    color: #34495e;
+    text-decoration: none;
+    font-size: 14px;
+    border-left: 4px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.submenu-item:hover {
+    background: #ecf0f1;
+    border-left-color: #3498db;
+    color: #3498db;
+}
+
+.submenu-item.active {
+    background: #d5ebf5;
+    border-left-color: #3498db;
+    color: #3498db;
+    font-weight: 600;
+}
+
+/* ===================== MAIN CONTENT - RIGHT FRAME ===================== */
 .main-content {
     flex: 1;
-    margin-left: 260px;
-    padding: 30px 40px;
-    min-height: calc(100vh - 70px);
     background: #f5f7fa;
+    padding: 0;
+    max-width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ===================== PAGE HEADING ===================== */
 .page-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 16px;
-    padding: 0;
-    margin-bottom: 35px;
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    padding: 20px 30px;
+    margin: 2rem 2rem 0 2rem;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     overflow: hidden;
+    flex-shrink: 0;
+    border-bottom: none;
+}
+
+/* Content wrapper for page content */
+.content-wrapper {
+    flex: 1;
+    padding: 20px 2rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
 }
 
 .page-header-content {
-    padding: 30px 35px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 20px;
+    padding: 0;
 }
 
 .page-title-wrapper {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 15px;
 }
 
 .page-icon {
-    font-size: 48px;
+    font-size: 40px;
     background: rgba(255, 255, 255, 0.2);
-    padding: 15px;
-    border-radius: 12px;
+    padding: 12px;
+    border-radius: 10px;
     backdrop-filter: blur(10px);
 }
 
 .page-title {
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 700;
     color: white;
     margin: 0;
@@ -222,9 +295,9 @@ html, body {
 }
 
 .page-subtitle {
-    font-size: 15px;
+    font-size: 13px;
     color: rgba(255, 255, 255, 0.9);
-    margin: 5px 0 0 0;
+    margin: 3px 0 0 0;
     font-weight: 400;
 }
 
@@ -334,19 +407,24 @@ html, body {
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 25px;
-    margin-bottom: 40px;
+    gap: 20px;
+    margin-bottom: 30px;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
 }
 
 .stat-card {
-    background: white;
-    padding: 30px;
-    border-radius: 16px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    padding: 20px 25px;
+    border-radius: 12px;
     text-align: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
     overflow: hidden;
+    border: 1px solid #f0f0f0;
 }
 
 .stat-card::before {
@@ -383,15 +461,30 @@ html, body {
 }
 
 .stat-icon {
-    font-size: 52px;
-    margin-bottom: 15px;
+    font-size: 42px;
+    margin-bottom: 10px;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
 }
 
+.logo-img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.mscit-logo-img {
+    width: 75px;
+    height: auto;
+    max-height: 65px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1));
+}
+
 .stat-number {
-    font-size: 42px;
+    font-size: 36px;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -399,10 +492,10 @@ html, body {
 }
 
 .stat-label {
-    font-size: 14px;
+    font-size: 12px;
     color: #7f8c8d;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     font-weight: 600;
 }
 
@@ -411,28 +504,32 @@ html, body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 25px;
-    margin-top: 30px;
+    margin-top: 0;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
 }
 
 .chart-container {
-    background: white;
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
     transition: all 0.3s ease;
 }
 
 .chart-container:hover {
-    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    box-shadow: none;
 }
 
 .chart-container h3 {
-    margin-bottom: 25px;
+    margin-bottom: 20px;
     color: #2c3e50;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     position: relative;
-    padding-bottom: 12px;
+    padding-bottom: 10px;
 }
 
 .chart-container h3::after {
@@ -536,8 +633,15 @@ html, body {
     }
     
     .main-content {
-        margin-left: 220px;
-        padding: 20px;
+        padding: 0;
+    }
+    
+    .page-header {
+        margin: 1.5rem 1.5rem 20px 1.5rem;
+    }
+    
+    .content-wrapper {
+        padding: 1.5rem;
     }
     
     .stats-grid {
@@ -590,8 +694,15 @@ html, body {
     }
     
     .main-content {
-        margin-left: 0;
-        padding: 15px;
+        padding: 0;
+    }
+    
+    .page-header {
+        margin: 1rem 1rem 20px 1rem;
+    }
+    
+    .content-wrapper {
+        padding: 1rem;
     }
     
     .page-title-wrapper {
