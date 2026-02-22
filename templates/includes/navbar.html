@@ -1,0 +1,213 @@
+<!-- Navigation Bar Component -->
+<!-- Usage: {% include 'includes/navbar.html' %} in base.html -->
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm sticky-top">
+    <div class="container-fluid">
+        <!-- Brand/Logo -->
+        <a class="navbar-brand fw-bold" href="{% url 'home' %}">
+            <i class="fas fa-graduation-cap me-2"></i>SSC Education
+        </a>
+        
+        <!-- Hamburger Menu Button (Mobile) -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <!-- Navigation Links -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                {% if user.is_authenticated %}
+                    <!-- Dashboard Link -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" 
+                           href="{% url 'dashboard' %}">
+                            <i class="fas fa-chart-line me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    
+                    <!-- Enquiries Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if active_page == 'enquiry' %}active{% endif %}" 
+                           href="#" id="enquiryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-envelope me-1"></i>Enquiries
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="enquiryDropdown">
+                            <li><a class="dropdown-item" href="{% url 'enquiry_list' %}">
+                                <i class="fas fa-list me-2"></i>View All
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'enquiry_list' %}?search=pending">
+                                <i class="fas fa-clock me-2"></i>Pending
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'export_enquiries' %}">
+                                <i class="fas fa-download me-2"></i>Export
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Admissions Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if active_page == 'admission' %}active{% endif %}" 
+                           href="#" id="admissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-graduate me-1"></i>Admissions
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="admissionDropdown">
+                            <li><a class="dropdown-item" href="{% url 'new_admission' %}">
+                                <i class="fas fa-user-plus me-2"></i>New Admission
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'admitted_students' %}">
+                                <i class="fas fa-list me-2"></i>All Students
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'export_admitted_students_excel' %}">
+                                <i class="fas fa-download me-2"></i>Export
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Fees & Payments Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if active_page == 'fees' %}active{% endif %}" 
+                           href="#" id="feesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-credit-card me-1"></i>Fees
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="feesDropdown">
+                            <li><a class="dropdown-item" href="{% url 'fees_payment' %}">
+                                <i class="fas fa-money-bill me-2"></i>Record Payment
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'receipts_view' %}">
+                                <i class="fas fa-receipt me-2"></i>Receipts
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'payment_tracking' %}">
+                                <i class="fas fa-chart-bar me-2"></i>Payment Tracking
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'export_receipts' %}">
+                                <i class="fas fa-download me-2"></i>Export Receipts
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Reports Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if active_page == 'reports' %}active{% endif %}" 
+                           href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-chart-pie me-1"></i>Reports
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
+                            <li><a class="dropdown-item" href="{% url 'statistics' %}">
+                                <i class="fas fa-chart-line me-2"></i>Statistics
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'month_wise_admission' %}">
+                                <i class="fas fa-calendar me-2"></i>Month Wise
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'student_finance_details' %}">
+                                <i class="fas fa-wallet me-2"></i>Finance Details
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Admin & Settings Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if active_page == 'admin' %}active{% endif %}" 
+                           href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-cog me-1"></i>Admin
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                            <li><a class="dropdown-item" href="{% url 'sales_services_dashboard' %}">
+                                <i class="fas fa-shopping-cart me-2"></i>Sales & Services
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'backup_page' %}">
+                                <i class="fas fa-database me-2"></i>Backup
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% if user.is_staff %}
+                            <li><a class="dropdown-item" href="/admin/">
+                                <i class="fas fa-key me-2"></i>Django Admin
+                            </a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    
+                    <!-- User Account Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle me-1"></i>{{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-key me-2"></i>Change Password</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <!-- Public Navigation -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'home' %}">
+                            <i class="fas fa-home me-1"></i>Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-primary btn-sm text-white ms-2" href="/admin/login/">
+                            <i class="fas fa-sign-in-alt me-1"></i>Login
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Mobile-Responsive Navbar Styles -->
+<style>
+    .navbar {
+        border-bottom: 2px solid #0d6efd;
+    }
+    
+    .navbar-brand {
+        font-size: 1.5rem;
+        color: #0d6efd !important;
+    }
+    
+    .navbar-nav .nav-link {
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+        border-radius: 0.25rem;
+        transition: all 0.3s ease;
+    }
+    
+    .navbar-nav .nav-link:hover {
+        background-color: rgba(13, 110, 253, 0.1);
+        color: #0d6efd !important;
+    }
+    
+    .navbar-nav .nav-link.active {
+        background-color: rgba(13, 110, 253, 0.2);
+        color: #0d6efd !important;
+        font-weight: 600;
+    }
+    
+    .dropdown-menu {
+        border: 1px solid #dee2e6;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    @media (max-width: 991px) {
+        .navbar-nav {
+            padding-top: 1rem;
+        }
+        
+        .navbar-nav .nav-link {
+            padding: 0.5rem 0;
+        }
+        
+        .dropdown-menu {
+            background-color: #f8f9fa;
+        }
+    }
+</style>

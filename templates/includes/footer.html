@@ -1,0 +1,170 @@
+<!-- Footer Component -->
+<!-- Usage: {% include 'includes/footer.html' %} in base.html -->
+
+<footer class="bg-dark text-light mt-5 py-4 border-top border-2">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- About Section -->
+            <div class="col-md-4 col-sm-6 mb-4 mb-md-0">
+                <h5 class="fw-bold mb-3">
+                    <i class="fas fa-graduation-cap text-primary me-2"></i>SSC Education
+                </h5>
+                <p class="small text-muted">
+                    Providing quality education and training programs. Empowering students with 
+                    professional skills and certificates.
+                </p>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <strong>Founded:</strong> 2024<br>
+                        <strong>Status:</strong> <span class="badge bg-success">Active</span>
+                    </small>
+                </div>
+            </div>
+            
+            <!-- Quick Links Section -->
+            <div class="col-md-4 col-sm-6 mb-4 mb-md-0">
+                <h5 class="fw-bold mb-3">Quick Links</h5>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <a href="{% url 'home' %}" class="text-decoration-none text-muted">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>Home
+                        </a>
+                    </li>
+                    {% if user.is_authenticated %}
+                    <li class="mb-2">
+                        <a href="{% url 'dashboard' %}" class="text-decoration-none text-muted">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="{% url 'admitted_students' %}" class="text-decoration-none text-muted">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>Students
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="{% url 'statistics' %}" class="text-decoration-none text-muted">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>Reports
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="mb-2">
+                        <a href="/admin/login/" class="text-decoration-none text-muted">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>Admin Login
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="text-decoration-none text-muted">
+                            <i class="fas fa-arrow-right text-primary me-2"></i>Courses
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            
+            <!-- Contact Section -->
+            <div class="col-md-4 col-sm-12">
+                <h5 class="fw-bold mb-3">Contact Us</h5>
+                <div class="small text-muted">
+                    <p class="mb-2">
+                        <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                        <strong>Address:</strong><br>
+                        <span class="ps-4">SSC Education Center<br>Training Institute</span>
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-phone text-primary me-2"></i>
+                        <strong>Phone:</strong> <a href="tel:+91XXXXXXXXXX" class="text-muted">+91-XXXXXXXXXX</a>
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-envelope text-primary me-2"></i>
+                        <strong>Email:</strong> <a href="mailto:info@ssceducation.com" class="text-muted">info@ssceducation.com</a>
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-clock text-primary me-2"></i>
+                        <strong>Hours:</strong> Mon-Fri: 9AM-6PM
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Divider -->
+        <hr class="my-4 border-secondary">
+        
+        <!-- Bottom Section -->
+        <div class="row align-items-center">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <small class="text-muted">
+                    <i class="fas fa-copyright me-1"></i>2024 SSC Education Management System. All rights reserved.
+                </small>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <div class="small">
+                    <a href="#" class="text-muted text-decoration-none me-3">
+                        <i class="fab fa-facebook me-1"></i>Facebook
+                    </a>
+                    <a href="#" class="text-muted text-decoration-none me-3">
+                        <i class="fab fa-twitter me-1"></i>Twitter
+                    </a>
+                    <a href="#" class="text-muted text-decoration-none me-3">
+                        <i class="fab fa-linkedin me-1"></i>LinkedIn
+                    </a>
+                    <a href="#" class="text-muted text-decoration-none">
+                        <i class="fab fa-instagram me-1"></i>Instagram
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Footer Styles -->
+<style>
+    footer {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        margin-top: auto;
+        flex-shrink: 0;
+    }
+    
+    footer h5 {
+        border-bottom: 2px solid #0d6efd;
+        padding-bottom: 0.5rem;
+    }
+    
+    footer a {
+        transition: all 0.3s ease;
+    }
+    
+    footer a:hover {
+        color: #0d6efd !important;
+    }
+    
+    footer .text-muted {
+        color: #adb5bd !important;
+    }
+    
+    footer .small {
+        font-size: 0.85rem;
+    }
+    
+    @media (max-width: 768px) {
+        footer h5 {
+            font-size: 1rem;
+        }
+        
+        footer .small {
+            font-size: 0.8rem;
+        }
+        
+        footer .row > div {
+            text-align: center;
+        }
+    }
+</style>
+
+<!-- Ensure footer sticks to bottom using Flexbox in body -->
+<script>
+    if (document.body.style.display !== 'flex') {
+        document.body.style.display = 'flex';
+        document.body.style.flexDirection = 'column';
+        document.body.style.minHeight = '100vh';
+    }
+</script>

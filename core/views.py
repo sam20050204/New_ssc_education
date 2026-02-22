@@ -22,6 +22,7 @@ import shutil
 import os
 from django.db.models import Sum, Count, Q
 from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem
+from .forms import EnquiryForm, AdmittedStudentForm, FeePaymentForm, CourseForm
 
 # ================= CUSTOM LOGOUT =================
 def custom_logout(request):
@@ -33,56 +34,34 @@ def custom_logout(request):
 # ================= HOME PAGE =================
 def home(request):
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        mobile = request.POST.get("mobile", "").strip()
-        education = request.POST.get("education", "").strip()
-        course = request.POST.get("course", "").strip()
-        custom_course = request.POST.get("other_course", "").strip()
-        address = request.POST.get("address", "").strip()
-        city = request.POST.get("city", "").strip()
-        taluka = request.POST.get("taluka", "").strip()
-        district = request.POST.get("district", "").strip()
-
-        # Validate required fields
-        if not name or not mobile or not education or not course:
-            messages.error(request, "❌ Please fill all required fields (Name, Mobile, Education, Course)!")
+        form = EnquiryForm(request.POST)
+        if form.is_valid():
+            # Check for duplicate enquiry (within last 5 minutes)
+            five_minutes_ago = timezone.now() - timedelta(minutes=5)
+            duplicate = Enquiry.objects.filter(
+                name__iexact=form.cleaned_data['name'],
+                mobile=form.cleaned_data['mobile'],
+                created_at__gte=five_minutes_ago
+            ).exists()
+            
+            if duplicate:
+                messages.warning(request, "⚠️ Similar enquiry already submitted recently!")
+            else:
+                form.save()
+                messages.success(request, "✅ Enquiry submitted successfully!")
+            
             return redirect("home")
-        
-        # Validate mobile number (10 digits)
-        if len(mobile) != 10 or not mobile.isdigit():
-            messages.error(request, "❌ Mobile number must be exactly 10 digits!")
-            return redirect("home")
-        
-        # Check for duplicate enquiry (within last 5 minutes)
-        five_minutes_ago = timezone.now() - timedelta(minutes=5)
-        duplicate = Enquiry.objects.filter(
-            name__iexact=name,
-            mobile=mobile,
-            created_at__gte=five_minutes_ago
-        ).exists()
-        
-        if duplicate:
-            messages.warning(request, "⚠️ Similar enquiry already submitted recently!")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {field}: {error}")
             return redirect("home")
 
-        Enquiry.objects.create(
-            name=name,
-            mobile=mobile,
-            education=education,
-            course=course,
-            custom_course=custom_course if course == "Other" else "",
-            address=address,
-            city=city,
-            taluka=taluka,
-            district=district
-        )
-
-        messages.success(request, "✅ Enquiry submitted successfully!")
-        return redirect("home")
-
+    form = EnquiryForm()
     all_courses = Course.objects.all().order_by('name')
     
     return render(request, "core/home.html", {
+        'form': form,
         'all_courses': all_courses
     })
 
@@ -405,82 +384,18 @@ def convert_enquiry_to_admission(request, id):
 @login_required
 def new_admission(request):
     if request.method == "POST":
-        try:
-            course = request.POST.get("course")
-            custom_course = request.POST.get("custom_course", "")
-            student_name = request.POST.get("student_name")
-            father_name = request.POST.get("father_name")
-            surname = request.POST.get("surname")
-            mother_name = request.POST.get("mother_name")
-            full_name = request.POST.get("full_name")
-            date_of_birth = request.POST.get("date_of_birth")
-            mobile_own = request.POST.get("mobile_own")
-            parent_mobile = request.POST.get("parent_mobile", "")
-            gender = request.POST.get("gender")
-            marital_status = request.POST.get("marital_status")
-            address = request.POST.get("address")
-            city = request.POST.get("city")
-            tehsil_block = request.POST.get("tehsil_block")
-            district = request.POST.get("district")
-            pin_code = request.POST.get("pin_code")
-            educational_qualification = request.POST.get("educational_qualification")
-            total_fees = request.POST.get("total_fees", 5000)
-            photo = request.FILES.get("photo")
-            
-            # Get admission date from form
-            admission_date_str = request.POST.get("admission_date")
-            
-            # Validate and parse admission date
-            if not admission_date_str:
-                messages.error(request, "❌ Admission date is required!")
-                return redirect("new_admission")
-            
-            try:
-                admission_date = datetime.strptime(admission_date_str, '%Y-%m-%d').date()
-            except ValueError:
-                messages.error(request, "❌ Invalid admission date format!")
-                return redirect("new_admission")
-            
-            # Get batch information
-            batch_month = request.POST.get("batch_month", "").strip()
-            batch_year = request.POST.get("batch_year", "").strip()
-            
-            # Validate required admission fields
-            if not full_name or not course or not date_of_birth or not mobile_own:
-                messages.error(request, "❌ Please fill all required fields!")
-                return redirect("new_admission")
-            
-            admission = AdmittedStudent.objects.create(
-                course=course,
-                custom_course=custom_course if course == "Other" else "",
-                student_name=student_name,
-                father_name=father_name,
-                surname=surname,
-                mother_name=mother_name,
-                full_name=full_name,
-                date_of_birth=date_of_birth,
-                mobile_own=mobile_own,
-                parent_mobile=parent_mobile,
-                gender=gender,
-                marital_status=marital_status,
-                address=address,
-                city=city,
-                tehsil_block=tehsil_block,
-                district=district,
-                pin_code=pin_code,
-                educational_qualification=educational_qualification,
-                total_fees=total_fees,
-                photo=photo,
-                admission_date=admission_date,
-                batch_month=batch_month,
-                batch_year=batch_year,
-            )
-            
-            messages.success(request, f"Admission for {full_name} has been successfully recorded! Total Fees: ₹{total_fees}")
+        form = AdmittedStudentForm(request.POST, request.FILES)
+        if form.is_valid():
+            admission = form.save(commit=False)
+            admission.save()
+            messages.success(request, f"✅ Admission for {admission.full_name} has been successfully recorded! Total Fees: ₹{admission.total_fees}")
             return redirect("new_admission")
-            
-        except Exception as e:
-            messages.error(request, f"Error: {str(e)}")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {field}: {error}")
+    else:
+        form = AdmittedStudentForm()
     
     # Get enquiry data from session if available
     enquiry_data = request.session.get('enquiry_conversion', {})
@@ -490,6 +405,7 @@ def new_admission(request):
     
     return render(request, "core/new_admission.html", {
         "active_page": "new_admission",
+        "form": form,
         "enquiry_data": enquiry_data,
         "all_courses": all_courses
     })
@@ -505,29 +421,23 @@ def add_course_ajax(request):
         data = json.loads(request.body)
         course_name = data.get('course_name', '').strip()
         
-        if not course_name:
+        # Validate using CourseForm
+        form = CourseForm(data={'name': course_name, 'duration': 'To be defined'})
+        
+        if form.is_valid():
+            course = form.save()
+            return JsonResponse({
+                'success': True,
+                'message': f'Course "{course_name}" added successfully!',
+                'course_id': course.id,
+                'course_name': course.name
+            }, status=201)
+        else:
+            errors = [str(error) for field_errors in form.errors.values() for error in field_errors]
             return JsonResponse({
                 'success': False,
-                'message': 'Course name cannot be empty'
+                'message': ' | '.join(errors) if errors else 'Invalid course data'
             }, status=400)
-        
-        if Course.objects.filter(name__iexact=course_name).exists():
-            return JsonResponse({
-                'success': False,
-                'message': 'This course already exists in database!'
-            }, status=400)
-        
-        course = Course.objects.create(
-            name=course_name,
-            duration='To be defined'
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Course "{course_name}" added successfully!',
-            'course_id': course.id,
-            'course_name': course.name
-        }, status=201)
     
     except json.JSONDecodeError:
         return JsonResponse({
@@ -789,29 +699,21 @@ def submit_fee_payment(request):
             # Debug logging
             print(f"Received payment data: student_id={student_id}, amount={amount}, payment_mode={payment_mode}, payment_date={payment_date}")
             
-            # Validate inputs
-            if not student_id:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Student ID is required'
-                }, status=400)
+            # Validate with FeePaymentForm
+            form_data = {
+                'student': student_id,
+                'amount': amount,
+                'payment_mode': payment_mode,
+                'payment_date': payment_date,
+                'remarks': remarks
+            }
+            form = FeePaymentForm(form_data)
             
-            if not amount:
+            if not form.is_valid():
+                errors = [str(error) for field_errors in form.errors.values() for error in field_errors]
                 return JsonResponse({
                     'success': False,
-                    'error': 'Payment amount is required'
-                }, status=400)
-            
-            if not payment_mode:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Payment mode is required'
-                }, status=400)
-            
-            if not payment_date:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Payment date is required'
+                    'error': ' | '.join(errors) if errors else 'Invalid payment data'
                 }, status=400)
             
             # Parse payment_date string (YYYY-MM-DD format) to date object
@@ -832,13 +734,6 @@ def submit_fee_payment(request):
                 return JsonResponse({
                     'success': False,
                     'error': 'Invalid amount format'
-                }, status=400)
-            
-            # Validate amount
-            if amount <= 0:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Payment amount must be greater than zero'
                 }, status=400)
             
             # Use atomic transaction
