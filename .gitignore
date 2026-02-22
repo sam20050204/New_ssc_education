@@ -1,7 +1,8 @@
-# Database
+# Database files (NEVER commit these!)
 *.sqlite3
 *.db
 db.sqlite3
+database_backup*.db
 
 # Python
 *.pyc
@@ -13,19 +14,38 @@ __pycache__/
 venv/
 env/
 ENV/
+*.egg-info/
+dist/
+build/
 
-# Media files (uploaded photos)
+# Media files (uploaded photos - user-generated content)
 media/
+student_photos/
 
-# Environment variables
+# Environment variables (NEVER commit this!)
 .env
+.env.local
+.env.*.local
+
+# Backup files
+*.bak
+*.backup
+*.tmp
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
 # OS
 .DS_Store
 Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Django
+*.log
+/staticfiles/
