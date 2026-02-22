@@ -25,7 +25,6 @@ CSRF_COOKIE_SECURE = False
 
 # ==================== INSTALLED APPS - DEV TOOLS ====================
 INSTALLED_APPS += [
-    'django_extensions',  # Shell plus, etc
     'debug_toolbar',      # Debug toolbar
 ]
 

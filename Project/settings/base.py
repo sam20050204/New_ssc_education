@@ -46,6 +46,10 @@ MIDDLEWARE = [
     'core.middleware.LoggingMiddleware',  # Custom logging
 ]
 
+# ==================== URL CONFIGURATION ====================
+ROOT_URLCONF = 'Project.urls'
+WSGI_APPLICATION = 'Project.wsgi.application'
+
 # ==================== TEMPLATES ====================
 TEMPLATES = [
     {

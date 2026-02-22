@@ -174,15 +174,17 @@ class AdmittedStudentForm(forms.ModelForm):
                 'class': 'form-control',
                 'accept': 'image/jpeg,image/png,image/gif'
             }),
-            'total_fees': forms.DecimalField(attrs={
+            'total_fees': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
-                'step': '0.01'
+                'step': '0.01',
+                'type': 'number'
             }),
-            'paid_fees': forms.DecimalField(attrs={
+            'paid_fees': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
-                'step': '0.01'
+                'step': '0.01',
+                'type': 'number'
             }),
         }
     
@@ -249,10 +251,11 @@ class FeePaymentForm(forms.ModelForm):
         fields = ['student', 'amount', 'payment_mode', 'payment_date', 'remarks']
         widgets = {
             'student': forms.Select(attrs={'class': 'form-control', 'required': True}),
-            'amount': forms.DecimalField(attrs={
+            'amount': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0.01',
                 'step': '0.01',
+                'type': 'number',
                 'required': True
             }),
             'payment_mode': forms.Select(attrs={'class': 'form-control', 'required': True}),
