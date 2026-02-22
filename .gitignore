@@ -1,51 +1,202 @@
-# Database files (NEVER commit these!)
+# ==================== CRITICAL: NEVER COMMIT ====================
+
+# Database files (NEVER commit production data)
 *.sqlite3
+*.sqlite
 *.db
 db.sqlite3
 database_backup*.db
+database_backup/
+*.dump
+*.sql
 
-# Python
-*.pyc
+# Backup files and directories
+backup/
+backups/
+backup_db.bat
+*.bak
+*.backup
+*.tmp
+*.tar
+*.tar.gz
+*.zip
+
+# Environment variables (NEVER commit - contains secrets!)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Secret keys and credentials
+secret_key.txt
+credentials.json
+*.pem
+*.key
+*.crt
+*.cert
+*.pfx
+
+# API keys and tokens
+api_keys.txt
+tokens.txt
+.tokens
+
+# ==================== PYTHON ====================
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-venv/
-env/
-ENV/
-*.egg-info/
-dist/
-build/
 
-# Media files (uploaded photos - user-generated content)
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+virtualenv/
+.virtualenv
+
+# ==================== DJANGO ====================
+
+# Static files and media
+staticfiles/
 media/
 student_photos/
+uploads/
+*.log
+log.txt
+django.log
 
-# Environment variables (NEVER commit this!)
-.env
-.env.local
-.env.*.local
+# Django migrations (keep in repo, but maybe not __pycache__)
+# migrations/__pycache__/
 
-# Backup files
-*.bak
-*.backup
-*.tmp
+# Local database
+db.sqlite3
 
-# IDE
+# ==================== IDE & EDITORS ====================
+
 .vscode/
 .idea/
 *.swp
 *.swo
 *.sublime-project
 *.sublime-workspace
+*.code-workspace
+*.iml
+.project
+.pydevproject
+.settings/
+.classpath
 
-# OS
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+*~
+.vim/
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Nano
+.nano_history
+
+# ==================== OPERATING SYSTEM ====================
+
 .DS_Store
-Thumbs.db
+.DS_Store?
+._*
 .AppleDouble
 .LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Spotlight-V100
+.Trashes
 
-# Django
-*.log
+# ==================== VERSION CONTROL ====================
+
+.git/
+.gitkeep
+.gitmodules
+.hg/
+.svn/
+CVS/
+
+# ==================== OPERATING SYSTEM TEMP ====================
+
+*.tmp
+tmp/
+temp/
+*.cache
+.cache/
+
+# ==================== NODE (if using frontend build tools) ====================
+
+node_modules/
+npm-debug.log
+yarn-error.log
+.npm/
+.yarn/
+package-lock.json
+yarn.lock
+
+# ==================== COMPILED ASSETS ====================
+
+*.min.js
+*.min.css
+.sass-cache/
+*.css.map
+
+# ==================== MISC ====================
+
+*.pyo
+.coverage
+htmlcov/
+.hypothesis/
+.pytest_cache/
+
+# Testing
+.tox/
+.coverage.*
+.pytest_cache/
+htmlcov/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Logs directory
+logs/
+logs/*.log
+
+# Sensitive data
+secrets/
+private/
+
 /staticfiles/
