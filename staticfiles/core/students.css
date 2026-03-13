@@ -209,3 +209,32 @@
         font-size: 13px;
     }
 }
+
+/* ===================== DARK MODE STYLES ===================== */
+
+body.dark-mode .student-card {
+    background: #242424 !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .student-card:hover {
+    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.3) !important;
+}
+
+body.dark-mode .student-name {
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .course-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+body.dark-mode .detail-item {
+    color: #b0b0b0 !important;
+}
+
+body.dark-mode .detail-label {
+    color: #888 !important;
+}

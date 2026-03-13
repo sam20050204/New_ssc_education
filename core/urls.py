@@ -19,6 +19,7 @@ urlpatterns = [
     # Admission URLs
     path('admission/', views.new_admission, name='new_admission'),
     path('admission/list/', views.admitted_students, name='admitted_students'),
+    path('admission/search-students/', views.search_admitted_students, name='search_admitted_students'),
     path('admission/<int:student_id>/detail/', views.student_detail_admitted, name='student_detail_admitted'),
     path('admission/<int:student_id>/update/', views.update_student_admitted, name='update_student_admitted'),
     path('admission/delete/', views.delete_admitted_students, name='delete_admitted_students'),
@@ -53,6 +54,10 @@ urlpatterns = [
     
     #Statistics URLs
     path('statistics/', views.statistics_view, name='statistics'),
+    path('attendance/', views.student_daily_attendance, name='student_attendance'),
+    path('attendance/save/', views.save_attendance_ajax, name='save_attendance_ajax'),
+    path('attendance/data/', views.get_attendance_data, name='get_attendance_data'),
+    path('attendance/chart/', views.get_attendance_chart_data, name='get_attendance_chart_data'),
     path('student-finance-details/', views.student_finance_details, name='student_finance_details'),
     path('update-finance-detail/', views.update_finance_detail, name='update_finance_detail'),
     path('month-wise-admission/', views.month_wise_admission, name='month_wise_admission'),

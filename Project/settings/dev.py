@@ -24,23 +24,23 @@ SECURE_SSL_REDIRECT = False
 CSRF_COOKIE_SECURE = False
 
 # ==================== INSTALLED APPS - DEV TOOLS ====================
-INSTALLED_APPS += [
-    'debug_toolbar',      # Debug toolbar
-]
+# Debug toolbar removed - use this to re-enable if needed:
+# INSTALLED_APPS += ['debug_toolbar']
 
 # ==================== MIDDLEWARE - DEV TOOLS ====================
-MIDDLEWARE += [
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-]
-
-# ==================== DEBUG TOOLBAR ====================
-INTERNAL_IPS = [
-    '127.0.0.1',
-]
+# Debug toolbar middleware removed - use this to re-enable if needed:
+# MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
 
 # ==================== LOGGING - VERBOSE ====================
-LOGGING['loggers']['django']['level'] = 'DEBUG'
-LOGGING['loggers']['core']['level'] = 'DEBUG'
+LOGGING['loggers']['django']['level'] = 'INFO'  # Changed from DEBUG to INFO
+LOGGING['loggers']['core']['level'] = 'INFO'   # Changed from DEBUG to INFO
+
+# Add autoreloader to suppress debug messages
+if 'django.utils.autoreload' not in LOGGING['loggers']:
+    LOGGING['loggers']['django.utils.autoreload'] = {
+        'level': 'WARNING',
+        'propagate': False,
+    }
 
 # ==================== EMAIL - Console Backend (Dev) ====================
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -65,4 +65,4 @@ REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'] = [
     'rest_framework.permissions.AllowAny',  # Dev only
 ]
 
-print("✅ Django Development Settings Loaded")
+print("[OK] Django Development Settings Loaded")

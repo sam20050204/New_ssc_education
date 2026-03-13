@@ -56,11 +56,11 @@
         <div class="stat-sublabel">Total Admissions</div>
     </a>
 
-    <div class="stat-card clickable-card" onclick="loadPerformanceSection()">
-        <div class="stat-icon">📊</div>
-        <div class="stat-label">Student Performance</div>
-        <p class="coming-soon">Coming Soon</p>
-    </div>
+    <a href="{% url 'student_attendance' %}" class="stat-card clickable-card" style="text-decoration: none; color: inherit;">
+        <div class="stat-icon">�</div>
+        <div class="stat-label">Student Attendance</div>
+        <p class="coming-soon">Mark Daily Attendance</p>
+    </a>
 
     <div class="stat-card clickable-card" onclick="loadAttendanceSection()">
         <div class="stat-icon">📅</div>
@@ -127,11 +127,22 @@
     function loadPerformanceSection() {
         const statsGrid = document.querySelector('.stats-grid');
         const detailSections = document.querySelectorAll('.detail-section');
-        
+
         statsGrid.style.display = 'none';
         detailSections.forEach(section => section.style.display = 'none');
-        
-        document.getElementById('performanceSection').style.display = 'block';
+
+        const perfSection = document.getElementById('performanceSection');
+        perfSection.style.display = 'block';
+        perfSection.innerHTML = '<p style="text-align:center; padding:40px; color:#666;"><span class="loading-spinner"></span> Loading...</p>';
+
+    fetch('{% url "student_attendance" %}')
+            .then(response => response.text())
+            .then(html => {
+                perfSection.innerHTML = html;
+            })
+            .catch(err => {
+                perfSection.innerHTML = '<p style="color:red; text-align:center;">Error loading attendance</p>';
+            });
     }
     
     function loadAttendanceSection() {

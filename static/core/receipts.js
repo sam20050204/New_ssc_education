@@ -14,13 +14,22 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializePage() {
     // Populate year dropdown
     const yearFilter = document.getElementById('yearFilter');
+    const batchYearFilter = document.getElementById('batchYearFilter');
     const currentYear = new Date().getFullYear();
     for (let year = currentYear; year >= currentYear - 5; year--) {
         const option = document.createElement('option');
         option.value = year;
         option.textContent = year;
         yearFilter.appendChild(option);
+        
+        const batchOption = document.createElement('option');
+        batchOption.value = year;
+        batchOption.textContent = year;
+        batchYearFilter.appendChild(batchOption);
     }
+    
+    // Populate course dropdown from loaded data
+    populateCourseFilter();
 }
 
 // Setup event listeners
@@ -39,6 +48,27 @@ function setupEventListeners() {
     
     // Edit form submit
     document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
+}
+
+// Populate course filter dropdown
+function populateCourseFilter() {
+    const courseFilter = document.getElementById('courseFilter');
+    const courses = new Set();
+    
+    // Extract unique courses from allReceipts
+    allReceipts.forEach(receipt => {
+        if (receipt.course) {
+            courses.add(receipt.course);
+        }
+    });
+    
+    // Sort and add to dropdown
+    Array.from(courses).sort().forEach(course => {
+        const option = document.createElement('option');
+        option.value = course;
+        option.textContent = course;
+        courseFilter.appendChild(option);
+    });
 }
 
 // Debounce function for search
@@ -77,6 +107,9 @@ async function loadReceipts() {
             
             console.log('Total receipts loaded:', allReceipts.length);
             
+            // Populate course filter after loading data
+            populateCourseFilter();
+            
             renderReceipts(filteredReceipts);
             updateSummary(filteredReceipts);
         } else {
@@ -95,11 +128,13 @@ async function loadReceipts() {
 // Apply filters
 function applyFilters() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const dateFilter = document.getElementById('dateFilter').value;
     const monthFilter = document.getElementById('monthFilter').value;
     const yearFilter = document.getElementById('yearFilter').value;
+    const courseFilter = document.getElementById('courseFilter').value;
+    const batchMonthFilter = document.getElementById('batchMonthFilter').value;
+    const batchYearFilter = document.getElementById('batchYearFilter').value;
     
-    console.log('Applying filters:', { searchTerm, dateFilter, monthFilter, yearFilter }); // Debug log
+    console.log('Applying filters:', { searchTerm, monthFilter, yearFilter, courseFilter, batchMonthFilter, batchYearFilter }); // Debug log
     
     filteredReceipts = allReceipts.filter(receipt => {
         // Search filter
@@ -107,12 +142,7 @@ function applyFilters() {
             return false;
         }
         
-        // Date filter
-        if (dateFilter && receipt.payment_date !== dateFilter) {
-            return false;
-        }
-        
-        // Month and Year filter
+        // Month and Year filter (payment date)
         if (monthFilter || yearFilter) {
             const receiptDate = new Date(receipt.payment_date);
             const receiptMonth = String(receiptDate.getMonth() + 1).padStart(2, '0');
@@ -123,6 +153,26 @@ function applyFilters() {
             }
             
             if (yearFilter && receiptYear !== yearFilter) {
+                return false;
+            }
+        }
+        
+        // Course filter
+        if (courseFilter && receipt.course !== courseFilter) {
+            return false;
+        }
+        
+        // Batch Month and Batch Year filter
+        if (batchMonthFilter || batchYearFilter) {
+            const batchDate = new Date(receipt.batch_date);
+            const batchMonth = String(batchDate.getMonth() + 1).padStart(2, '0');
+            const batchYear = String(batchDate.getFullYear());
+            
+            if (batchMonthFilter && batchMonth !== batchMonthFilter) {
+                return false;
+            }
+            
+            if (batchYearFilter && batchYear !== batchYearFilter) {
                 return false;
             }
         }
@@ -138,9 +188,11 @@ function applyFilters() {
 // Clear all filters
 function clearFilters() {
     document.getElementById('searchInput').value = '';
-    document.getElementById('dateFilter').value = '';
     document.getElementById('monthFilter').value = '';
     document.getElementById('yearFilter').value = '';
+    document.getElementById('courseFilter').value = '';
+    document.getElementById('batchMonthFilter').value = '';
+    document.getElementById('batchYearFilter').value = '';
     
     filteredReceipts = [...allReceipts];
     renderReceipts(filteredReceipts);

@@ -147,11 +147,10 @@
         {% csrf_token %}
         
         <!-- Admission Date Selection -->
-        <div class="form-section" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left-color: #f59e0b; padding: 15px 20px; margin-bottom: 15px;">
+        <div class="form-section" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left-color: #f59e0b; padding: 12px 20px; margin-bottom: 15px;">
             <h3 class="section-title" style="color: #92400e; margin-bottom: 8px; font-size: 16px;">📆 Admission Date</h3>
             
-            <div class="form-group full-width" style="margin-bottom: 8px;">
-                <label for="admission_date" style="font-size: 13px; margin-bottom: 4px; display: block;">Admission Date <span class="required">*</span></label>
+            <div class="form-group full-width" style="margin-bottom: 0;">
                 <input type="date" name="admission_date" id="admission_date" required>
             </div>
             
@@ -161,11 +160,10 @@
         </div>
         
         <!-- Course Selection -->
-        <div class="form-section" style="padding: 15px 20px; margin-bottom: 15px;">
+        <div class="form-section" style="padding: 12px 20px; margin-bottom: 15px;">
             <h3 class="section-title" style="margin-bottom: 8px; font-size: 16px;">📚 Course Information</h3>
             
             <div class="form-group full-width" style="margin-bottom: 8px;">
-                <label for="course" style="font-size: 13px; margin-bottom: 4px; display: block;">Course <span class="required">*</span></label>
                 <select name="course" id="course" required>
                     <option value="">-- Select Course --</option>
                     <option value="MS-CIT" {% if enquiry_data.course == "MS-CIT" %}selected{% endif %}>MS-CIT</option>
@@ -193,18 +191,16 @@
             </div>
             
             <div class="form-group full-width" id="customCourseGroup" style="display: none; margin-bottom: 0;">
-                <label for="custom_course" style="font-size: 13px; margin-bottom: 4px; display: block;">Specify Course Name <span class="required">*</span></label>
                 <input type="text" name="custom_course" id="custom_course" value="{{ enquiry_data.custom_course|default:'' }}" placeholder="Enter course name">
             </div>
         </div>
 
         <!-- Batch Information -->
-        <div class="form-section" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left-color: #0284c7; padding: 15px 20px; margin-bottom: 15px;">
+        <div class="form-section" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left-color: #0284c7; padding: 12px 20px; margin-bottom: 15px;">
             <h3 class="section-title" style="color: #0c4a6e; margin-bottom: 8px; font-size: 16px;">📅 Batch Information</h3>
             
             <div class="form-row double">
                 <div class="form-group">
-                    <label for="batch_month" style="font-size: 13px; margin-bottom: 4px; display: block;">Batch Month <span class="required">*</span></label>
                     <select name="batch_month" id="batch_month" required>
                         <option value="">-- Select Month --</option>
                         <option value="January">January</option>
@@ -223,7 +219,6 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="batch_year" style="font-size: 13px; margin-bottom: 4px; display: block;">Batch Year <span class="required">*</span></label>
                     <select name="batch_year" id="batch_year" required>
                         <option value="">-- Select Year --</option>
                         <!-- Years will be populated by JavaScript -->
@@ -272,13 +267,16 @@
                 <input type="text" name="full_name" id="full_name" readonly required>
             </div>
 
+            <!-- Hidden full_name field for form submission -->
+            <input type="hidden" name="full_name" id="full_name_hidden">
+
             <!-- Mother Name, Date of Birth, Gender (Left) and Photo (Right) -->
             <div style="display: flex; gap: 30px; align-items: flex-start;">
                 <!-- Left Side: Form Fields (Stacked Vertically) -->
                 <div style="flex: 1;">
                     <div class="form-group full-width">
-                        <label for="mother_name">Mother Name <span class="required">*</span></label>
-                        <input type="text" name="mother_name" id="mother_name" required>
+                        <label for="mother_name">Mother Name</label>
+                        <input type="text" name="mother_name" id="mother_name">
                     </div>
                     
                     <div class="form-group full-width">

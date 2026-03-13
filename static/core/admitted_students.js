@@ -543,15 +543,11 @@ function deleteSelectedStudents() {
     const confirmMessage = `⚠️ Are you sure you want to delete ${studentIds.length} student${studentIds.length > 1 ? 's' : ''}?\n\n` +
                           `This action cannot be undone and will also delete:\n` +
                           `• All fee payment records\n` +
-                          `• Student photos and documents\n\n` +
-                          `Type "DELETE" to confirm:`;
+                          `• Student photos and documents`;
     
-    const userInput = prompt(confirmMessage);
+    const isConfirmed = confirm(confirmMessage);
     
-    if (userInput !== 'DELETE') {
-        if (userInput !== null) {
-            alert('❌ Deletion cancelled. You must type "DELETE" to confirm.');
-        }
+    if (!isConfirmed) {
         return;
     }
     

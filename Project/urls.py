@@ -8,9 +8,7 @@ from core import views as core_views
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path('login/', auth_views.LoginView.as_view(
-        template_name='core/login.html'
-    ), name='login'),
+    path('login/', core_views.custom_login, name='login'),
 
     path('logout/', core_views.custom_logout, name='logout'),
 
@@ -20,3 +18,12 @@ urlpatterns = [
 # Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    
+    # Include django-debug-toolbar (if installed)
+    try:
+        import debug_toolbar
+        urlpatterns = [
+            path('__debug__/', include(debug_toolbar.urls)),
+        ] + urlpatterns
+    except (ImportError, RuntimeError):
+        pass

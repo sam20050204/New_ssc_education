@@ -47,6 +47,7 @@
                 placeholder="Search by name or mobile..."
                 value="{{ search }}"
                 class="filter-input"
+                onkeyup="autoSearchStudents()"
             >
         </div>
 
@@ -182,7 +183,7 @@
                 
                 <!-- Student Info -->
                 <div class="student-info" onclick="openStudentModal({{ student.id }})">
-                    <h3 class="student-name">{{ student.full_name }}</h3>
+                    <h3 class="student-name">{% if student.full_name %}{{ student.full_name }}{% else %}{{ student.student_name }} {{ student.father_name }} {{ student.surname }}{% endif %}</h3>
                     
                     <div class="student-details">
                         <div class="detail-item">
@@ -256,8 +257,8 @@
                                 <input type="text" id="surname" name="surname" required>
                             </div>
                             <div class="form-group">
-                                <label>Mother Name <span class="required">*</span></label>
-                                <input type="text" id="motherName" name="mother_name" required>
+                                <label>Mother Name</label>
+                                <input type="text" id="motherName" name="mother_name">
                             </div>
                         </div>
 
@@ -606,6 +607,34 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+// Auto-search after 3 letters typed - Client side filtering
+function autoSearchStudents() {
+    const searchInput = document.getElementById('search');
+    const searchValue = searchInput.value.trim().toLowerCase();
+    const studentCards = document.querySelectorAll('.student-card');
+    let visibleCount = 0;
+    
+    studentCards.forEach(card => {
+        const studentName = card.querySelector('.student-name').textContent.toLowerCase();
+        const studentMobile = card.querySelector('.detail-item span:last-child')?.textContent.toLowerCase() || '';
+        
+        if (studentName.includes(searchValue) || studentMobile.includes(searchValue) || searchValue === '') {
+            card.style.display = '';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Show empty state if no results
+    const emptyState = document.querySelector('.empty-state');
+    if (visibleCount === 0 && searchValue.length >= 3) {
+        if (emptyState) emptyState.style.display = 'grid';
+    } else if (emptyState) {
+        emptyState.style.display = 'none';
+    }
 }
 </script>
 {% endblock %}

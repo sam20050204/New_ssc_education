@@ -92,6 +92,18 @@ class EnquiryForm(forms.ModelForm):
             raise ValidationError("Name can only contain letters, spaces, hyphens, and apostrophes.")
         
         return name
+    
+    def clean(self):
+        """Validate form data"""
+        cleaned_data = super().clean()
+        course = cleaned_data.get('course')
+        custom_course = cleaned_data.get('custom_course')
+        
+        # Validate custom_course is provided when course is "Other"
+        if course == 'Other' and not custom_course:
+            raise ValidationError("Please specify a course name when 'Other' is selected.")
+        
+        return cleaned_data
 
 
 class AdmittedStudentForm(forms.ModelForm):
@@ -101,10 +113,10 @@ class AdmittedStudentForm(forms.ModelForm):
         model = AdmittedStudent
         fields = [
             'course', 'custom_course', 'student_name', 'father_name', 'surname',
-            'mother_name', 'date_of_birth', 'mobile_own', 'parent_mobile',
+            'mother_name', 'full_name', 'date_of_birth', 'mobile_own', 'parent_mobile',
             'gender', 'marital_status', 'address', 'city', 'tehsil_block',
             'district', 'pin_code', 'educational_qualification', 'batch_month',
-            'batch_year', 'photo', 'total_fees', 'paid_fees'
+            'batch_year', 'photo', 'total_fees'
         ]
         widgets = {
             'course': forms.Select(attrs={'class': 'form-control', 'required': True}),
@@ -128,6 +140,7 @@ class AdmittedStudentForm(forms.ModelForm):
                 'class': 'form-control',
                 'required': True
             }),
+            'full_name': forms.HiddenInput(),
             'date_of_birth': forms.DateInput(attrs={
                 'class': 'form-control',
                 'type': 'date',
@@ -180,12 +193,6 @@ class AdmittedStudentForm(forms.ModelForm):
                 'step': '0.01',
                 'type': 'number'
             }),
-            'paid_fees': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'step': '0.01',
-                'type': 'number'
-            }),
         }
     
     def clean_mobile_own(self):
@@ -233,12 +240,17 @@ class AdmittedStudentForm(forms.ModelForm):
     def clean(self):
         """Validate form data"""
         cleaned_data = super().clean()
+        course = cleaned_data.get('course')
+        custom_course = cleaned_data.get('custom_course')
         total_fees = cleaned_data.get('total_fees')
-        paid_fees = cleaned_data.get('paid_fees')
         
-        if total_fees is not None and paid_fees is not None:
-            if paid_fees > total_fees:
-                raise ValidationError("Paid fees cannot exceed total fees.")
+        # Validate custom_course is provided when course is "Other"
+        if course == 'Other' and not custom_course:
+            raise ValidationError("Please specify a course name when 'Other' is selected.")
+        
+        # Validate total_fees is provided
+        if not total_fees:
+            raise ValidationError("Total fees must be specified.")
         
         return cleaned_data
 

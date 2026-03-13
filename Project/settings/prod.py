@@ -99,4 +99,4 @@ sentry_sdk.init(
     send_default_pii=False
 )
 
-print("✅ Django Production Settings Loaded")
+print("[OK] Django Production Settings Loaded")

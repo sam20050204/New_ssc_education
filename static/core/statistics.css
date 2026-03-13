@@ -193,3 +193,68 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* ============================================
+   DARK MODE STYLES FOR STATISTICS PAGE
+   ============================================ */
+
+body.dark-mode .stat-card {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+    border-color: #333 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-mode .stat-card:hover {
+    box-shadow: 0 12px 24px rgba(102, 126, 234, 0.2) !important;
+}
+
+body.dark-mode .stat-label {
+    color: #b0b0b0 !important;
+}
+
+body.dark-mode .stat-number {
+    color: #667eea !important;
+}
+
+body.dark-mode .stat-sublabel,
+body.dark-mode .coming-soon {
+    color: #888 !important;
+}
+
+body.dark-mode .detail-section {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+    border-color: #333 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-mode #financeSection {
+    background: #1a1a1a !important;
+    border-color: #333 !important;
+}
+
+body.dark-mode .detail-section::-webkit-scrollbar-track {
+    background: #333 !important;
+}
+
+body.dark-mode .detail-section::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+body.dark-mode .detail-section::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #5568d3 0%, #6b4399 100%) !important;
+}
+
+body.dark-mode .back-button {
+    background: #667eea !important;
+    color: white !important;
+}
+
+body.dark-mode .back-button:hover {
+    background: #5568d3 !important;
+}
+
+body.dark-mode .back-button:active {
+    background: #4557b8 !important;
+}

@@ -66,7 +66,7 @@ class AdmittedStudent(models.Model):
     student_name = models.CharField(max_length=100)
     father_name = models.CharField(max_length=100)
     surname = models.CharField(max_length=100)
-    mother_name = models.CharField(max_length=100)
+    mother_name = models.CharField(max_length=100, blank=True, null=True)
     full_name = models.CharField(max_length=300)
     date_of_birth = models.DateField()
     
@@ -334,6 +334,20 @@ class StudentFinanceDetail(models.Model):
         blank=True,
         null=True
     )
+    fourth_installment = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        blank=True,
+        null=True
+    )
+    fifth_installment = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        blank=True,
+        null=True
+    )
     fees_paid_to_mkcl_1 = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -370,6 +384,33 @@ class StudentFinanceDetail(models.Model):
         """Calculate profit (Total Paid - MKCL Fees)"""
         total_paid = self.student.paid_fees or 0
         return total_paid - self.total_mkcl_fees
+
+
+class Attendance(models.Model):
+    """Daily attendance records for admitted students"""
+    STATUS_CHOICES = [
+        ('P', 'Present'),
+        ('A', 'Absent'),
+    ]
+
+    student = models.ForeignKey(
+        'AdmittedStudent',
+        on_delete=models.CASCADE,
+        related_name='attendance_records'
+    )
+    date = models.DateField(db_index=True)
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='A')
+    remarks = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Attendance'
+        verbose_name_plural = 'Attendance Records'
+        unique_together = ('student', 'date')
+        ordering = ['-date', 'student']
+
+    def __str__(self):
+        return f"{self.student.full_name} - {self.date} - {self.get_status_display()}"
 
 
 class SalesItem(models.Model):

@@ -21,8 +21,30 @@ import json
 import shutil
 import os
 from django.db.models import Sum, Count, Q
-from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem
+from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem, Attendance
 from .forms import EnquiryForm, AdmittedStudentForm, FeePaymentForm, CourseForm
+from django.contrib.auth import authenticate, login as auth_login
+
+# ================= CUSTOM LOGIN =================
+def custom_login(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            auth_login(request, user)
+            messages.success(request, f"Welcome back, {user.username}!")
+            next_url = request.GET.get('next', 'dashboard')
+            return redirect(next_url)
+        else:
+            messages.error(request, "Invalid username or password. Please try again.")
+    
+    return render(request, 'core/login.html')
 
 # ================= CUSTOM LOGOUT =================
 def custom_logout(request):
@@ -351,6 +373,148 @@ def enquiry_detail(request, id):
     return JsonResponse(data)
 
 
+@login_required
+@require_http_methods(["POST"])
+def save_attendance_ajax(request):
+    """AJAX endpoint to save attendance for a single date and return JSON response."""
+    try:
+        data = json.loads(request.body)
+        date_str = data.get('date')
+        present_ids = data.get('present_ids', [])
+
+        # Parse and validate date
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        # Remove attendance records for students not present
+        Attendance.objects.filter(date=selected_date).exclude(student_id__in=present_ids).delete()
+
+        # Create or update present records
+        for sid in present_ids:
+            try:
+                sid = int(sid)
+                Attendance.objects.update_or_create(
+                    student_id=sid,
+                    date=selected_date,
+                    defaults={'status': 'P'}
+                )
+            except (ValueError, AdmittedStudent.DoesNotExist):
+                pass
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Attendance updated for {selected_date}',
+            'present_count': len(present_ids),
+            'date': str(selected_date)
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@login_required
+def get_attendance_data(request):
+    """AJAX endpoint to fetch filtered attendance data with pagination."""
+    from datetime import date as _date
+    
+    date_str = request.GET.get('date')
+    course_filter = request.GET.get('course', '')
+    batch_filter = request.GET.get('batch', '')
+    page_num = request.GET.get('page', 1)
+    
+    if date_str:
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except Exception:
+            selected_date = _date.today()
+    else:
+        selected_date = _date.today()
+
+    # Get all students
+    students = AdmittedStudent.objects.filter().order_by('full_name')
+
+    # Apply filters
+    if course_filter:
+        students = students.filter(course=course_filter)
+    if batch_filter:
+        students = students.filter(batch_month=batch_filter)
+
+    # Get attendance for the selected date
+    attendance_qs = Attendance.objects.filter(date=selected_date)
+    attendance_map = {a.student_id: a.status for a in attendance_qs}
+    present_ids = [sid for sid, st in attendance_map.items() if st == 'P']
+
+    # Paginate
+    paginator = Paginator(students, 20)
+    page_obj = paginator.get_page(page_num)
+
+    # Get available courses and batches for filter dropdowns
+    all_courses = AdmittedStudent.objects.values_list('course', flat=True).distinct().order_by('course')
+    all_batches = AdmittedStudent.objects.values_list('batch_month', flat=True).distinct().order_by('batch_month')
+
+    # Build student list for response
+    student_list = []
+    for student in page_obj.object_list:
+        student_list.append({
+            'id': student.id,
+            'name': student.full_name,
+            'course': student.course,
+            'batch': student.batch_display,
+            'mobile': student.mobile_own,
+            'is_present': student.id in present_ids
+        })
+
+    return JsonResponse({
+        'success': True,
+        'students': student_list,
+        'current_page': page_obj.number,
+        'total_pages': page_obj.paginator.num_pages,
+        'total_count': page_obj.paginator.count,
+        'selected_date': str(selected_date),
+        'present_count': len(present_ids),
+        'courses': list(all_courses),
+        'batches': list(all_batches),
+    })
+
+
+@login_required
+def get_attendance_chart_data(request):
+    """AJAX endpoint to get last 7 days attendance summary for chart."""
+    from datetime import timedelta, date as _date
+    
+    today = _date.today()
+    start_date = today - timedelta(days=6)  # Last 7 days including today
+    
+    # Get attendance records for last 7 days
+    attendance_records = Attendance.objects.filter(
+        date__gte=start_date,
+        date__lte=today,
+        status='P'
+    ).values('date').annotate(present_count=Count('id')).order_by('date')
+    
+    # Build date range with counts
+    chart_data = {}
+    for i in range(7):
+        date = start_date + timedelta(days=i)
+        chart_data[str(date)] = 0
+    
+    # Populate with actual data
+    for record in attendance_records:
+        chart_data[str(record['date'])] = record['present_count']
+    
+    # Get total students count
+    total_students = AdmittedStudent.objects.count()
+    
+    return JsonResponse({
+        'success': True,
+        'labels': list(chart_data.keys()),
+        'data': list(chart_data.values()),
+        'total_students': total_students,
+        'date_range': f"{start_date} to {today}"
+    })
+
+
 # ================= CONVERT ENQUIRY TO ADMISSION =================
 @login_required
 def convert_enquiry_to_admission(request, id):
@@ -607,6 +771,7 @@ def update_student_admitted(request, student_id):
         student.mother_name = request.POST.get('mother_name')
         student.full_name = request.POST.get('full_name')
         student.date_of_birth = request.POST.get('date_of_birth')
+        student.admission_date = request.POST.get('admission_date')
         student.mobile_own = request.POST.get('mobile_own')
         student.parent_mobile = request.POST.get('parent_mobile')
         student.gender = request.POST.get('gender')
@@ -648,6 +813,32 @@ def update_student_admitted(request, student_id):
         return JsonResponse({'success': True})
     
     return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+# ================= SEARCH ADMITTED STUDENTS (AJAX) =================
+@login_required
+def search_admitted_students(request):
+    query = request.GET.get('q', '').strip()
+    
+    if len(query) < 3:
+        return JsonResponse({'students': []})
+    
+    students = AdmittedStudent.objects.filter(
+        Q(full_name__icontains=query) |
+        Q(student_name__icontains=query) |
+        Q(mobile_own__icontains=query)
+    ).order_by('-admission_date')[:10]
+    
+    students_data = []
+    for student in students:
+        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+        students_data.append({
+            'id': student.id,
+            'full_name': student.full_name or f"{student.student_name} {student.father_name} {student.surname}",
+            'mobile_own': student.mobile_own,
+            'course': course_name,
+        })
+    
+    return JsonResponse({'students': students_data})
 
 # ================= FEES PAYMENT PAGE =================
 @login_required
@@ -1178,7 +1369,7 @@ def export_receipts(request):
                 try:
                     if len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
-                except:
+                except (TypeError, AttributeError):
                     pass
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column_letter].width = adjusted_width
@@ -1289,7 +1480,7 @@ def export_admitted_students_excel(request):
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except (TypeError, AttributeError):
                 pass
         adjusted_width = min(max_length + 2, 50)
         ws.column_dimensions[column_letter].width = adjusted_width
@@ -1504,6 +1695,8 @@ def statistics_view(request):
                     'first_installment': Decimal('0.00'),
                     'second_installment': Decimal('0.00'),
                     'third_installment': Decimal('0.00'),
+                    'fourth_installment': Decimal('0.00'),
+                    'fifth_installment': Decimal('0.00'),
                     'fees_paid_to_mkcl_1': Decimal('0.00'),
                     'fees_paid_to_mkcl_2': Decimal('0.00'),
                 }
@@ -1518,10 +1711,12 @@ def statistics_view(request):
             # Get fee payments for this student - ordered by payment_date (oldest first)
             fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
             
-            # Extract installment amounts from FeePayment records
+            # Extract installment amounts from FeePayment records (5 installments)
             first_inst = Decimal('0.00')
             second_inst = Decimal('0.00')
             third_inst = Decimal('0.00')
+            fourth_inst = Decimal('0.00')
+            fifth_inst = Decimal('0.00')
             
             if len(fee_payments) >= 1:
                 first_inst = fee_payments[0].amount
@@ -1529,9 +1724,13 @@ def statistics_view(request):
                 second_inst = fee_payments[1].amount
             if len(fee_payments) >= 3:
                 third_inst = fee_payments[2].amount
+            if len(fee_payments) >= 4:
+                fourth_inst = fee_payments[3].amount
+            if len(fee_payments) >= 5:
+                fifth_inst = fee_payments[4].amount
             
             # Calculate profit as (Total Fees Paid By Learner) - (Total Fees Paid to MKCL)
-            learner_total_paid = first_inst + second_inst + third_inst
+            learner_total_paid = first_inst + second_inst + third_inst + fourth_inst + fifth_inst
             profit = learner_total_paid - mkcl_total
             total += profit
         
@@ -1560,6 +1759,59 @@ def statistics_view(request):
         'student_count': students.count(),
     }
     return render(request, 'core/statistics.html', context)
+
+
+@login_required
+def student_daily_attendance(request):
+    """View to display and record daily attendance for admitted students."""
+    from datetime import date as _date
+    # Parse selected date from GET or POST
+    date_str = request.GET.get('date') or request.POST.get('date')
+    if date_str:
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except Exception:
+            selected_date = _date.today()
+    else:
+        selected_date = _date.today()
+
+    if request.method == 'POST':
+        # Expect checkbox inputs named 'present' with student ids
+        present_ids = request.POST.getlist('present')
+        # Normalize to ints
+        present_ids = [int(x) for x in present_ids if x.isdigit()]
+
+        # Remove attendance records for students not present
+        Attendance.objects.filter(date=selected_date).exclude(student_id__in=present_ids).delete()
+
+        # Create or update present records
+        for sid in present_ids:
+            Attendance.objects.update_or_create(
+                student_id=sid,
+                date=selected_date,
+                defaults={'status': 'P'}
+            )
+
+        # Ensure absent records exist for other students (optional)
+        # Redirect back to GET to show updated data
+        messages.success(request, f"Attendance updated for {selected_date}")
+        # Render updated template below
+
+    # GET or re-render after POST
+    students = AdmittedStudent.objects.filter().order_by('full_name')
+    attendance_qs = Attendance.objects.filter(date=selected_date)
+    attendance_map = {a.student_id: a.status for a in attendance_qs}
+    present_ids = [sid for sid, st in attendance_map.items() if st == 'P']
+
+    context = {
+        'students': students,
+        'attendance_map': attendance_map,
+        'present_ids': present_ids,
+        'selected_date': selected_date,
+        'active_page': 'statistics',
+    }
+
+    return render(request, 'core/student_attendance.html', context)
 
 @login_required
 def student_finance_details(request):
@@ -1591,6 +1843,8 @@ def student_finance_details(request):
                 'first_installment': Decimal('0.00'),
                 'second_installment': Decimal('0.00'),
                 'third_installment': Decimal('0.00'),
+                'fourth_installment': Decimal('0.00'),
+                'fifth_installment': Decimal('0.00'),
                 'fees_paid_to_mkcl_1': Decimal('0.00'),
                 'fees_paid_to_mkcl_2': Decimal('0.00'),
             }
@@ -1613,10 +1867,12 @@ def student_finance_details(request):
         # Get fee payments for this student - ordered by payment_date (oldest first)
         fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
         
-        # Extract installment amounts from FeePayment records
+        # Extract installment amounts from FeePayment records (5 installments)
         first_inst = Decimal('0.00')
         second_inst = Decimal('0.00')
         third_inst = Decimal('0.00')
+        fourth_inst = Decimal('0.00')
+        fifth_inst = Decimal('0.00')
         
         if len(fee_payments) >= 1:
             first_inst = fee_payments[0].amount
@@ -1624,9 +1880,13 @@ def student_finance_details(request):
             second_inst = fee_payments[1].amount
         if len(fee_payments) >= 3:
             third_inst = fee_payments[2].amount
+        if len(fee_payments) >= 4:
+            fourth_inst = fee_payments[3].amount
+        if len(fee_payments) >= 5:
+            fifth_inst = fee_payments[4].amount
         
         # Calculate profit as (Total Fees Paid By Learner) - (Total Fees Paid to MKCL)
-        learner_total_paid = first_inst + second_inst + third_inst
+        learner_total_paid = first_inst + second_inst + third_inst + fourth_inst + fifth_inst
         profit = learner_total_paid - mkcl_total
         total_profit += profit
         
@@ -1646,7 +1906,7 @@ def student_finance_details(request):
         finance_data.append({
             'id': student.id,
             'sr_no': student.id,
-            'learner_name': student.full_name,
+            'learner_name': student.full_name or f"{student.student_name} {student.father_name} {student.surname}",
             'student_id': student.id,  # Using student ID as identifier
             'mobile_no': student.mobile_own,
             'batch': student.batch_display,
@@ -1654,6 +1914,8 @@ def student_finance_details(request):
             'first_inst': first_inst,
             'second_inst': second_inst,
             'third_inst': third_inst,
+            'fourth_inst': fourth_inst,
+            'fifth_inst': fifth_inst,
             'total_paid': total_paid,
             'total_fees': total_fees,
             'balance_fees': balance_fees,

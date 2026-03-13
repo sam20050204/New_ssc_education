@@ -2,22 +2,23 @@
 .fees-payment-container {
     max-width: 1000px;
     margin: 0 auto;
+    padding: 20px;
 }
 
 /* ===================== SEARCH SECTION ===================== */
 .search-section {
     background: white;
-    padding: 25px;
+    padding: 35px;
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     margin-bottom: 25px;
 }
 
 .search-section h3 {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     color: #2c3e50;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -29,12 +30,13 @@
 
 .search-input {
     width: 100%;
-    padding: 12px 45px 12px 15px;
+    padding: 18px 50px 18px 20px;
     border: 2px solid #e8e8e8;
     border-radius: 8px;
-    font-size: 15px;
+    font-size: 17px;
     transition: all 0.3s ease;
     background: #f8f9fa;
+    min-height: 50px;
 }
 
 .search-input:focus {
@@ -46,58 +48,79 @@
 
 .search-icon {
     position: absolute;
-    right: 15px;
+    right: 18px;
     top: 50%;
     transform: translateY(-50%);
     color: #667eea;
-    font-size: 20px;
+    font-size: 22px;
 }
 
 /* ===================== SEARCH RESULTS ===================== */
 .search-results {
     margin-top: 15px;
-    max-height: 300px;
+    max-height: 350px;
     overflow-y: auto;
     border: 2px solid #e8e8e8;
     border-radius: 8px;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* ✅ FIXED: Show results only if there's content */
+.search-results:empty {
     display: none;
 }
 
-.search-results.active {
-    display: block;
-}
-
-.student-result {
-    padding: 12px 15px;
+.search-result-item {
+    padding: 15px;
     border-bottom: 1px solid #f0f0f0;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.student-result:hover {
-    background: #f8f9fa;
+.search-result-item:hover {
+    background: #f0f7ff;
+    border-left: 4px solid #667eea;
+    padding-left: 11px;
 }
 
-.student-result:last-child {
+.search-result-item:last-child {
     border-bottom: none;
 }
 
-.student-result-name {
+.result-name {
     font-weight: 600;
     color: #2c3e50;
-    font-size: 14px;
+    font-size: 15px;
+    margin-bottom: 4px;
 }
 
-.student-result-details {
-    font-size: 12px;
+.result-details {
+    font-size: 13px;
     color: #7f8c8d;
-    margin-top: 3px;
+}
+
+.loading {
+    padding: 20px;
+    text-align: center;
+    color: #667eea;
+    font-weight: 600;
 }
 
 .no-results {
     padding: 20px;
     text-align: center;
-    color: #95a5a6;
+    color: #e74c3c;
+    font-weight: 600;
+}
+
+.error {
+    padding: 15px 20px;
+    background: #fee;
+    color: #c33;
+    border-left: 4px solid #c33;
+    border-radius: 4px;
+    font-size: 14px;
 }
 
 /* ===================== STUDENT DETAILS SECTION ===================== */
@@ -107,11 +130,6 @@
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     margin-bottom: 25px;
-    display: none;
-}
-
-.student-details-section.active {
-    display: block;
 }
 
 .student-header {
@@ -124,12 +142,13 @@
 }
 
 .student-photo-large {
-    width: 100px;
-    height: 120px;
+    width: 120px;
+    height: 140px;
     border-radius: 12px;
     overflow: hidden;
     border: 3px solid #667eea;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+    flex-shrink: 0;
 }
 
 .student-photo-large img {
@@ -138,7 +157,8 @@
     object-fit: cover;
 }
 
-.photo-placeholder-large {
+/* ✅ FIXED: Added .no-photo styles */
+.no-photo {
     width: 100%;
     height: 100%;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -155,15 +175,15 @@
 }
 
 .student-name-large {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 700;
     color: #2c3e50;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .student-course-large {
     display: inline-block;
-    padding: 6px 16px;
+    padding: 8px 18px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-radius: 20px;
@@ -173,9 +193,29 @@
 }
 
 .student-mobile-large {
+    font-size: 15px;
+    color: #7f8c8d;
+    margin-top: 8px;
+}
+
+/* ✅ NEW: Batch styling */
+.student-batch-large {
     font-size: 14px;
     color: #7f8c8d;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
+
+.student-batch-large strong {
+    color: #667eea;
+    font-weight: 600;
+    background: rgba(102, 126, 234, 0.1);
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
 
 /* ===================== FEES INFO GRID ===================== */
 .fees-info-grid {
@@ -191,6 +231,12 @@
     border-radius: 12px;
     text-align: center;
     border: 2px solid #e8e8e8;
+    transition: all 0.3s ease;
+}
+
+.fees-info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .fees-info-card.total {
@@ -218,7 +264,7 @@
 }
 
 .fees-amount {
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 700;
     color: #2c3e50;
 }
@@ -290,6 +336,7 @@
     transition: all 0.3s ease;
     background: #f8f9fa;
     outline: none;
+    font-family: inherit;
 }
 
 .form-input:focus,
@@ -299,10 +346,25 @@
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.form-input:disabled,
+.form-select:disabled {
+    background: #f0f0f0;
+    color: #999;
+    cursor: not-allowed;
+}
+
 .payment-amount-input {
     font-size: 20px;
     font-weight: 700;
     color: #10b981;
+}
+
+/* ✅ FIXED: Added .help-text styles */
+.help-text {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-top: 4px;
+    display: block;
 }
 
 /* ===================== FORM ACTIONS ===================== */
@@ -333,7 +395,7 @@
     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
 }
 
-.btn-submit:hover {
+.btn-submit:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
@@ -362,41 +424,47 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 10000;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;  /* ✅ FIXED: Increased z-index */
     overflow-y: auto;
+    padding: 20px;
 }
 
 .receipt-modal.active {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+}
+
+/* ✅ FIXED: Added .receipt-modal-content styles */
+.receipt-modal-content {
+    width: 100%;
+    max-width: 800px;
 }
 
 .receipt-container {
     background: white;
     width: 100%;
-    max-width: 210mm;
-    height: 148.5mm;
-    padding: 15mm;
+    padding: 30px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    position: relative;
+    border-radius: 12px;
+    page-break-after: avoid;
 }
 
 .receipt-header {
     text-align: center;
     border-bottom: 3px solid #2c3e50;
-    padding-bottom: 10px;
+    padding-bottom: 12px;
     margin-bottom: 15px;
 }
 
 .institute-name {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     color: #2c3e50;
     text-transform: uppercase;
     margin-bottom: 5px;
+    letter-spacing: 0.5px;
 }
 
 .institute-details {
@@ -418,9 +486,9 @@
 .receipt-info {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 8px 15px;
+    gap: 10px 20px;
     margin-bottom: 15px;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .receipt-label {
@@ -430,6 +498,7 @@
 
 .receipt-value {
     color: #495057;
+    word-break: break-word;
 }
 
 .receipt-divider {
@@ -452,6 +521,7 @@
     align-items: center;
     margin-bottom: 8px;
     font-size: 13px;
+    padding: 5px 0;
 }
 
 .amount-row:last-child {
@@ -462,22 +532,28 @@
     font-size: 16px;
     font-weight: 700;
     color: #10b981;
-    padding-top: 10px;
-    border-top: 2px solid #f59e0b;
+    padding: 10px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 4px;
+    border: 1px solid #10b981;
 }
 
 .amount-in-words {
-    margin-top: 10px;
-    font-size: 11px;
-    color: #92400e;
-    font-weight: 600;
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.02);
+    border-left: 3px solid #f59e0b;
+    font-size: 12px;
+    color: #495057;
+    font-weight: 500;
+    line-height: 1.5;
 }
 
 .receipt-footer {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-top: 20px;
+    margin-top: 30px;
     padding-top: 15px;
     border-top: 2px solid #dee2e6;
 }
@@ -485,7 +561,7 @@
 .thank-you {
     font-size: 12px;
     color: #7f8c8d;
-    font-style: italic;
+    font-weight: 500;
 }
 
 .signature-section {
@@ -549,31 +625,36 @@
 
 /* ===================== PRINT STYLES ===================== */
 @media print {
-    body * {
-        visibility: hidden;
+    * {
+        box-shadow: none !important;
     }
     
-    .receipt-container,
-    .receipt-container * {
-        visibility: visible;
+    body {
+        background: white;
     }
     
-    .receipt-container {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 210mm;
-        height: 148.5mm;
-        box-shadow: none;
+    .receipt-modal {
+        background: white;
+        position: static;
+        overflow: visible;
     }
     
     .modal-actions {
         display: none !important;
     }
+    
+    .receipt-container {
+        box-shadow: none;
+        page-break-inside: avoid;
+    }
 }
 
 /* ===================== RESPONSIVE ===================== */
 @media (max-width: 768px) {
+    .fees-payment-container {
+        padding: 15px;
+    }
+    
     .fees-info-grid {
         grid-template-columns: 1fr;
     }
@@ -585,16 +666,22 @@
     .student-header {
         flex-direction: column;
         text-align: center;
+        gap: 15px;
+    }
+    
+    .student-info-large {
+        width: 100%;
     }
     
     .receipt-container {
-        height: auto;
-        min-height: 148.5mm;
+        padding: 20px;
+        border-radius: 8px;
     }
     
     .form-actions,
     .modal-actions {
         flex-direction: column;
+        gap: 10px;
     }
     
     .btn-submit,
@@ -604,4 +691,415 @@
         width: 100%;
         justify-content: center;
     }
+    
+    .receipt-info {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+    
+    .receipt-label {
+        font-weight: 600;
+        color: #666;
+    }
+}
+
+@media (max-width: 480px) {
+    .search-section,
+    .student-details-section,
+    .payment-form-section {
+        padding: 15px;
+        border-radius: 8px;
+    }
+    
+    .student-photo-large {
+        width: 100px;
+        height: 120px;
+    }
+    
+    .student-name-large {
+        font-size: 20px;
+    }
+    
+    .receipt-container {
+        padding: 15px;
+    }
+    
+    .institute-name {
+        font-size: 16px;
+    }
+    
+    .receipt-title {
+        font-size: 14px;
+    }
+}
+
+/* ===================== SCROLLBAR STYLES ===================== */
+.search-results::-webkit-scrollbar {
+    width: 8px;
+}
+
+.search-results::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.search-results::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
+}
+
+
+/* ===================== UPDATED PRINT STYLES ===================== */
+/* Add this to the END of your fees_payment.css file */
+
+@media print {
+    /* Keep everything simple - let the new window handle printing */
+    .modal-actions,
+    .btn-print,
+    .btn-close {
+        display: none !important;
+    }
+
+    /* Remove shadows, borders and adjust spacing for clean print */
+    .receipt-container {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 20px;
+        page-break-inside: avoid;
+    }
+
+    /* Remove modal background */
+    .receipt-modal {
+        background: white !important;
+        position: static !important;
+        overflow: visible !important;
+    }
+
+    /* Ensure receipt content is properly sized and avoids breaks */
+    .receipt-header,
+    .receipt-title,
+    .receipt-info,
+    .amount-section,
+    .receipt-footer {
+        page-break-inside: avoid;
+    }
+}
+
+/* ===================== RECEIPT MODAL SCROLLBAR ===================== */
+.receipt-modal-content {
+    width: 100%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    background: white;
+}
+
+/* ✅ Scrollbar styling for receipt modal */
+.receipt-modal-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.receipt-modal-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.receipt-modal-content::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+    border: 2px solid #f1f1f1;
+}
+
+.receipt-modal-content::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
+}
+
+/* Firefox scrollbar */
+.receipt-modal-content {
+    scrollbar-color: #667eea #f1f1f1;
+    scrollbar-width: thin;
+}
+
+/* ===================== RECEIPT CONTAINER PADDING ===================== */
+.receipt-container {
+    background: white;
+    width: 100%;
+    padding: 30px;
+    page-break-after: avoid;
+}
+
+/* ===================== MODAL ACTIONS BUTTONS ===================== */
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-top: 1px solid #e8e8e8;
+    border-radius: 0 0 12px 12px;
+}
+
+.btn-print,
+.btn-new,
+.btn-close {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+/* Print Button */
+.btn-print {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-print:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-print:active {
+    transform: translateY(0);
+}
+
+
+
+/* New Payment Button - ✅ NEW */
+.btn-new {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.btn-new:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-new:active {
+    transform: translateY(0);
+}
+
+/* Close Button */
+.btn-close {
+    background: #e9ecef;
+    color: #495057;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-close:hover {
+    background: #dee2e6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-close:active {
+    transform: translateY(0);
+}
+
+/* ===================== RESPONSIVE BUTTONS ===================== */
+@media (max-width: 768px) {
+    .modal-actions {
+        gap: 8px;
+    }
+    
+    .btn-print,
+    .btn-new,
+    .btn-close {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    .receipt-modal-content {
+        max-height: 90vh;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .btn-print,
+    .btn-new,
+    .btn-close {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+    }
+    
+    .receipt-container {
+        padding: 15px;
+    }
+}
+
+/* ===================== DARK MODE STYLES ===================== */
+
+body.dark-mode .search-section {
+    background: #242424 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .search-section h3 {
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .search-input {
+    background: #333 !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+body.dark-mode .search-input:focus {
+    background: #3a3a3a !important;
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+body.dark-mode .search-input::placeholder {
+    color: #888 !important;
+}
+
+body.dark-mode .search-results {
+    background: #242424 !important;
+    border-color: #333 !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+
+body.dark-mode .search-result-item {
+    border-bottom-color: #333 !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .search-result-item:hover {
+    background: rgba(102, 126, 234, 0.1) !important;
+    border-left-color: #667eea !important;
+}
+
+body.dark-mode .result-name {
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .result-details {
+    color: #888 !important;
+}
+
+body.dark-mode .student-info-section {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+    border-color: #333 !important;
+}
+
+body.dark-mode .student-info-section h3 {
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .info-item-label {
+    color: #888 !important;
+}
+
+body.dark-mode .info-item-value {
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .fees-info-section {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .fees-info-section h3 {
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .fees-grid {
+    background: #1f1f1f !important;
+}
+
+body.dark-mode .fee-item {
+    background: #242424 !important;
+    border-color: #333 !important;
+}
+
+body.dark-mode .fee-label {
+    color: #888 !important;
+}
+
+body.dark-mode .fee-amount {
+    color: #667eea !important;
+}
+
+body.dark-mode .payment-form-section {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .payment-form-section h3 {
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .form-group label {
+    color: #b0b0b0 !important;
+}
+
+body.dark-mode .form-control {
+    background: #333 !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
+}
+
+body.dark-mode .form-control:focus {
+    background: #3a3a3a !important;
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+body.dark-mode .form-control::placeholder {
+    color: #888 !important;
+}
+
+body.dark-mode .btn-submit {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+body.dark-mode .btn-submit:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+}
+
+body.dark-mode .receipt-modal-overlay {
+    background: rgba(0, 0, 0, 0.8) !important;
+}
+
+body.dark-mode .receipt-modal-content {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.dark-mode .receipt-container {
+    background: #1f1f1f !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .modal-title {
+    color: #e0e0e0 !important;
 }

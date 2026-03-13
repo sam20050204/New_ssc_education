@@ -20,13 +20,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const fatherName = document.getElementById('father_name');
     const surname = document.getElementById('surname');
     const fullName = document.getElementById('full_name');
+    const fullNameHidden = document.getElementById('full_name_hidden');
 
     function generateFullName() {
         const parts = [];
         if (studentName && studentName.value) parts.push(studentName.value.trim());
         if (fatherName && fatherName.value) parts.push(fatherName.value.trim());
         if (surname && surname.value) parts.push(surname.value.trim());
-        if (fullName) fullName.value = parts.join(' ');
+        const fullNameValue = parts.join(' ');
+        if (fullName) fullName.value = fullNameValue;
+        if (fullNameHidden) fullNameHidden.value = fullNameValue;
     }
 
     if (studentName) studentName.addEventListener('input', generateFullName);

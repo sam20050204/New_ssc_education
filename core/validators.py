@@ -31,12 +31,25 @@ def validate_image_file(file):
             params={'size': round(file.size / (1024 * 1024), 2)},
         )
     
-    if file.content_type not in ALLOWED_IMAGE_MIMETYPES:
+    # Get MIME type from file - handle both UploadedFile and existing ImageFieldFile
+    content_type = getattr(file, 'content_type', None)
+    if not content_type:
+        # Try to determine MIME type from extension
+        mime_map = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+        }
+        content_type = mime_map.get(file_ext, 'application/octet-stream')
+    
+    if content_type not in ALLOWED_IMAGE_MIMETYPES:
         raise ValidationError(
             _('Invalid file type: %(type)s. Allowed types: %(allowed)s'),
             code='invalid_mimetype',
             params={
-                'type': file.content_type,
+                'type': content_type,
                 'allowed': ', '.join(ALLOWED_IMAGE_MIMETYPES)
             },
         )

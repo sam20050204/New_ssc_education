@@ -155,7 +155,7 @@
     height: auto;
     display: flex;
     flex-direction: column;
-    overflow-x: visible;
+    overflow: visible;
     border: 1px solid #f0f0f0;
     padding: 0;
     max-width: 100%;
@@ -172,6 +172,7 @@
     border-radius: 0;
     padding: 15px 30px 15px 30px;
     min-width: 0;
+    position: relative;
 }
 
 /* Custom Scrollbar Styling - Only on Table Container */
@@ -226,7 +227,7 @@
 }
 
 .finance-table thead th {
-    padding: 6px 2px;
+    padding: 8px 4px;
     text-align: center;
     font-weight: 600;
     font-size: 11px;
@@ -244,7 +245,7 @@
 }
 .section-header {
     display: table-cell;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
     color: white;
     font-weight: bold;
     text-align: center;
@@ -273,7 +274,7 @@
 }
 
 .finance-table tbody td {
-    padding: 4px 2px;
+    padding: 6px 4px;
     text-align: center;
     border-right: 1px solid #e0e0e0;
     font-size: 12px;
@@ -294,6 +295,113 @@
 }
 .finance-table tbody td:last-child {
     border-right: none;
+}
+
+/* Sticky Columns - Freeze Panes Effect */
+.sticky-col {
+    position: sticky;
+    background: white;
+    z-index: 5;
+}
+
+.sticky-col-1 {
+    left: 0;
+    min-width: 50px;
+    width: 50px;
+    z-index: 5;
+}
+
+.sticky-col-2 {
+    left: 50px;
+    min-width: 150px;
+    width: 150px;
+    z-index: 5;
+}
+
+.sticky-col-3 {
+    left: 200px;
+    min-width: 100px;
+    width: 100px;
+    z-index: 5;
+}
+
+.sticky-col-4 {
+    left: 300px;
+    min-width: 100px;
+    width: 100px;
+    z-index: 5;
+}
+
+.sticky-col-5 {
+    left: 400px;
+    min-width: 80px;
+    width: 80px;
+    z-index: 5;
+    border-right: 3px solid #667eea !important;
+}
+
+/* Sticky header styling - Higher z-index than body rows */
+.finance-table thead th.sticky-col {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: sticky;
+    z-index: 10;
+}
+
+.finance-table thead th.sticky-col-1 {
+    left: 0;
+    z-index: 10;
+}
+
+.finance-table thead th.sticky-col-2 {
+    left: 50px;
+    z-index: 10;
+}
+
+.finance-table thead th.sticky-col-3 {
+    left: 200px;
+    z-index: 10;
+}
+
+.finance-table thead th.sticky-col-4 {
+    left: 300px;
+    z-index: 10;
+}
+
+.finance-table thead th.sticky-col-5 {
+    left: 400px;
+    z-index: 10;
+    border-right: 3px solid rgba(255,255,255,0.6) !important;
+}
+
+/* Sticky Section Header - Highest z-index */
+.sticky-section-header {
+    position: sticky;
+    left: 0 !important;
+    z-index: 11;
+}
+
+/* Regular columns should have z-index 1 (default) so they go behind sticky */
+.finance-table tbody td:not(.sticky-col) {
+    position: relative;
+    z-index: 1;
+}
+
+.finance-table thead th:not(.sticky-col):not(.sticky-section-header) {
+    position: relative;
+    z-index: 1;
+}
+
+/* Alternate row backgrounds for sticky columns */
+.finance-table tbody tr:nth-child(even) .sticky-col {
+    background-color: #fafafa;
+}
+
+.finance-table tbody tr:hover .sticky-col {
+    background-color: #f8f9fa;
+}
+
+.finance-table tbody tr:nth-child(even):hover .sticky-col {
+    background-color: #f8f9fa;
 }
 
 .editable-cell {
@@ -329,6 +437,8 @@
     background-color: #f8f9fa;
     font-weight: 500;
     color: #333;
+    min-width: 85px;
+    width: 85px;
 }
 
 .profit-positive {

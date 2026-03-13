@@ -62,7 +62,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'core.context_processors.site_context',  # Custom context
+                'core.context_processors.static_version',  # Custom context
             ],
         },
     },
@@ -232,6 +232,11 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 
 # ==================== PAGINATION ====================
 PAGINATION_DEFAULT = 20
+
+# ==================== AUTHENTICATION CONFIGURATION ====================
+LOGIN_URL = 'login'  # URL name or path where users are redirected if login is required
+LOGIN_REDIRECT_URL = 'dashboard'  # URL name or path to redirect after successful login
+LOGOUT_REDIRECT_URL = 'home'  # URL name or path to redirect after logout
 
 # ==================== ROLE-BASED ACCESS ====================
 ROLES = {

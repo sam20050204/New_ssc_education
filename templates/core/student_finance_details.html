@@ -63,20 +63,22 @@
             <table class="finance-table">
                 <thead>
                     <tr>
-                        <th colspan="5" class="section-header">Student Details</th>
-                        <th colspan="6" class="section-header">Fees Paid By Learner</th>
+                        <th colspan="5" class="section-header sticky-section-header">Student Details</th>
+                        <th colspan="8" class="section-header">Fees Paid By Learner</th>
                         <th colspan="3" class="section-header">Fees Paid to MKCL</th>
                         <th rowspan="2">Profit</th>
                     </tr>
                     <tr>
-                        <th>Sr.No.</th>
-                        <th class="w-n">Learner Name</th>
-                        <th>Mobile No.</th>
-                        <th>Batch</th>
-                        <th>Course</th>
-                        <th>I Inst</th>
-                        <th>II Inst</th>
-                        <th>III Inst</th>
+                        <th class="sticky-col sticky-col-1">Sr.No.</th>
+                        <th class="sticky-col sticky-col-2 w-n">Learner Name</th>
+                        <th class="sticky-col sticky-col-3">Course</th>
+                        <th class="sticky-col sticky-col-4">Mobile No.</th>
+                        <th class="sticky-col sticky-col-5">Batch</th>
+                        <th>I Installment</th>
+                        <th>II Installment</th>
+                        <th>III Installment</th>
+                        <th>IV Installment</th>
+                        <th>V Installment</th>
                         <th>Total Paid</th>
                         <th>Total Fees</th>
                         <th>Balance Fees</th>
@@ -88,16 +90,18 @@
                 <tbody>
                     {% for data in finance_data %}
                     <tr data-student-id="{{ data.id }}">
-                        <td>{{ forloop.counter }}</td>
-                        <td class="w-n"><strong>{{ data.learner_name }}</strong></td>
-                        <td>{{ data.mobile_no }}</td>
-                        <td>{{ data.batch }}</td>
-                        <td>{{ data.course }}</td>
+                        <td class="sticky-col sticky-col-1">{{ forloop.counter }}</td>
+                        <td class="sticky-col sticky-col-2 w-n"><strong>{{ data.learner_name }}</strong></td>
+                        <td class="sticky-col sticky-col-3">{{ data.course }}</td>
+                        <td class="sticky-col sticky-col-4">{{ data.mobile_no }}</td>
+                        <td class="sticky-col sticky-col-5">{{ data.batch }}</td>
                         
                         <!-- Fees Paid By Learner - Read Only -->
                         <td class="readonly-cell">{{ data.first_inst|floatformat:2 }}</td>
                         <td class="readonly-cell">{{ data.second_inst|floatformat:2 }}</td>
                         <td class="readonly-cell">{{ data.third_inst|floatformat:2 }}</td>
+                        <td class="readonly-cell">{{ data.fourth_inst|floatformat:2 }}</td>
+                        <td class="readonly-cell">{{ data.fifth_inst|floatformat:2 }}</td>
                         
                         <!-- Auto-calculated fields -->
                         <td class="readonly-cell">{{ data.total_paid|floatformat:2 }}</td>

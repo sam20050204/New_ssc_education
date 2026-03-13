@@ -1,0 +1,639 @@
+/* ===================== DARK MODE THEME - GLOBAL ===================== */
+
+/* Root & Body */
+body.dark-mode {
+    background: #1a1a1a;
+    color: #e0e0e0;
+}
+
+body.dark-mode * {
+    color-scheme: dark;
+}
+
+/* ===================== HEADER ===================== */
+body.dark-mode .top-header {
+    background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+    border-bottom-color: #333;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    color: #e0e0e0;
+}
+
+body.dark-mode .module-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+body.dark-mode .module-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+body.dark-mode .user-info span {
+    color: #e0e0e0;
+}
+
+/* ===================== SIDEBAR ===================== */
+body.dark-mode .sidebar {
+    background: #242424;
+    color: #e0e0e0;
+    border-right-color: #333;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .sidebar .menu-item {
+    color: #b0b0b0;
+    transition: all 0.3s ease;
+}
+
+body.dark-mode .sidebar .menu-item:hover {
+    background: #333;
+    color: #667eea;
+    border-left-color: #667eea;
+}
+
+body.dark-mode .sidebar .menu-item.active {
+    background: rgba(102, 126, 234, 0.15);
+    color: #667eea;
+    border-left-color: #667eea;
+}
+
+body.dark-mode .sidebar .menu-category-title {
+    color: #999;
+}
+
+/* ===================== LAYOUT ===================== */
+body.dark-mode .layout {
+    background: #1a1a1a;
+}
+
+body.dark-mode .main-content {
+    background: #1a1a1a;
+}
+
+body.dark-mode .content-wrapper {
+    background: #1a1a1a;
+}
+
+/* ===================== CARDS & CONTAINERS ===================== */
+body.dark-mode .page-header {
+    background: linear-gradient(135deg, #333 0%, #444 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .scrollbar-wrapper {
+    background: #242424 !important;
+    border-color: #333 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-mode .finance-table-container {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+}
+
+/* Statistics Page - Stat Cards */
+body.dark-mode .stat-card {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+    border-color: #333 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-mode .stat-card:hover {
+    box-shadow: 0 12px 24px rgba(102, 126, 234, 0.2) !important;
+}
+
+body.dark-mode .stat-label {
+    color: #b0b0b0 !important;
+}
+
+body.dark-mode .stat-number {
+    color: #667eea !important;
+}
+
+body.dark-mode .stat-sublabel,
+body.dark-mode .coming-soon {
+    color: #888 !important;
+}
+
+/* Dashboard Stats Grid */
+body.dark-mode .stats-grid {
+    background: #1a1a1a !important;
+}
+
+/* Detail Section */
+body.dark-mode .detail-section {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+    border-color: #333 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-mode #financeSection {
+    background: #1a1a1a !important;
+    border-color: #333 !important;
+}
+
+/* Detail Section Scrollbar */
+body.dark-mode .detail-section::-webkit-scrollbar {
+    height: 10px;
+}
+
+body.dark-mode .detail-section::-webkit-scrollbar-track {
+    background: #333 !important;
+    border-radius: 10px;
+}
+
+body.dark-mode .detail-section::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
+    border-radius: 10px;
+}
+
+body.dark-mode .detail-section::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #5568d3 0%, #6b4399 100%) !important;
+}
+
+/* ===================== TABLES ===================== */
+body.dark-mode .finance-table {
+    background: #242424;
+    color: #e0e0e0;
+}
+
+body.dark-mode .finance-table thead {
+    background: linear-gradient(135deg, #333 0%, #444 100%);
+    color: #e0e0e0;
+}
+
+body.dark-mode .finance-table thead th {
+    border-right-color: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+}
+
+body.dark-mode .finance-table tbody {
+    background: #242424;
+    color: #e0e0e0;
+}
+
+body.dark-mode .finance-table tbody tr {
+    border-bottom-color: #333;
+}
+
+body.dark-mode .finance-table tbody tr:hover {
+    background-color: #2a2a2a;
+}
+
+body.dark-mode .finance-table tbody tr:nth-child(even) {
+    background-color: #252525;
+}
+
+body.dark-mode .finance-table tbody tr:nth-child(even):hover {
+    background-color: #2a2a2a;
+}
+
+body.dark-mode .finance-table tbody td {
+    border-right-color: #333;
+    color: #e0e0e0;
+}
+
+body.dark-mode .readonly-cell {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+}
+
+body.dark-mode .editable-cell {
+    background-color: #1f1f1f;
+}
+
+body.dark-mode .editable-cell input {
+    background-color: #333;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+body.dark-mode .editable-cell input:focus {
+    background-color: #2a2a2a;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+body.dark-mode .editable-cell input:hover {
+    border-color: #555;
+}
+
+/* ===================== STICKY COLUMNS ===================== */
+body.dark-mode .sticky-col {
+    background: #242424;
+}
+
+body.dark-mode .sticky-col-5 {
+    border-right-color: #667eea;
+}
+
+body.dark-mode .finance-table tbody tr:nth-child(even) .sticky-col {
+    background-color: #252525;
+}
+
+body.dark-mode .finance-table tbody tr:hover .sticky-col {
+    background-color: #2a2a2a;
+}
+
+body.dark-mode .finance-table tbody tr:nth-child(even):hover .sticky-col {
+    background-color: #2a2a2a;
+}
+
+/* ===================== FORMS & INPUTS ===================== */
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+    background-color: #333;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+body.dark-mode input:focus,
+body.dark-mode textarea:focus,
+body.dark-mode select:focus {
+    background-color: #3a3a3a;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+    color: #888;
+}
+
+/* ===================== BUTTONS ===================== */
+body.dark-mode .btn-submit,
+body.dark-mode .filter-btn.apply {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+body.dark-mode .btn-submit:hover,
+body.dark-mode .filter-btn.apply:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+body.dark-mode .btn-reset,
+body.dark-mode .filter-btn.reset {
+    background: #333;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+body.dark-mode .btn-reset:hover,
+body.dark-mode .filter-btn.reset:hover {
+    background: #3a3a3a;
+    border-color: #555;
+}
+
+body.dark-mode .export-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+body.dark-mode .export-button:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* ===================== FILTERS & SEARCH ===================== */
+body.dark-mode .filters-container {
+    background: #242424;
+    border-color: #333;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .filter-input,
+body.dark-mode .filter-select {
+    background: #333;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+body.dark-mode .filter-input:focus,
+body.dark-mode .filter-select:focus {
+    background: #3a3a3a;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+body.dark-mode .filter-input::placeholder {
+    color: #888;
+}
+
+body.dark-mode .filter-group label {
+    color: #adb5bd;
+}
+
+/* ===================== MODALS ===================== */
+body.dark-mode .modal {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+body.dark-mode .modal-content {
+    background: #242424;
+    color: #e0e0e0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .modal-content h2 {
+    color: #e0e0e0;
+}
+
+body.dark-mode .modal-content label {
+    color: #b0b0b0;
+}
+
+body.dark-mode .modal-actions {
+    border-top-color: #333;
+}
+
+/* ===================== SECTION HEADERS ===================== */
+body.dark-mode .section-header {
+    background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+    color: white;
+}
+
+/* ===================== CARDS IN HEADER ===================== */
+body.dark-mode .total-profit-box {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .summary-card {
+    background: #242424;
+    color: #e0e0e0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .summary-card:hover {
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+}
+
+body.dark-mode .summary-value {
+    color: #e0e0e0;
+}
+
+body.dark-mode .summary-label {
+    color: #888;
+}
+
+/* ===================== LINKS & TEXT ===================== */
+body.dark-mode a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+body.dark-mode a:hover {
+    color: #764ba2;
+    text-decoration: underline;
+}
+
+body.dark-mode .student-name {
+    color: #667eea;
+}
+
+body.dark-mode .student-name:hover {
+    color: #764ba2;
+}
+
+/* ===================== MESSAGES & ALERTS ===================== */
+body.dark-mode .messages {
+    background: #242424;
+}
+
+body.dark-mode .alert {
+    background: #333;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+body.dark-mode .alert-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-color: #10b981;
+}
+
+body.dark-mode .alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+body.dark-mode .alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+body.dark-mode .alert-info {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+/* ===================== SCROLLBARS ===================== */
+body.dark-mode ::-webkit-scrollbar {
+    background: #1a1a1a;
+}
+
+body.dark-mode ::-webkit-scrollbar-track {
+    background: #242424;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #444;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* ===================== PROFIT CELLS ===================== */
+body.dark-mode .profit-positive {
+    color: #10b981;
+}
+
+body.dark-mode .profit-negative {
+    color: #ef4444;
+}
+
+/* ===================== EMPTY STATE ===================== */
+body.dark-mode .empty-state {
+    background: #242424;
+    color: #b0b0b0;
+}
+
+body.dark-mode .empty-icon {
+    font-size: 48px;
+}
+
+/* ===================== LOADING SPINNER ===================== */
+body.dark-mode .loading-spinner {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+body.dark-mode .spinner {
+    border-color: rgba(102, 126, 234, 0.2);
+    border-top-color: #667eea;
+}
+
+/* ===================== TRANSITIONS ===================== */
+body.dark-mode {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ===================== SPECIFIC PAGE STYLES ===================== */
+
+/* Dashboard */
+body.dark-mode .dashboard-card {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-mode .stat-box {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+}
+
+/* Chart Containers */
+body.dark-mode .chart-container {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode canvas {
+    filter: brightness(0.9);
+}
+
+/* Admission Chart Section */
+body.dark-mode .admission-chart {
+    background: #242424 !important;
+}
+
+body.dark-mode .chart-box {
+    background: #242424 !important;
+    color: #e0e0e0 !important;
+    border-color: #333 !important;
+}
+
+/* Tables with data-table class */
+body.dark-mode .data-table {
+    background: #242424;
+    color: #e0e0e0;
+}
+
+body.dark-mode .data-table thead {
+    background: linear-gradient(135deg, #333 0%, #444 100%);
+    color: #e0e0e0;
+}
+
+body.dark-mode .data-table tbody tr {
+    border-bottom-color: #333;
+}
+
+body.dark-mode .data-table tbody tr:hover {
+    background-color: #2a2a2a;
+}
+
+body.dark-mode .data-table tbody tr:nth-child(even) {
+    background-color: #252525;
+}
+
+body.dark-mode .data-table td,
+body.dark-mode .data-table th {
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+/* Search results */
+body.dark-mode .search-results {
+    background: #242424;
+    border-color: #333;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .search-result-item {
+    background: #242424;
+    border-bottom-color: #333;
+    color: #e0e0e0;
+}
+
+body.dark-mode .search-result-item:hover {
+    background: #2a2a2a;
+}
+
+body.dark-mode .result-name {
+    color: #e0e0e0;
+}
+
+body.dark-mode .result-details {
+    color: #999;
+}
+
+/* Student info card */
+body.dark-mode .student-header {
+    background: #242424;
+    color: #e0e0e0;
+}
+
+body.dark-mode .student-info-large {
+    background: #242424;
+    color: #e0e0e0;
+}
+
+body.dark-mode .student-name-large {
+    color: #e0e0e0;
+}
+
+body.dark-mode .student-course-large,
+body.dark-mode .student-batch-large,
+body.dark-mode .student-mobile-large {
+    color: #b0b0b0;
+}
+
+/* Fees info grid */
+body.dark-mode .fees-info-card {
+    background: #242424;
+    color: #e0e0e0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .fees-amount {
+    color: #667eea;
+}
+
+/* Payment form */
+body.dark-mode .payment-form-section {
+    background: #242424;
+    color: #e0e0e0;
+}
+
+body.dark-mode .payment-form-section h3 {
+    color: #e0e0e0;
+}
+
+/* Receipt modal */
+body.dark-mode .receipt-modal {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+body.dark-mode .receipt-modal-content {
+    background: #242424;
+    color: #e0e0e0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-mode .receipt-container {
+    background: #1f1f1f;
+    color: #e0e0e0;
+}
