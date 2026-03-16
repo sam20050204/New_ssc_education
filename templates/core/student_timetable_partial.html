@@ -1,0 +1,369 @@
+{% load static %}
+
+<style>
+    .timetable-container {
+        margin-top: 20px;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-group label {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #333;
+    }
+    
+    .filter-group input,
+    .filter-group select {
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+    }
+    
+    .btn-group button {
+        padding: 8px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-search {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-search:hover {
+        background: #0056b3;
+    }
+    
+    .btn-reset {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-reset:hover {
+        background: #5a6268;
+    }
+    
+    .btn-add {
+        background: #28a745;
+        color: white;
+        text-decoration: none;
+        display: inline-block;
+        padding: 10px 20px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    
+    .btn-add:hover {
+        background: #218838;
+        text-decoration: none;
+    }
+    
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card.green {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .stat-card h3 {
+        margin: 0 0 10px 0;
+        font-size: 18px;
+    }
+    
+    .stat-card p {
+        margin: 0;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    
+    .timetable-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .timetable-table thead {
+        background: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .timetable-table th {
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .timetable-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .timetable-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .badge-theory {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+    
+    .badge-practical {
+        background: #f3e5f5;
+        color: #7b1fa2;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .action-buttons a {
+        padding: 6px 12px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-edit {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-edit:hover {
+        background: #0056b3;
+    }
+    
+    .btn-delete {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-delete:hover {
+        background: #c82333;
+    }
+    
+    .empty-message {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+    
+    .back-button {
+        background: #6c757d;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+    
+    .back-button:hover {
+        background: #5a6268;
+    }
+</style>
+
+<button class="back-button" onclick="hideDetailSection()">← Back to Dashboard</button>
+
+<div class="timetable-container">
+    <h2>Student Timetable Management</h2>
+    
+    <div class="filter-section">
+        <form method="get" class="filter-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="student_name">Student Name</label>
+                    <input type="text" id="student_name" name="student_name" placeholder="Search by student name" value="{{ request.GET.student_name|default:'' }}">
+                </div>
+                <div class="filter-group">
+                    <label for="batch">Batch</label>
+                    <select id="batch" name="batch">
+                        <option value="">All Batches</option>
+                        {% for batch in filter_form.batch %}
+                            {% if batch.value %}
+                                <option value="{{ batch.value }}" {% if request.GET.batch == batch.value %}selected{% endif %}>
+                                    {{ batch.value }}
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="course">Course</label>
+                    <select id="course" name="course">
+                        <option value="">All Courses</option>
+                        {% for course_obj in filter_form.course %}
+                            {% if course_obj.value %}
+                                <option value="{{ course_obj.value }}" {% if request.GET.course == course_obj.value %}selected{% endif %}>
+                                    {{ course_obj.value }}
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="day">Day</label>
+                    <select id="day" name="day">
+                        <option value="">All Days</option>
+                        <option value="Monday" {% if request.GET.day == "Monday" %}selected{% endif %}>Monday</option>
+                        <option value="Tuesday" {% if request.GET.day == "Tuesday" %}selected{% endif %}>Tuesday</option>
+                        <option value="Wednesday" {% if request.GET.day == "Wednesday" %}selected{% endif %}>Wednesday</option>
+                        <option value="Thursday" {% if request.GET.day == "Thursday" %}selected{% endif %}>Thursday</option>
+                        <option value="Friday" {% if request.GET.day == "Friday" %}selected{% endif %}>Friday</option>
+                        <option value="Saturday" {% if request.GET.day == "Saturday" %}selected{% endif %}>Saturday</option>
+                        <option value="Sunday" {% if request.GET.day == "Sunday" %}selected{% endif %}>Sunday</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="time_slot">Time Slot</label>
+                    <select id="time_slot" name="time_slot">
+                        <option value="">All Time Slots</option>
+                        <option value="09:00-10:00" {% if request.GET.time_slot == "09:00-10:00" %}selected{% endif %}>09:00 - 10:00 AM</option>
+                        <option value="10:00-11:00" {% if request.GET.time_slot == "10:00-11:00" %}selected{% endif %}>10:00 - 11:00 AM</option>
+                        <option value="11:00-12:00" {% if request.GET.time_slot == "11:00-12:00" %}selected{% endif %}>11:00 - 12:00 PM</option>
+                        <option value="12:00-13:00" {% if request.GET.time_slot == "12:00-13:00" %}selected{% endif %}>12:00 - 1:00 PM</option>
+                        <option value="13:00-14:00" {% if request.GET.time_slot == "13:00-14:00" %}selected{% endif %}>1:00 - 2:00 PM</option>
+                        <option value="14:00-15:00" {% if request.GET.time_slot == "14:00-15:00" %}selected{% endif %}>2:00 - 3:00 PM</option>
+                        <option value="15:00-16:00" {% if request.GET.time_slot == "15:00-16:00" %}selected{% endif %}>3:00 - 4:00 PM</option>
+                        <option value="16:00-17:00" {% if request.GET.time_slot == "16:00-17:00" %}selected{% endif %}>4:00 - 5:00 PM</option>
+                        <option value="17:00-18:00" {% if request.GET.time_slot == "17:00-18:00" %}selected{% endif %}>5:00 - 6:00 PM</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn-search">🔍 Search</button>
+                <button type="button" class="btn-reset" onclick="location.href='{% url 'student_timetable' %}'">↻ Reset</button>
+                <a href="{% url 'add_student_timetable' %}" class="btn-add">+ Add New Timetable</a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="stats-cards">
+        <div class="stat-card">
+            <h3>Total Assignments</h3>
+            <p>{{ total_count|default:"0" }}</p>
+        </div>
+    </div>
+    
+    {% if timetables %}
+        <table class="timetable-table">
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Day</th>
+                    <th>Time Slot</th>
+                    <th>Session Type</th>
+                    <th>Course</th>
+                    <th>Batch</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for timetable in timetables %}
+                    <tr>
+                        <td>{{ timetable.student.full_name }}</td>
+                        <td>{{ timetable.day }}</td>
+                        <td>
+                            <a href="{% url 'time_slot_students' %}?day={{ timetable.day }}&time_slot={{ timetable.time_slot }}" style="color: #007bff; text-decoration: none; cursor: pointer;">
+                                {{ timetable.time_slot }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if timetable.session_type == 'Theory' %}
+                                <span class="badge badge-theory">Theory</span>
+                            {% else %}
+                                <span class="badge badge-practical">Practical</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ timetable.student.course }}</td>
+                        <td>{{ timetable.student.batch_display }}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{% url 'edit_student_timetable' timetable.id %}" class="btn-edit">✏️ Edit</a>
+                                <a href="{% url 'delete_student_timetable' timetable.id %}" class="btn-delete">🗑️ Delete</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-message">
+            <p>📋 No student timetables found. <a href="{% url 'add_student_timetable' %}" style="color: #007bff;">Add one now</a></p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    function hideDetailSection() {
+        const statsGrid = document.querySelector('.stats-grid');
+        const detailSections = document.querySelectorAll('.detail-section');
+        
+        statsGrid.style.display = 'grid';
+        detailSections.forEach(section => section.style.display = 'none');
+    }
+</script>

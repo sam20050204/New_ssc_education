@@ -25,12 +25,10 @@
         📚 Student Attendance
     </a>
 
-    <!-- Attendance Records (Coming Soon) -->
-    <a href="#"
-       class="menu-item disabled"
-       style="opacity: 0.5; cursor: not-allowed;"
-       title="Coming Soon">
-        📅 Attendance Records
+    <!-- Student Timetable -->
+    <a href="{% url 'student_timetable' %}"
+       class="menu-item {% if active_page == 'student_timetable' %}active{% endif %}">
+        ⏰ Student Timetable
     </a>
 
     <!-- Course Analytics (Coming Soon) -->
@@ -38,7 +36,7 @@
        class="menu-item disabled"
        style="opacity: 0.5; cursor: not-allowed;"
        title="Coming Soon">
-        � Course Analytics
+        📊 Course Analytics
     </a>
 
     <hr class="sidebar-divider">

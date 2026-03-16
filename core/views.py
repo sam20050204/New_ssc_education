@@ -2284,3 +2284,283 @@ def payment_tracking_student_detail(request, student_id):
     
     return JsonResponse(data)
 
+
+# ===== Student Timetable Views =====
+
+from .models import StudentTimetable
+from .forms import StudentTimetableForm, StudentTimetableFilterForm
+from django.db.models import Q, Count
+
+
+def student_timetable_view(request):
+    """Display and manage student timetables with filters"""
+    
+    # Start with all admitted students
+    admitted_students = AdmittedStudent.objects.all()
+    
+    # Apply filters
+    student_name = request.GET.get('student_name', '').strip()
+    batch = request.GET.get('batch', '').strip()
+    course = request.GET.get('course', '').strip()
+    
+    if student_name:
+        admitted_students = admitted_students.filter(
+            Q(full_name__icontains=student_name) |
+            Q(student_name__icontains=student_name)
+        )
+    
+    if batch:
+        admitted_students = admitted_students.filter(batch_month=batch)
+    
+    if course:
+        admitted_students = admitted_students.filter(course=course)
+    
+    # Order by name
+    admitted_students = admitted_students.order_by('full_name')
+    
+    # Handle POST request to save time slots
+    if request.method == 'POST':
+        student_id = request.POST.get('student_id')
+        theory_slot = request.POST.get('theory_slot')
+        practical_slot = request.POST.get('practical_slot')
+        
+        if student_id and theory_slot and practical_slot:
+            try:
+                student = AdmittedStudent.objects.get(id=student_id)
+                
+                # Save or update theory slot (Monday as default day)
+                theory_timetable, created = StudentTimetable.objects.update_or_create(
+                    student=student,
+                    session_type='Theory',
+                    defaults={
+                        'day': 'Monday',  # You can make this dynamic if needed
+                        'time_slot': theory_slot,
+                        'batch_month': student.batch_month,
+                        'batch_year': student.batch_year,
+                        'course': student.course,
+                    }
+                )
+                
+                # Save or update practical slot (Monday as default day)
+                practical_timetable, created = StudentTimetable.objects.update_or_create(
+                    student=student,
+                    session_type='Practical',
+                    defaults={
+                        'day': 'Monday',  # You can make this dynamic if needed
+                        'time_slot': practical_slot,
+                        'batch_month': student.batch_month,
+                        'batch_year': student.batch_year,
+                        'course': student.course,
+                    }
+                )
+                
+                messages.success(request, f'✓ Timetable saved for {student.full_name}')
+                return redirect('student_timetable')
+                
+            except AdmittedStudent.DoesNotExist:
+                messages.error(request, '✗ Student not found')
+            except Exception as e:
+                messages.error(request, f'✗ Error saving timetable: {str(e)}')
+    
+    context = {
+        'admitted_students': admitted_students,
+        'active_page': 'student_timetable',
+    }
+    
+    return render(request, 'core/student_timetable.html', context)
+
+
+def student_timetable_partial(request):
+    """Display student timetables partial (for AJAX loading in statistics)"""
+    
+    # Start with all timetables
+    timetables = StudentTimetable.objects.select_related('student').all()
+    
+    # Apply filters if provided
+    student_name = request.GET.get('student_name', '').strip()
+    batch = request.GET.get('batch', '').strip()
+    course = request.GET.get('course', '').strip()
+    day = request.GET.get('day', '').strip()
+    time_slot = request.GET.get('time_slot', '').strip()
+    
+    if student_name:
+        timetables = timetables.filter(
+            Q(student__full_name__icontains=student_name) |
+            Q(student__student_name__icontains=student_name)
+        )
+    
+    if batch:
+        timetables = timetables.filter(student__batch_month=batch)
+    
+    if course:
+        timetables = timetables.filter(student__course=course)
+    
+    if day:
+        timetables = timetables.filter(day=day)
+    
+    if time_slot:
+        timetables = timetables.filter(time_slot=time_slot)
+    
+    # Order timetables
+    timetables = timetables.order_by('day', 'time_slot', 'student__full_name')
+    
+    context = {
+        'timetables': timetables,
+        'total_count': timetables.count(),
+    }
+    
+    return render(request, 'core/student_timetable_partial.html', context)
+
+
+def add_student_timetable(request):
+    """Add new student timetable slot"""
+    
+    if request.method == 'POST':
+        form = StudentTimetableForm(request.POST)
+        if form.is_valid():
+            timetable = form.save(commit=False)
+            
+            # Auto-fill batch and course from student
+            if timetable.student:
+                timetable.batch_month = timetable.student.batch_month
+                timetable.batch_year = timetable.student.batch_year
+                timetable.course = timetable.student.course
+            
+            timetable.save()
+            
+            messages.success(request, f"Timetable slot added successfully for {timetable.student.full_name}!")
+            return redirect('student_timetable')
+    else:
+        form = StudentTimetableForm()
+    
+    context = {
+        'form': form,
+        'title': 'Add Student Timetable',
+    }
+    
+    return render(request, 'core/add_student_timetable.html', context)
+
+
+def edit_student_timetable(request, timetable_id):
+    """Edit existing student timetable slot"""
+    
+    try:
+        timetable = StudentTimetable.objects.get(id=timetable_id)
+    except StudentTimetable.DoesNotExist:
+        messages.error(request, "Timetable slot not found!")
+        return redirect('student_timetable')
+    
+    if request.method == 'POST':
+        form = StudentTimetableForm(request.POST, instance=timetable)
+        if form.is_valid():
+            timetable = form.save(commit=False)
+            
+            # Update batch and course
+            if timetable.student:
+                timetable.batch_month = timetable.student.batch_month
+                timetable.batch_year = timetable.student.batch_year
+                timetable.course = timetable.student.course
+            
+            timetable.save()
+            
+            messages.success(request, "Timetable slot updated successfully!")
+            return redirect('student_timetable')
+    else:
+        form = StudentTimetableForm(instance=timetable)
+    
+    context = {
+        'form': form,
+        'timetable': timetable,
+        'title': 'Edit Student Timetable',
+    }
+    
+    return render(request, 'core/add_student_timetable.html', context)
+
+
+def delete_student_timetable(request, timetable_id):
+    """Delete student timetable slot"""
+    
+    try:
+        timetable = StudentTimetable.objects.get(id=timetable_id)
+    except StudentTimetable.DoesNotExist:
+        messages.error(request, "Timetable slot not found!")
+        return redirect('student_timetable')
+    
+    if request.method == 'POST':
+        student_name = timetable.student.full_name
+        timetable.delete()
+        messages.success(request, f"Timetable slot deleted successfully!")
+        return redirect('student_timetable')
+    
+    context = {
+        'timetable': timetable,
+    }
+    
+    return render(request, 'core/delete_student_timetable.html', context)
+
+
+def time_slot_students(request):
+    """View students in a specific time slot"""
+    
+    day = request.GET.get('day', '').strip()
+    time_slot = request.GET.get('time_slot', '').strip()
+    
+    students_in_slot = []
+    slot_display = ''
+    total_count = 0
+    
+    if day and time_slot:
+        # Get all timetables for this slot
+        timetables = StudentTimetable.objects.filter(
+            day=day,
+            time_slot=time_slot
+        ).select_related('student').order_by('session_type', 'student__full_name')
+        
+        total_count = timetables.count()
+        
+        # Group by session type
+        theory_students = []
+        practical_students = []
+        
+        for timetable in timetables:
+            student_info = {
+                'id': timetable.student.id,
+                'name': timetable.student.full_name,
+                'course': timetable.student.course,
+                'batch': timetable.student.batch_display,
+                'session_type': timetable.session_type,
+                'timetable_id': timetable.id,
+            }
+            
+            if timetable.session_type == 'Theory':
+                theory_students.append(student_info)
+            else:
+                practical_students.append(student_info)
+        
+        students_in_slot = {
+            'theory': theory_students,
+            'practical': practical_students,
+        }
+        
+        # Get display name
+        time_slot_obj = StudentTimetable.objects.filter(
+            time_slot=time_slot
+        ).first()
+        
+        if time_slot_obj:
+            slot_display = f"{day}, {time_slot_obj.get_time_slot_display()}"
+        else:
+            slot_display = f"{day}, {time_slot}"
+    
+    context = {
+        'day': day,
+        'time_slot': time_slot,
+        'slot_display': slot_display,
+        'students_in_slot': students_in_slot,
+        'total_count': total_count,
+        'theory_count': len(students_in_slot.get('theory', [])) if students_in_slot else 0,
+        'practical_count': len(students_in_slot.get('practical', [])) if students_in_slot else 0,
+    }
+    
+    return render(request, 'core/time_slot_students.html', context)
+

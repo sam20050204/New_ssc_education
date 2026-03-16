@@ -66,4 +66,12 @@ urlpatterns = [
     path('sales/', views.sales_services_dashboard, name='sales_services_dashboard'),
     path('sales/items/', views.sales_items, name='sales_items'),
     path('sales/items/add/', views.add_sales_item, name='add_sales_item'),
+    
+    # Student Timetable URLs
+    path('student-timetable/', views.student_timetable_view, name='student_timetable'),
+    path('student-timetable/partial/', views.student_timetable_partial, name='student_timetable_partial'),
+    path('student-timetable/add/', views.add_student_timetable, name='add_student_timetable'),
+    path('student-timetable/<int:timetable_id>/edit/', views.edit_student_timetable, name='edit_student_timetable'),
+    path('student-timetable/<int:timetable_id>/delete/', views.delete_student_timetable, name='delete_student_timetable'),
+    path('time-slot-students/', views.time_slot_students, name='time_slot_students'),
 ]

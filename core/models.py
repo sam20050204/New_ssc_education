@@ -449,3 +449,114 @@ class SalesItem(models.Model):
     def calculated_total(self):
         """Calculate total amount based on quantity and purchase rate"""
         return self.quantity * self.purchase_rate
+
+
+class StudentTimetable(models.Model):
+    """Student timetable for theory and practical sessions"""
+    
+    SESSION_TYPE_CHOICES = [
+        ('Theory', 'Theory'),
+        ('Practical', 'Practical'),
+    ]
+    
+    TIME_SLOT_CHOICES = [
+        ('09:00-10:00', '09:00 - 10:00 AM'),
+        ('10:00-11:00', '10:00 - 11:00 AM'),
+        ('11:00-12:00', '11:00 - 12:00 PM'),
+        ('12:00-13:00', '12:00 - 1:00 PM'),
+        ('13:00-14:00', '1:00 - 2:00 PM'),
+        ('14:00-15:00', '2:00 - 3:00 PM'),
+        ('15:00-16:00', '3:00 - 4:00 PM'),
+        ('16:00-17:00', '4:00 - 5:00 PM'),
+        ('17:00-18:00', '5:00 - 6:00 PM'),
+    ]
+    
+    DAYS_OF_WEEK = [
+        ('Monday', 'Monday'),
+        ('Tuesday', 'Tuesday'),
+        ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'),
+        ('Friday', 'Friday'),
+        ('Saturday', 'Saturday'),
+        ('Sunday', 'Sunday'),
+    ]
+    
+    # Foreign Keys
+    student = models.ForeignKey(
+        AdmittedStudent,
+        on_delete=models.CASCADE,
+        related_name='timetable_slots'
+    )
+    
+    # Timetable Fields
+    day = models.CharField(
+        max_length=10,
+        choices=DAYS_OF_WEEK,
+        help_text="Day of the week"
+    )
+    
+    time_slot = models.CharField(
+        max_length=11,
+        choices=TIME_SLOT_CHOICES,
+        help_text="Time slot for the session (1 hour each)"
+    )
+    
+    session_type = models.CharField(
+        max_length=20,
+        choices=SESSION_TYPE_CHOICES,
+        default='Theory',
+        help_text="Type of session - Theory or Practical"
+    )
+    
+    batch_month = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Batch month for filtering"
+    )
+    
+    batch_year = models.CharField(
+        max_length=4,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Batch year for filtering"
+    )
+    
+    course = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Course name for filtering"
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Additional notes for this slot"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['day', 'time_slot']
+        verbose_name = 'Student Timetable'
+        verbose_name_plural = 'Student Timetables'
+        unique_together = ['student', 'day', 'time_slot']
+        indexes = [
+            models.Index(fields=['student']),
+            models.Index(fields=['day', 'time_slot']),
+            models.Index(fields=['batch_month', 'batch_year']),
+            models.Index(fields=['course']),
+        ]
+    
+    def __str__(self):
+        return f"{self.student.full_name} - {self.day} {self.time_slot} ({self.session_type})"
+    
+    @property
+    def day_time_display(self):
+        """Return formatted day and time"""
+        return f"{self.day}, {self.get_time_slot_display()}"

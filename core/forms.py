@@ -6,7 +6,7 @@ Provides proper form handling with validation instead of manual HTML processing.
 
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Enquiry, AdmittedStudent, FeePayment, Course
+from .models import Enquiry, AdmittedStudent, FeePayment, Course, StudentTimetable
 import re
 
 
@@ -327,3 +327,110 @@ class CourseForm(forms.ModelForm):
             raise ValidationError("This course already exists.")
         
         return name
+
+
+class StudentTimetableForm(forms.ModelForm):
+    """Form for managing student timetables"""
+    
+    class Meta:
+        model = StudentTimetable
+        fields = ['student', 'day', 'time_slot', 'session_type', 'notes']
+        widgets = {
+            'student': forms.Select(attrs={
+                'class': 'form-control',
+                'required': True
+            }),
+            'day': forms.Select(attrs={
+                'class': 'form-control',
+                'required': True
+            }),
+            'time_slot': forms.Select(attrs={
+                'class': 'form-control',
+                'required': True
+            }),
+            'session_type': forms.Select(attrs={
+                'class': 'form-control',
+                'required': True
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Additional notes (optional)',
+                'rows': 3
+            }),
+        }
+    
+    def clean(self):
+        """Validate form data"""
+        cleaned_data = super().clean()
+        student = cleaned_data.get('student')
+        day = cleaned_data.get('day')
+        time_slot = cleaned_data.get('time_slot')
+        
+        if student and day and time_slot:
+            # Check for duplicate timetable entry
+            existing = StudentTimetable.objects.filter(
+                student=student,
+                day=day,
+                time_slot=time_slot
+            ).exclude(pk=self.instance.pk if self.instance.pk else None)
+            
+            if existing.exists():
+                raise ValidationError(
+                    f"This student already has a {day} {time_slot} slot."
+                )
+        
+        return cleaned_data
+
+
+class StudentTimetableFilterForm(forms.Form):
+    """Form for filtering student timetables"""
+    
+    BATCH_CHOICES = [('', 'All Batches')] + list(
+        AdmittedStudent.objects.values_list('batch_month', 'batch_month')
+        .filter(batch_month__isnull=False)
+        .distinct()
+    )
+    
+    COURSE_CHOICES = [('', 'All Courses')] + list(
+        AdmittedStudent.objects.values_list('course', 'course')
+        .distinct()
+    )
+    
+    student_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by student name',
+            'maxlength': '100'
+        })
+    )
+    
+    batch = forms.CharField(
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        }, choices=BATCH_CHOICES)
+    )
+    
+    course = forms.CharField(
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        }, choices=COURSE_CHOICES)
+    )
+    
+    day = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        }),
+        choices=[('', 'All Days')] + StudentTimetable.DAYS_OF_WEEK
+    )
+    
+    time_slot = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        }),
+        choices=[('', 'All Time Slots')] + StudentTimetable.TIME_SLOT_CHOICES
+    )

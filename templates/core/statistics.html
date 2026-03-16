@@ -62,10 +62,10 @@
         <p class="coming-soon">Mark Daily Attendance</p>
     </a>
 
-    <div class="stat-card clickable-card" onclick="loadAttendanceSection()">
-        <div class="stat-icon">📅</div>
-        <div class="stat-label">Attendance Records</div>
-        <p class="coming-soon">Coming Soon</p>
+    <div class="stat-card clickable-card" onclick="loadTimetableSection()">
+        <div class="stat-icon">⏰</div>
+        <div class="stat-label">Student Timetable</div>
+        <div class="stat-sublabel">Manage Time Slots</div>
     </div>
 
     <div class="stat-card clickable-card" onclick="loadCoursesSection()">
@@ -93,6 +93,15 @@
 <div id="attendanceSection" class="detail-section" style="display: none;">
     <h2>Attendance Records</h2>
     <p style="padding: 40px; text-align: center; color: #666;">Coming soon...</p>
+</div>
+
+<div id="timetableSection" class="detail-section" style="display: none;">
+    <div id="timetableContent">
+        <p style="text-align: center; padding: 40px; color: #666;">
+            <span class="loading-spinner"></span>
+            Loading...
+        </p>
+    </div>
 </div>
 
 <div id="coursesSection" class="detail-section" style="display: none;">
@@ -153,6 +162,27 @@
         detailSections.forEach(section => section.style.display = 'none');
         
         document.getElementById('attendanceSection').style.display = 'block';
+    }
+    
+    function loadTimetableSection() {
+        const statsGrid = document.querySelector('.stats-grid');
+        const detailSections = document.querySelectorAll('.detail-section');
+        
+        statsGrid.style.display = 'none';
+        detailSections.forEach(section => section.style.display = 'none');
+        
+        const timetableSection = document.getElementById('timetableSection');
+        timetableSection.style.display = 'block';
+        
+        // Load timetable via AJAX
+        fetch('{% url "student_timetable_partial" %}')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('timetableContent').innerHTML = html;
+            })
+            .catch(error => {
+                document.getElementById('timetableContent').innerHTML = '<p style="color: red; text-align: center;">Error loading timetable</p>';
+            });
     }
     
     function loadCoursesSection() {
