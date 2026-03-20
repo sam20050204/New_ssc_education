@@ -44,6 +44,32 @@
         </div>
     </div>
 
+    <!-- Attendance Section with Submenu -->
+    <div class="menu-section">
+        <button class="menu-item menu-toggle" onclick="toggleAttendanceMenu(this)">
+            📋 Attendance
+            <span class="toggle-icon">▶</span>
+        </button>
+        <div class="submenu">
+            <a href="{% url 'student_timetable' %}"
+               class="submenu-item {% if active_page == 'student_timetable' %}active{% endif %}">
+                📚 Student Timetable
+            </a>
+            <a href="{% url 'batch_overview' %}"
+               class="submenu-item {% if active_page == 'batch_overview' %}active{% endif %}">
+                📊 Batch Overview
+            </a>
+            <a href="{% url 'mark_attendance' %}"
+               class="submenu-item {% if active_page == 'mark_attendance' %}active{% endif %}">
+                ✏️ Mark Attendance
+            </a>
+            <a href="{% url 'attendance_reports' %}"
+               class="submenu-item {% if active_page == 'attendance_reports' %}active{% endif %}">
+                📈 Attendance Reports
+            </a>
+        </div>
+    </div>
+
     <!-- Database Backup Management -->
     <a href="{% url 'backup_page' %}"
        class="menu-item {% if active_page == 'backup' %}active{% endif %}">
@@ -61,6 +87,14 @@
 
 <script>
 function toggleStudentsMenu(button) {
+    const submenu = button.nextElementSibling;
+    const icon = button.querySelector('.toggle-icon');
+    
+    submenu.classList.toggle('active');
+    icon.classList.toggle('rotated');
+}
+
+function toggleAttendanceMenu(button) {
     const submenu = button.nextElementSibling;
     const icon = button.querySelector('.toggle-icon');
     

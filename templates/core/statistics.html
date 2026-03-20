@@ -56,23 +56,12 @@
         <div class="stat-sublabel">Total Admissions</div>
     </a>
 
-    <a href="{% url 'student_attendance' %}" class="stat-card clickable-card" style="text-decoration: none; color: inherit;">
-        <div class="stat-icon">�</div>
-        <div class="stat-label">Student Attendance</div>
-        <p class="coming-soon">Mark Daily Attendance</p>
-    </a>
-
-    <div class="stat-card clickable-card" onclick="loadTimetableSection()">
-        <div class="stat-icon">⏰</div>
-        <div class="stat-label">Student Timetable</div>
-        <div class="stat-sublabel">Manage Time Slots</div>
-    </div>
-
-    <div class="stat-card clickable-card" onclick="loadCoursesSection()">
+    <div class="stat-card">
         <div class="stat-icon">📚</div>
         <div class="stat-label">Course Analytics</div>
         <p class="coming-soon">Coming Soon</p>
     </div>
+</div>
 </div>
 
 <!-- Detail Sections -->
@@ -93,15 +82,6 @@
 <div id="attendanceSection" class="detail-section" style="display: none;">
     <h2>Attendance Records</h2>
     <p style="padding: 40px; text-align: center; color: #666;">Coming soon...</p>
-</div>
-
-<div id="timetableSection" class="detail-section" style="display: none;">
-    <div id="timetableContent">
-        <p style="text-align: center; padding: 40px; color: #666;">
-            <span class="loading-spinner"></span>
-            Loading...
-        </p>
-    </div>
 </div>
 
 <div id="coursesSection" class="detail-section" style="display: none;">
@@ -142,16 +122,7 @@
 
         const perfSection = document.getElementById('performanceSection');
         perfSection.style.display = 'block';
-        perfSection.innerHTML = '<p style="text-align:center; padding:40px; color:#666;"><span class="loading-spinner"></span> Loading...</p>';
-
-    fetch('{% url "student_attendance" %}')
-            .then(response => response.text())
-            .then(html => {
-                perfSection.innerHTML = html;
-            })
-            .catch(err => {
-                perfSection.innerHTML = '<p style="color:red; text-align:center;">Error loading attendance</p>';
-            });
+        perfSection.innerHTML = '<p style="text-align:center; padding:40px; color:#666;">Coming soon...</p>';
     }
     
     function loadAttendanceSection() {
@@ -162,27 +133,6 @@
         detailSections.forEach(section => section.style.display = 'none');
         
         document.getElementById('attendanceSection').style.display = 'block';
-    }
-    
-    function loadTimetableSection() {
-        const statsGrid = document.querySelector('.stats-grid');
-        const detailSections = document.querySelectorAll('.detail-section');
-        
-        statsGrid.style.display = 'none';
-        detailSections.forEach(section => section.style.display = 'none');
-        
-        const timetableSection = document.getElementById('timetableSection');
-        timetableSection.style.display = 'block';
-        
-        // Load timetable via AJAX
-        fetch('{% url "student_timetable_partial" %}')
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('timetableContent').innerHTML = html;
-            })
-            .catch(error => {
-                document.getElementById('timetableContent').innerHTML = '<p style="color: red; text-align: center;">Error loading timetable</p>';
-            });
     }
     
     function loadCoursesSection() {

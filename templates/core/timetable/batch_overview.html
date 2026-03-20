@@ -1,0 +1,1201 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Batch Overview Dashboard{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">📊</div>
+            <div>
+                <h1 class="page-title">Batch Overview Dashboard</h1>
+                <p class="page-subtitle">Student distribution across theory and practical batches</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Statistics Cards -->
+    <div class="stats-grid" id="stats-container">
+        <div class="stat-card stat-total">
+            <div class="stat-icon">👥</div>
+            <div class="stat-number" id="stat-total">{{ total_students }}</div>
+            <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card stat-assigned">
+            <div class="stat-icon">✅</div>
+            <div class="stat-number" id="stat-theory">{{ students_with_theory }}</div>
+            <div class="stat-label">Theory Assigned</div>
+        </div>
+        <div class="stat-card stat-assigned">
+            <div class="stat-icon">✅</div>
+            <div class="stat-number" id="stat-practical">{{ students_with_practical }}</div>
+            <div class="stat-label">Practical Assigned</div>
+        </div>
+        <div class="stat-card stat-warning">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-number" id="stat-without">{{ students_without_batch }}</div>
+            <div class="stat-label">Without Batch</div>
+        </div>
+    </div>
+
+    <!-- Theory Batches -->
+    <div class="batch-section">
+        <div class="batch-section-header">
+            <h3 class="section-title">📚 Theory Batches</h3>
+            <button class="btn-add-batch btn-sm" onclick="openCreateBatchModal('Theory')" title="Add new theory batch">
+                ➕ Add Batch
+            </button>
+        </div>
+        <div class="batch-grid" id="theory-batches-grid">
+            {% for batch in theory_batches %}
+            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Theory" data-batch-id="{{ batch.id }}">
+                <div class="batch-card-header">
+                    <div class="batch-time" onclick="editBatch({{ batch.id }}, 'Theory', '{{ batch.slot }}', {{ batch.capacity }})" style="cursor: pointer; flex-grow: 1;" title="Click to edit">
+                        {{ batch.display }}
+                    </div>
+                    <button class="btn-delete-batch btn-xs" onclick="deleteBatch('Theory', '{{ batch.slot }}')" title="Delete batch">
+                        ❌
+                    </button>
+                </div>
+                <div class="batch-count">
+                    <div class="count-number batch-student-count">{{ batch.count }}</div>
+                    <div class="count-label">students</div>
+                </div>
+                <div class="batch-capacity-label">Capacity: {{ batch.capacity }}</div>
+                <div class="batch-bar">
+                    <div class="batch-bar-fill" style="width: {% widthratio batch.count total_students 100 %}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+            <!-- Add Batch Button Card -->
+            <div class="batch-card batch-add-card" onclick="openCreateBatchModal('Theory')">
+                <div class="batch-add-content">
+                    <div class="batch-add-icon">➕</div>
+                    <div class="batch-add-text">Add<br>New Batch</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Practical Batches -->
+    <div class="batch-section">
+        <div class="batch-section-header">
+            <h3 class="section-title">🛠️ Practical Batches</h3>
+            <button class="btn-add-batch btn-sm" onclick="openCreateBatchModal('Practical')" title="Add new practical batch">
+                ➕ Add Batch
+            </button>
+        </div>
+        <div class="batch-grid" id="practical-batches-grid">
+            {% for batch in practical_batches %}
+            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Practical" data-batch-id="{{ batch.id }}">
+                <div class="batch-card-header">
+                    <div class="batch-time" onclick="editBatch({{ batch.id }}, 'Practical', '{{ batch.slot }}', {{ batch.capacity }})" style="cursor: pointer; flex-grow: 1;" title="Click to edit">
+                        {{ batch.display }}
+                    </div>
+                    <button class="btn-delete-batch btn-xs" onclick="deleteBatch('Practical', '{{ batch.slot }}')" title="Delete batch">
+                        ❌
+                    </button>
+                </div>
+                <div class="batch-count">
+                    <div class="count-number batch-student-count">{{ batch.count }}</div>
+                    <div class="count-label">students</div>
+                </div>
+                <div class="batch-capacity-label">Capacity: {{ batch.capacity }}</div>
+                <div class="batch-bar">
+                    <div class="batch-bar-fill" style="width: {% widthratio batch.count total_students 100 %}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+            <!-- Add Batch Button Card -->
+            <div class="batch-card batch-add-card" onclick="openCreateBatchModal('Practical')">
+                <div class="batch-add-content">
+                    <div class="batch-add-icon">➕</div>
+                    <div class="batch-add-text">Add<br>New Batch</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Table -->
+    <div class="summary-section">
+        <h3 class="section-title">📋 Summary</h3>
+        <div class="table-container">
+            <table class="summary-table" id="summary-table">
+                <thead>
+                    <tr>
+                        <th>Batch Time</th>
+                        <th>Theory Students</th>
+                        <th>Practical Students</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="summary-table-body">
+                    <!-- This will be populated by JavaScript from theory_batches and practical_batches -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="actions-section">
+        <div class="action-buttons">
+            <a href="{% url 'student_timetable' %}" class="btn btn-primary">
+                📚 View Timetable
+            </a>
+            <a href="{% url 'mark_attendance' %}" class="btn btn-success">
+                ✏️ Mark Attendance
+            </a>
+            <a href="{% url 'attendance_reports' %}" class="btn btn-info">
+                📊 View Reports
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Create Batch Modal -->
+<div id="createBatchModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-title">Create New Theory Batch</h2>
+            <button class="close-btn" onclick="closeCreateBatchModal()">&times;</button>
+        </div>
+        <form id="createBatchForm">
+            <div class="form-group">
+                <label for="batch_type">Batch Type:</label>
+                <input type="text" id="batch_type" name="batch_type" readonly style="background: #f0f0f0;">
+            </div>
+            <div class="form-group">
+                <label for="time_slot">Time Slot:</label>
+                <select id="time_slot" name="time_slot" required>
+                    <option value="">-- Select Time Slot --</option>
+                    <option value="08:00-09:00">8:00 AM - 9:00 AM</option>
+                    <option value="09:00-10:00">9:00 AM - 10:00 AM</option>
+                    <option value="10:00-11:00">10:00 AM - 11:00 AM</option>
+                    <option value="11:00-12:00">11:00 AM - 12:00 PM</option>
+                    <option value="12:00-13:00">12:00 PM - 1:00 PM</option>
+                    <option value="15:00-16:00">3:00 PM - 4:00 PM</option>
+                    <option value="16:00-17:00">4:00 PM - 5:00 PM</option>
+                    <option value="17:00-18:00">5:00 PM - 6:00 PM</option>
+                    <option value="18:00-19:00">6:00 PM - 7:00 PM</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="capacity">Capacity (default: 50):</label>
+                <input type="number" id="capacity" name="capacity" value="50" min="1">
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success">✅ Create Batch</button>
+                <button type="button" class="btn btn-secondary" onclick="closeCreateBatchModal()">❌ Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmModal" class="modal" style="display: none;">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2>Delete Batch</h2>
+            <button class="close-btn" onclick="closeDeleteConfirmModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="delete-message">Are you sure you want to delete this batch?</p>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">🗑️ Delete</button>
+            <button type="button" class="btn btn-secondary" onclick="closeDeleteConfirmModal()">❌ Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Batch Modal -->
+<div id="editBatchModal" class="modal" style="display: none;">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h2>Edit Batch</h2>
+            <button class="close-btn" onclick="closeEditBatchModal()">&times;</button>
+        </div>
+        <form id="editBatchForm">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="edit-batch-type">Batch Type</label>
+                    <input type="text" id="edit-batch-type" readonly style="background-color: #f0f0f0;">
+                </div>
+                <div class="form-group">
+                    <label for="edit-time-slot">Time Slot *</label>
+                    <select id="edit-time-slot" required>
+                        <option value="">-- Select Time Slot --</option>
+                        <option value="08:00-09:00">8:00 AM - 9:00 AM</option>
+                        <option value="09:00-10:00">9:00 AM - 10:00 AM</option>
+                        <option value="10:00-11:00">10:00 AM - 11:00 AM</option>
+                        <option value="11:00-12:00">11:00 AM - 12:00 PM</option>
+                        <option value="12:00-13:00">12:00 PM - 1:00 PM</option>
+                        <option value="15:00-16:00">3:00 PM - 4:00 PM</option>
+                        <option value="16:00-17:00">4:00 PM - 5:00 PM</option>
+                        <option value="17:00-18:00">5:00 PM - 6:00 PM</option>
+                        <option value="18:00-19:00">6:00 PM - 7:00 PM</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-capacity">Capacity</label>
+                    <input type="number" id="edit-capacity" min="1" placeholder="e.g., 50">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="saveEditBatch()">💾 Save Changes</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditBatchModal()">❌ Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .batch-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .btn-add-batch {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-add-batch:hover {
+        background: #218838;
+        transform: translateY(-2px);
+    }
+
+    .btn-add-batch.btn-sm {
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+
+    .btn-delete-batch {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px 8px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-delete-batch:hover {
+        transform: scale(1.2);
+    }
+
+    .btn-delete-batch.btn-xs {
+        padding: 2px 6px;
+        font-size: 14px;
+    }
+
+    .batch-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .batch-capacity-label {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+
+    .batch-add-card {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
+        border: 2px dashed #ccc;
+        transition: all 0.3s ease;
+    }
+
+    .batch-add-card:hover {
+        background: linear-gradient(135deg, #efefef, #e0e0e0);
+        border-color: #28a745;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+    }
+
+    .batch-add-content {
+        text-align: center;
+    }
+
+    .batch-add-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+
+    .batch-add-text {
+        font-size: 12px;
+        color: #666;
+        font-weight: 600;
+        line-height: 1.4;
+    }
+
+    /* Modal Styles */
+    .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.4);
+        display: none;
+    }
+
+    .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 30px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        animation: slideIn 0.3s ease;
+    }
+
+    .modal-content.modal-sm {
+        max-width: 400px;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 15px;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        color: #333;
+        font-size: 20px;
+    }
+
+    .modal-body {
+        margin-bottom: 20px;
+    }
+
+    .modal-body p {
+        color: #666;
+        margin: 0;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 28px;
+        cursor: pointer;
+        color: #999;
+        transition: color 0.2s;
+    }
+
+    .close-btn:hover {
+        color: #333;
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #218838;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    /* Alert Message */
+    .alert {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        display: none;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        display: block;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        display: block;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .stat-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+    }
+
+    .stat-number {
+        font-size: 28px;
+        font-weight: bold;
+        color: #333;
+        margin: 10px 0;
+    }
+
+    .stat-label {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .stat-total .stat-number {
+        color: #007bff;
+    }
+
+    .stat-assigned .stat-number {
+        color: #28a745;
+    }
+
+    .stat-warning .stat-number {
+        color: #ffc107;
+    }
+
+    .batch-section {
+        margin-bottom: 40px;
+    }
+
+    .section-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+        border-left: 4px solid #007bff;
+        padding-left: 15px;
+    }
+
+    .batch-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 15px;
+    }
+
+    .batch-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-top: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+
+    .batch-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+
+    .batch-time {
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+        word-wrap: break-word;
+    }
+
+    .batch-count {
+        text-align: center;
+        margin-bottom: 12px;
+    }
+
+    .count-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    .count-label {
+        font-size: 12px;
+        color: #999;
+    }
+
+    .batch-bar {
+        width: 100%;
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .batch-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #007bff, #0056b3);
+        transition: width 0.3s ease;
+    }
+
+    .summary-section {
+        margin-bottom: 40px;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .summary-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .summary-table thead {
+        background: #f8f9fa;
+    }
+
+    .summary-table th {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+    }
+
+    .summary-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .summary-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .badge-info {
+        background: #e7f3ff;
+        color: #0066cc;
+    }
+
+    .badge-success {
+        background: #e7f5e7;
+        color: #00aa00;
+    }
+
+    .badge-primary {
+        background: #e7f3ff;
+        color: #007bff;
+    }
+
+    .actions-section {
+        margin: 40px 0;
+        text-align: center;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #0056b3;
+        transform: translateY(-2px);
+    }
+
+    .btn-info {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .btn-info:hover {
+        background: #138496;
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .batch-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        .batch-section-header {
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .btn-add-batch {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '{{ csrf_token }}';
+
+// Modal Management
+function openCreateBatchModal(batchType) {
+    document.getElementById('batch_type').value = batchType;
+    document.getElementById('modal-title').textContent = `Create New ${batchType} Batch`;
+    document.getElementById('time_slot').value = '';
+    document.getElementById('capacity').value = '50';
+    document.getElementById('createBatchModal').style.display = 'block';
+}
+
+function closeCreateBatchModal() {
+    document.getElementById('createBatchModal').style.display = 'none';
+    document.getElementById('createBatchForm').reset();
+}
+
+function closeDeleteConfirmModal() {
+    document.getElementById('deleteConfirmModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('createBatchModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+    const deleteModal = document.getElementById('deleteConfirmModal');
+    if (event.target === deleteModal) {
+        deleteModal.style.display = 'none';
+    }
+}
+
+// Create Batch Form Submission
+document.getElementById('createBatchForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const batch_type = document.getElementById('batch_type').value;
+    const time_slot = document.getElementById('time_slot').value;
+    const capacity = document.getElementById('capacity').value;
+
+    if (!time_slot) {
+        showAlert('Please select a time slot', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('{% url "create_batch" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                batch_type: batch_type,
+                time_slot: time_slot,
+                capacity: capacity
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showAlert(data.message, 'success');
+            closeCreateBatchModal();
+            updateBatchList();
+        } else {
+            showAlert(data.error || 'Error creating batch', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert('Error creating batch: ' + error.message, 'error');
+    }
+});
+
+// Delete Batch
+let deleteData = {};
+
+async function deleteBatch(batchType, timeSlot) {
+    try {
+        // First, find the batch ID by making a request to get the batch ID
+        const response = await fetch('{% url "get_batch_list" %}');
+        const data = await response.json();
+        
+        if (!data.success) {
+            showAlert('Error fetching batch data', 'error');
+            return;
+        }
+        
+        // Find the batch in the list
+        let batchId = null;
+        const batchList = batchType === 'Theory' ? data.theory_batches : data.practical_batches;
+        
+        for (const batch of batchList) {
+            if (batch.slot === timeSlot) {
+                // We need to get the batch ID - check the DOM for data attributes
+                const batchCard = document.querySelector(`[data-slot="${timeSlot}"][data-type="${batchType}"]`);
+                if (batchCard) {
+                    // Query the backend to get batch by type and time_slot
+                    const searchResponse = await fetch(`{% url "get_batch_list" %}`);
+                    const searchData = await searchResponse.json();
+                    // For now, store the slot and type to identify the batch
+                    deleteData = { batchType, timeSlot };
+                }
+                break;
+            }
+        }
+        
+        const timeSlotDisplay = getTimeSlotDisplay(timeSlot);
+        document.getElementById('delete-message').textContent = `Are you sure you want to delete the ${batchType.toLowerCase()} batch at ${timeSlotDisplay}? Students assigned to this batch will be automatically unassigned.`;
+        document.getElementById('deleteConfirmModal').style.display = 'block';
+    } catch (error) {
+        console.error('Error in deleteBatch:', error);
+        showAlert('Error preparing deletion: ' + error.message, 'error');
+    }
+}
+
+async function confirmDelete() {
+    try {
+        document.getElementById('deleteConfirmModal').style.display = 'none';
+        
+        if (!deleteData.batchType || !deleteData.timeSlot) {
+            showAlert('Error: Missing batch information', 'error');
+            console.error('Missing batch data:', deleteData);
+            return;
+        }
+        
+        console.log('Starting deletion process for:', deleteData);
+        
+        // Step 1: Get the batch ID
+        console.log(`Fetching batch ID for type="${deleteData.batchType}" time_slot="${deleteData.timeSlot}"`);
+        const getBatchIdResponse = await fetch(`/batch/get-id/?type=${deleteData.batchType}&time_slot=${deleteData.timeSlot}`);
+        
+        console.log('Get batch ID response status:', getBatchIdResponse.status);
+        
+        if (!getBatchIdResponse.ok) {
+            const errorData = await getBatchIdResponse.json();
+            console.error('Failed to get batch ID:', errorData);
+            showAlert('Error: ' + (errorData.error || 'Could not find batch'), 'error');
+            return;
+        }
+        
+        const batchIdData = await getBatchIdResponse.json();
+        console.log('Batch ID data:', batchIdData);
+        
+        if (!batchIdData.success) {
+            console.error('Batch ID response not successful:', batchIdData);
+            showAlert('Error: ' + (batchIdData.error || 'Could not find batch'), 'error');
+            return;
+        }
+        
+        const batchId = batchIdData.batch_id;
+        console.log('Got batch ID:', batchId);
+        
+        // Step 2: Delete the batch
+        console.log(`Deleting batch with ID: ${batchId}`);
+        const deleteResponse = await fetch(`/batch/${batchId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            }
+        });
+        
+        console.log('Delete response status:', deleteResponse.status);
+        
+        const deleteResult = await deleteResponse.json();
+        console.log('Delete result:', deleteResult);
+        
+        if (deleteResult.success) {
+            showAlert(deleteResult.message, 'success');
+            console.log('Batch deleted successfully, updating list...');
+            updateBatchList();
+        } else {
+            console.error('Delete failed:', deleteResult);
+            showAlert(deleteResult.error || 'Error deleting batch', 'error');
+        }
+    } catch (error) {
+        console.error('Error in confirmDelete:', error);
+        console.error('Error stack:', error.stack);
+        showAlert('Error: ' + error.message, 'error');
+    }
+}
+
+// Edit Batch
+let editData = {};
+
+function editBatch(batchId, batchType, timeSlot, capacity) {
+    editData = { batchId, batchType, timeSlot, capacity };
+    
+    document.getElementById('edit-batch-type').value = batchType;
+    document.getElementById('edit-time-slot').value = timeSlot;
+    document.getElementById('edit-capacity').value = capacity;
+    
+    document.getElementById('editBatchModal').style.display = 'block';
+}
+
+function closeEditBatchModal() {
+    document.getElementById('editBatchModal').style.display = 'none';
+    editData = {};
+}
+
+async function saveEditBatch() {
+    try {
+        if (!editData.batchId) {
+            showAlert('Error: Missing batch information', 'error');
+            return;
+        }
+        
+        const newTimeSlot = document.getElementById('edit-time-slot').value;
+        const newCapacity = document.getElementById('edit-capacity').value;
+        
+        if (!newTimeSlot) {
+            showAlert('Please select a time slot', 'error');
+            return;
+        }
+        
+        const response = await fetch(`/batch/${editData.batchId}/edit/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                time_slot: newTimeSlot,
+                capacity: newCapacity || editData.capacity
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert(result.message, 'success');
+            closeEditBatchModal();
+            updateBatchList();
+        } else {
+            showAlert(result.error || 'Error updating batch', 'error');
+        }
+    } catch (error) {
+        console.error('Error in saveEditBatch:', error);
+        showAlert('Error: ' + error.message, 'error');
+    }
+}
+
+// Get time slot display text
+function getTimeSlotDisplay(slot) {
+    const slots = {
+        '08:00-09:00': '8:00 AM - 9:00 AM',
+        '09:00-10:00': '9:00 AM - 10:00 AM',
+        '10:00-11:00': '10:00 AM - 11:00 AM',
+        '11:00-12:00': '11:00 AM - 12:00 PM',
+        '12:00-13:00': '12:00 PM - 1:00 PM',
+        '15:00-16:00': '3:00 PM - 4:00 PM',
+        '16:00-17:00': '4:00 PM - 5:00 PM',
+        '17:00-18:00': '5:00 PM - 6:00 PM',
+        '18:00-19:00': '6:00 PM - 7:00 PM',
+    };
+    return slots[slot] || slot;
+}
+
+// Update Batch Lists (Real-time)
+async function updateBatchList() {
+    try {
+        const response = await fetch('{% url "get_batch_list" %}');
+        const data = await response.json();
+
+        if (data.success) {
+            updateTheoryBatches(data.theory_batches);
+            updatePracticalBatches(data.practical_batches);
+            updateStats(data);
+        }
+    } catch (error) {
+        console.error('Error updating batch list:', error);
+    }
+}
+
+function updateTheoryBatches(batches) {
+    const grid = document.getElementById('theory-batches-grid');
+    let html = '';
+
+    batches.forEach(batch => {
+        const total = parseInt(document.getElementById('stat-total').textContent) || 1;
+        const width = Math.max(batch.count * 100 / total, 5);
+        html += `
+            <div class="batch-card" data-slot="${batch.slot}" data-type="Theory" data-batch-id="${batch.id}">
+                <div class="batch-card-header">
+                    <div class="batch-time" onclick="editBatch(${batch.id}, 'Theory', '${batch.slot}', ${batch.capacity})" style="cursor: pointer; flex-grow: 1;" title="Click to edit">
+                        ${batch.display}
+                    </div>
+                    <button class="btn-delete-batch btn-xs" onclick="deleteBatch('Theory', '${batch.slot}')" title="Delete batch">
+                        ❌
+                    </button>
+                </div>
+                <div class="batch-count">
+                    <div class="count-number batch-student-count">${batch.count}</div>
+                    <div class="count-label">students</div>
+                </div>
+                <div class="batch-capacity-label">Capacity: ${batch.capacity}</div>
+                <div class="batch-bar">
+                    <div class="batch-bar-fill" style="width: ${width}%"></div>
+                </div>
+            </div>
+        `;
+    });
+
+    // Add button card
+    html += `
+        <div class="batch-card batch-add-card" onclick="openCreateBatchModal('Theory')">
+            <div class="batch-add-content">
+                <div class="batch-add-icon">➕</div>
+                <div class="batch-add-text">Add<br>New Batch</div>
+            </div>
+        </div>
+    `;
+
+    grid.innerHTML = html;
+}
+
+function updatePracticalBatches(batches) {
+    const grid = document.getElementById('practical-batches-grid');
+    let html = '';
+
+    batches.forEach(batch => {
+        const total = parseInt(document.getElementById('stat-total').textContent) || 1;
+        const width = Math.max(batch.count * 100 / total, 5);
+        html += `
+            <div class="batch-card" data-slot="${batch.slot}" data-type="Practical" data-batch-id="${batch.id}">
+                <div class="batch-card-header">
+                    <div class="batch-time" onclick="editBatch(${batch.id}, 'Practical', '${batch.slot}', ${batch.capacity})" style="cursor: pointer; flex-grow: 1;" title="Click to edit">
+                        ${batch.display}
+                    </div>
+                    <button class="btn-delete-batch btn-xs" onclick="deleteBatch('Practical', '${batch.slot}')" title="Delete batch">
+                        ❌
+                    </button>
+                </div>
+                <div class="batch-count">
+                    <div class="count-number batch-student-count">${batch.count}</div>
+                    <div class="count-label">students</div>
+                </div>
+                <div class="batch-capacity-label">Capacity: ${batch.capacity}</div>
+                <div class="batch-bar">
+                    <div class="batch-bar-fill" style="width: ${width}%"></div>
+                </div>
+            </div>
+        `;
+    });
+
+    // Add button card
+    html += `
+        <div class="batch-card batch-add-card" onclick="openCreateBatchModal('Practical')">
+            <div class="batch-add-content">
+                <div class="batch-add-icon">➕</div>
+                <div class="batch-add-text">Add<br>New Batch</div>
+            </div>
+        </div>
+    `;
+
+    grid.innerHTML = html;
+}
+
+function updateStats(data) {
+    document.getElementById('stat-total').textContent = data.total_students;
+    document.getElementById('stat-theory').textContent = data.students_with_theory;
+    document.getElementById('stat-practical').textContent = data.students_with_practical;
+    document.getElementById('stat-without').textContent = data.students_without_batch;
+    
+    // Update summary table
+    updateSummaryTable(data.theory_batches, data.practical_batches);
+}
+
+function updateSummaryTable(theoryBatches, practicalBatches) {
+    const summaryBody = document.getElementById('summary-table-body');
+    if (!summaryBody) return;
+    
+    // Create a map of all unique time slots
+    const allSlots = new Set();
+    theoryBatches.forEach(b => allSlots.add(b.slot));
+    practicalBatches.forEach(b => allSlots.add(b.slot));
+    
+    // Sort slots
+    const sortedSlots = Array.from(allSlots).sort();
+    
+    let html = '';
+    sortedSlots.forEach(slot => {
+        const theoryBatch = theoryBatches.find(b => b.slot === slot);
+        const practicalBatch = practicalBatches.find(b => b.slot === slot);
+        
+        const display = theoryBatch?.display || practicalBatch?.display || slot;
+        const theoryCount = theoryBatch?.count || 0;
+        const practicalCount = practicalBatch?.count || 0;
+        const total = theoryCount + practicalCount;
+        
+        html += `
+            <tr>
+                <td><strong>${display}</strong></td>
+                <td class="text-center">
+                    ${theoryCount > 0 ? `<span class="badge badge-info">${theoryCount}</span>` : '<span class="text-muted">—</span>'}
+                </td>
+                <td class="text-center">
+                    ${practicalCount > 0 ? `<span class="badge badge-success">${practicalCount}</span>` : '<span class="text-muted">—</span>'}
+                </td>
+                <td class="text-center">
+                    <span class="badge badge-primary">${total}</span>
+                </td>
+            </tr>
+        `;
+    });
+    
+    summaryBody.innerHTML = html;
+}
+
+// Show Alert Messages
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+    alertDiv.style.display = 'block';
+    
+    // Insert at top of container
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Refresh data every 10 seconds
+setInterval(updateBatchList, 10000);
+
+// Initialize summary table on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateBatchList();
+});
+</script>
+{% endblock %}
+

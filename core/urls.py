@@ -54,10 +54,7 @@ urlpatterns = [
     
     #Statistics URLs
     path('statistics/', views.statistics_view, name='statistics'),
-    path('attendance/', views.student_daily_attendance, name='student_attendance'),
-    path('attendance/save/', views.save_attendance_ajax, name='save_attendance_ajax'),
-    path('attendance/data/', views.get_attendance_data, name='get_attendance_data'),
-    path('attendance/chart/', views.get_attendance_chart_data, name='get_attendance_chart_data'),
+    
     path('student-finance-details/', views.student_finance_details, name='student_finance_details'),
     path('update-finance-detail/', views.update_finance_detail, name='update_finance_detail'),
     path('month-wise-admission/', views.month_wise_admission, name='month_wise_admission'),
@@ -67,11 +64,18 @@ urlpatterns = [
     path('sales/items/', views.sales_items, name='sales_items'),
     path('sales/items/add/', views.add_sales_item, name='add_sales_item'),
     
-    # Student Timetable URLs
-    path('student-timetable/', views.student_timetable_view, name='student_timetable'),
-    path('student-timetable/partial/', views.student_timetable_partial, name='student_timetable_partial'),
-    path('student-timetable/add/', views.add_student_timetable, name='add_student_timetable'),
-    path('student-timetable/<int:timetable_id>/edit/', views.edit_student_timetable, name='edit_student_timetable'),
-    path('student-timetable/<int:timetable_id>/delete/', views.delete_student_timetable, name='delete_student_timetable'),
-    path('time-slot-students/', views.time_slot_students, name='time_slot_students'),
+    # Timetable & Attendance Management URLs
+    path('timetable/', views.student_timetable, name='student_timetable'),
+    path('timetable/<int:student_id>/edit/', views.edit_student_batch, name='edit_student_batch'),
+    path('batch/overview/', views.batch_overview_dashboard, name='batch_overview'),
+    path('batch/create/', views.create_batch, name='create_batch'),
+    path('batch/<int:batch_id>/delete/', views.delete_batch, name='delete_batch'),
+    path('batch/<int:batch_id>/edit/', views.edit_batch, name='edit_batch'),
+    path('batch/list/', views.get_batch_list, name='get_batch_list'),
+    path('batch/get-id/', views.get_batch_id, name='get_batch_id'),
+    path('attendance/mark/', views.mark_attendance_page, name='mark_attendance'),
+    path('attendance/save/<str:date>/<str:batch_time>/<str:batch_type>/', views.save_attendance, name='save_attendance'),
+    path('attendance/reports/', views.attendance_reports, name='attendance_reports'),
+    path('export/timetable/', views.export_timetable_excel, name='export_timetable'),
+    path('export/attendance/', views.export_attendance_report_excel, name='export_attendance_report'),
 ]

@@ -1,12 +1,14 @@
-from datetime import timedelta
+from datetime import timedelta, datetime as dt
 from django.db import transaction  
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import logout
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
+from django.utils.html import escape
 from django.db.models.functions import ExtractYear
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
@@ -16,13 +18,13 @@ import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from io import BytesIO
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import json
 import shutil
 import os
-from django.db.models import Sum, Count, Q
-from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem, Attendance
-from .forms import EnquiryForm, AdmittedStudentForm, FeePaymentForm, CourseForm
+from django.db.models import Sum, Count, Q, F
+from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem, Attendance, Batch
+from .forms import EnquiryForm, AdmittedStudentForm, FeePaymentForm, CourseForm, BatchManagementForm, AttendanceForm
 from django.contrib.auth import authenticate, login as auth_login
 
 # ================= CUSTOM LOGIN =================
@@ -287,6 +289,7 @@ def enquiry_list(request):
 
 # ================= DELETE ENQUIRY =================
 @login_required
+@staff_member_required
 def delete_enquiry(request, id):
     enquiry = get_object_or_404(Enquiry, id=id)
     enquiry.delete()
@@ -371,148 +374,6 @@ def enquiry_detail(request, id):
     }
     
     return JsonResponse(data)
-
-
-@login_required
-@require_http_methods(["POST"])
-def save_attendance_ajax(request):
-    """AJAX endpoint to save attendance for a single date and return JSON response."""
-    try:
-        data = json.loads(request.body)
-        date_str = data.get('date')
-        present_ids = data.get('present_ids', [])
-
-        # Parse and validate date
-        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-
-        # Remove attendance records for students not present
-        Attendance.objects.filter(date=selected_date).exclude(student_id__in=present_ids).delete()
-
-        # Create or update present records
-        for sid in present_ids:
-            try:
-                sid = int(sid)
-                Attendance.objects.update_or_create(
-                    student_id=sid,
-                    date=selected_date,
-                    defaults={'status': 'P'}
-                )
-            except (ValueError, AdmittedStudent.DoesNotExist):
-                pass
-
-        return JsonResponse({
-            'success': True,
-            'message': f'Attendance updated for {selected_date}',
-            'present_count': len(present_ids),
-            'date': str(selected_date)
-        })
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=400)
-
-
-@login_required
-def get_attendance_data(request):
-    """AJAX endpoint to fetch filtered attendance data with pagination."""
-    from datetime import date as _date
-    
-    date_str = request.GET.get('date')
-    course_filter = request.GET.get('course', '')
-    batch_filter = request.GET.get('batch', '')
-    page_num = request.GET.get('page', 1)
-    
-    if date_str:
-        try:
-            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        except Exception:
-            selected_date = _date.today()
-    else:
-        selected_date = _date.today()
-
-    # Get all students
-    students = AdmittedStudent.objects.filter().order_by('full_name')
-
-    # Apply filters
-    if course_filter:
-        students = students.filter(course=course_filter)
-    if batch_filter:
-        students = students.filter(batch_month=batch_filter)
-
-    # Get attendance for the selected date
-    attendance_qs = Attendance.objects.filter(date=selected_date)
-    attendance_map = {a.student_id: a.status for a in attendance_qs}
-    present_ids = [sid for sid, st in attendance_map.items() if st == 'P']
-
-    # Paginate
-    paginator = Paginator(students, 20)
-    page_obj = paginator.get_page(page_num)
-
-    # Get available courses and batches for filter dropdowns
-    all_courses = AdmittedStudent.objects.values_list('course', flat=True).distinct().order_by('course')
-    all_batches = AdmittedStudent.objects.values_list('batch_month', flat=True).distinct().order_by('batch_month')
-
-    # Build student list for response
-    student_list = []
-    for student in page_obj.object_list:
-        student_list.append({
-            'id': student.id,
-            'name': student.full_name,
-            'course': student.course,
-            'batch': student.batch_display,
-            'mobile': student.mobile_own,
-            'is_present': student.id in present_ids
-        })
-
-    return JsonResponse({
-        'success': True,
-        'students': student_list,
-        'current_page': page_obj.number,
-        'total_pages': page_obj.paginator.num_pages,
-        'total_count': page_obj.paginator.count,
-        'selected_date': str(selected_date),
-        'present_count': len(present_ids),
-        'courses': list(all_courses),
-        'batches': list(all_batches),
-    })
-
-
-@login_required
-def get_attendance_chart_data(request):
-    """AJAX endpoint to get last 7 days attendance summary for chart."""
-    from datetime import timedelta, date as _date
-    
-    today = _date.today()
-    start_date = today - timedelta(days=6)  # Last 7 days including today
-    
-    # Get attendance records for last 7 days
-    attendance_records = Attendance.objects.filter(
-        date__gte=start_date,
-        date__lte=today,
-        status='P'
-    ).values('date').annotate(present_count=Count('id')).order_by('date')
-    
-    # Build date range with counts
-    chart_data = {}
-    for i in range(7):
-        date = start_date + timedelta(days=i)
-        chart_data[str(date)] = 0
-    
-    # Populate with actual data
-    for record in attendance_records:
-        chart_data[str(record['date'])] = record['present_count']
-    
-    # Get total students count
-    total_students = AdmittedStudent.objects.count()
-    
-    return JsonResponse({
-        'success': True,
-        'labels': list(chart_data.keys()),
-        'data': list(chart_data.values()),
-        'total_students': total_students,
-        'date_range': f"{start_date} to {today}"
-    })
 
 
 # ================= CONVERT ENQUIRY TO ADMISSION =================
@@ -833,9 +694,9 @@ def search_admitted_students(request):
         course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
         students_data.append({
             'id': student.id,
-            'full_name': student.full_name or f"{student.student_name} {student.father_name} {student.surname}",
-            'mobile_own': student.mobile_own,
-            'course': course_name,
+            'full_name': escape(student.full_name or f"{student.student_name} {student.father_name} {student.surname}"),
+            'mobile_own': escape(student.mobile_own or ''),
+            'course': escape(course_name or ''),
         })
     
     return JsonResponse({'students': students_data})
@@ -867,9 +728,9 @@ def search_students_for_payment(request):
         course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
         students_data.append({
             'id': student.id,
-            'full_name': student.full_name,
-            'mobile_own': student.mobile_own,
-            'course': course_name
+            'full_name': escape(student.full_name or ''),
+            'mobile_own': escape(student.mobile_own or ''),
+            'course': escape(course_name or '')
         })
     
     return JsonResponse({'students': students_data})
@@ -877,6 +738,8 @@ def search_students_for_payment(request):
 
 # ================= SUBMIT FEE PAYMENT - FIXED VERSION WITH BATCH =================
 @login_required
+@csrf_protect
+@require_http_methods(["POST"])
 def submit_fee_payment(request):
     if request.method == 'POST':
         try:
@@ -920,11 +783,19 @@ def submit_fee_payment(request):
             
             # Convert amount to Decimal
             try:
-                amount = Decimal(str(amount))
-            except (ValueError, TypeError):
+                amount = Decimal(str(amount).strip())
+                # Validate amount is positive
+                if amount <= 0:
+                    raise ValueError("Amount must be greater than zero")
+                # Validate amount doesn't exceed maximum (₹10 million)
+                if amount > Decimal('10000000'):
+                    raise ValueError("Amount exceeds maximum limit (₹10,000,000)")
+                # Quantize to 2 decimal places (paise)
+                amount = amount.quantize(Decimal('0.01'))
+            except (ValueError, TypeError) as e:
                 return JsonResponse({
                     'success': False,
-                    'error': 'Invalid amount format'
+                    'error': f'Invalid amount: {str(e)}'
                 }, status=400)
             
             # Use atomic transaction
@@ -957,9 +828,9 @@ def submit_fee_payment(request):
                     remaining_after_this=student.total_fees - (student.paid_fees + amount)
                 )
                 
-                # Update student's paid fees
-                student.paid_fees += amount
-                student.save()
+                # Update student's paid fees using F() for atomic increment
+                student.paid_fees = F('paid_fees') + amount
+                student.save(update_fields=['paid_fees'])
                 
                 # Prepare receipt data
                 course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
@@ -1202,7 +1073,13 @@ def update_receipt(request, receipt_id):
         
         if 'amount' in data or 'paid_fees' in data:
             old_amount = payment.amount
-            new_amount = Decimal(str(data.get('amount') or data.get('paid_fees', old_amount)))
+            try:
+                new_amount = Decimal(str(data.get('amount') or data.get('paid_fees', old_amount)).strip())
+            except (ValueError, TypeError, InvalidOperation):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid amount format'
+                }, status=400)
             
             # Validate amount
             if new_amount <= 0:
@@ -1211,16 +1088,37 @@ def update_receipt(request, receipt_id):
                     'error': 'Amount must be greater than zero'
                 }, status=400)
             
-            # Update student's paid fees
+            if new_amount > Decimal('10000000'):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Amount exceeds maximum limit'
+                }, status=400)
+            
+            # Update student's paid fees with validation
             student = payment.student
             amount_difference = new_amount - old_amount
+            new_paid_fees = student.paid_fees + amount_difference
+            
+            # Validate new amount doesn't exceed total fees
+            if new_paid_fees < 0:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Cannot update: would result in negative paid fees'
+                }, status=400)
+            
+            if new_paid_fees > student.total_fees:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Cannot update: would exceed total fees'
+                }, status=400)
             
             with transaction.atomic():
-                student.paid_fees = max(0, student.paid_fees + amount_difference)
-                student.save()
+                # Use F() for atomic update
+                student.paid_fees = F('paid_fees') + amount_difference
+                student.save(update_fields=['paid_fees'])
                 
                 payment.amount = new_amount
-                payment.remaining_after_this = student.total_fees - student.paid_fees
+                payment.remaining_after_this = student.total_fees - new_paid_fees
                 payment.save()
         
         return JsonResponse({
@@ -1247,6 +1145,8 @@ def update_receipt(request, receipt_id):
     
 # ================= DELETE RECEIPT API =================
 @login_required
+@staff_member_required
+@require_http_methods(["POST"])
 def delete_receipt(request, receipt_id):
     """API endpoint to delete a receipt"""
     from datetime import date
@@ -1513,6 +1413,7 @@ def export_admitted_students_excel(request):
 
 # ================= DELETE ADMITTED STUDENTS =================
 @login_required
+@staff_member_required
 @require_http_methods(["POST"])
 def delete_admitted_students(request):
     """Delete multiple admitted students at once"""
@@ -1762,57 +1663,6 @@ def statistics_view(request):
 
 
 @login_required
-def student_daily_attendance(request):
-    """View to display and record daily attendance for admitted students."""
-    from datetime import date as _date
-    # Parse selected date from GET or POST
-    date_str = request.GET.get('date') or request.POST.get('date')
-    if date_str:
-        try:
-            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        except Exception:
-            selected_date = _date.today()
-    else:
-        selected_date = _date.today()
-
-    if request.method == 'POST':
-        # Expect checkbox inputs named 'present' with student ids
-        present_ids = request.POST.getlist('present')
-        # Normalize to ints
-        present_ids = [int(x) for x in present_ids if x.isdigit()]
-
-        # Remove attendance records for students not present
-        Attendance.objects.filter(date=selected_date).exclude(student_id__in=present_ids).delete()
-
-        # Create or update present records
-        for sid in present_ids:
-            Attendance.objects.update_or_create(
-                student_id=sid,
-                date=selected_date,
-                defaults={'status': 'P'}
-            )
-
-        # Ensure absent records exist for other students (optional)
-        # Redirect back to GET to show updated data
-        messages.success(request, f"Attendance updated for {selected_date}")
-        # Render updated template below
-
-    # GET or re-render after POST
-    students = AdmittedStudent.objects.filter().order_by('full_name')
-    attendance_qs = Attendance.objects.filter(date=selected_date)
-    attendance_map = {a.student_id: a.status for a in attendance_qs}
-    present_ids = [sid for sid, st in attendance_map.items() if st == 'P']
-
-    context = {
-        'students': students,
-        'attendance_map': attendance_map,
-        'present_ids': present_ids,
-        'selected_date': selected_date,
-        'active_page': 'statistics',
-    }
-
-    return render(request, 'core/student_attendance.html', context)
-
 @login_required
 def student_finance_details(request):
     """Student Finance Details section"""
@@ -2285,282 +2135,1074 @@ def payment_tracking_student_detail(request, student_id):
     return JsonResponse(data)
 
 
-# ===== Student Timetable Views =====
+# ================= ATTENDANCE MANAGEMENT SYSTEM =================
 
-from .models import StudentTimetable
-from .forms import StudentTimetableForm, StudentTimetableFilterForm
-from django.db.models import Q, Count
+@login_required
+def attendance_management(request):
+    """Attendance management has been removed"""
+    from django.http import HttpResponse
+    return HttpResponse("Attendance management feature has been removed from this application.", status=410)
 
 
-def student_timetable_view(request):
-    """Display and manage student timetables with filters"""
+@login_required
+def get_attendance_stats(request):
+    """Feature removed"""
+    return JsonResponse({'error': 'Attendance management feature has been removed'}, status=410)
+
+
+@login_required
+def get_daily_attendance_students(request):
+    """Feature removed"""
+    return JsonResponse({'error': 'Attendance management feature has been removed'}, status=410)
+
+
+@login_required
+def save_daily_attendance(request):
+    """Feature removed"""
+    return JsonResponse({'error': 'Attendance management feature has been removed'}, status=410)
+
+
+@login_required
+def get_monthly_timetable(request):
+    """Feature removed"""
+    return JsonResponse({'error': 'Attendance management feature has been removed'}, status=410)
+
+
+@login_required
+def get_monthly_report(request):
+    """Feature removed"""
+    return JsonResponse({'error': 'Attendance management feature has been removed'}, status=410)
+
+
+@login_required
+def export_attendance_excel(request):
+    """Feature removed"""
+    return JsonResponse({'error': 'Attendance management feature has been removed'}, status=410)
+
+
+@login_required
+def export_attendance_pdf(request):
+    """Feature removed"""
+    return JsonResponse({'error': 'Attendance management feature has been removed'}, status=410)
+
+
+# ============= TIMETABLE & ATTENDANCE MANAGEMENT =============
+
+@login_required
+@staff_member_required
+def student_timetable(request):
+    """Display student timetable with batch assignments"""
+    search_query = request.GET.get('search', '').strip()
+    course_filter = request.GET.get('course', '')
+    batch_month_filter = request.GET.get('batch_month', '')
+    batch_year_filter = request.GET.get('batch_year', '')
+    theory_batch_filter = request.GET.get('theory_batch', '')
+    practical_batch_filter = request.GET.get('practical_batch', '')
     
-    # Start with all admitted students
-    admitted_students = AdmittedStudent.objects.all()
+    # Get all students with batch assignments
+    students = AdmittedStudent.objects.all()
     
-    # Apply filters
-    student_name = request.GET.get('student_name', '').strip()
-    batch = request.GET.get('batch', '').strip()
-    course = request.GET.get('course', '').strip()
-    
-    if student_name:
-        admitted_students = admitted_students.filter(
-            Q(full_name__icontains=student_name) |
-            Q(student_name__icontains=student_name)
+    # Apply search filter
+    if search_query:
+        students = students.filter(
+            Q(full_name__icontains=search_query) |
+            Q(student_name__icontains=search_query) |
+            Q(mobile_own__icontains=search_query)
         )
     
-    if batch:
-        admitted_students = admitted_students.filter(batch_month=batch)
+    # Apply course filter
+    if course_filter:
+        students = students.filter(course=course_filter)
     
-    if course:
-        admitted_students = admitted_students.filter(course=course)
+    # Apply batch month filter
+    if batch_month_filter:
+        students = students.filter(batch_month=batch_month_filter)
     
-    # Order by name
-    admitted_students = admitted_students.order_by('full_name')
+    # Apply batch year filter
+    if batch_year_filter:
+        students = students.filter(batch_year=batch_year_filter)
     
-    # Handle POST request to save time slots
+    # Apply theory batch filter
+    if theory_batch_filter:
+        students = students.filter(theory_batch_time=theory_batch_filter)
+    
+    # Apply practical batch filter
+    if practical_batch_filter:
+        students = students.filter(practical_batch_time=practical_batch_filter)
+    
+    # Paginate results
+    paginator = Paginator(students, 25)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Get available courses from AdmittedStudent
+    course_choices = [
+        ('MS-CIT', 'MS-CIT'),
+        ('Tally', 'Tally'),
+        ('Advance Excel', 'Advance Excel'),
+        ('IOT', 'IOT'),
+        ('Scratch', 'Scratch'),
+        ('Other', 'Other'),
+    ]
+    all_courses = course_choices
+    
+    # Get available batch months and years
+    available_batch_months = (
+        AdmittedStudent.objects
+        .exclude(batch_month__isnull=True)
+        .exclude(batch_month='')
+        .values_list('batch_month', flat=True)
+        .distinct()
+        .order_by('batch_month')
+    )
+    
+    available_batch_years = (
+        AdmittedStudent.objects
+        .exclude(batch_year__isnull=True)
+        .exclude(batch_year='')
+        .values_list('batch_year', flat=True)
+        .distinct()
+        .order_by('-batch_year')
+    )
+    
+    # Get available batches
+    available_theory_batches = Batch.objects.filter(
+        batch_type='Theory',
+        course__isnull=True
+    ).values_list('time_slot', flat=True).distinct().order_by('time_slot')
+    
+    available_practical_batches = Batch.objects.filter(
+        batch_type='Practical',
+        course__isnull=True
+    ).values_list('time_slot', flat=True).distinct().order_by('time_slot')
+    
+    # Map time slots to display format
+    time_slot_display_map = {
+        '08:00-09:00': '8:00 AM - 9:00 AM',
+        '09:00-10:00': '9:00 AM - 10:00 AM',
+        '10:00-11:00': '10:00 AM - 11:00 AM',
+        '11:00-12:00': '11:00 AM - 12:00 PM',
+        '12:00-13:00': '12:00 PM - 1:00 PM',
+        '15:00-16:00': '3:00 PM - 4:00 PM',
+        '16:00-17:00': '4:00 PM - 5:00 PM',
+        '17:00-18:00': '5:00 PM - 6:00 PM',
+        '18:00-19:00': '6:00 PM - 7:00 PM',
+    }
+    
+    time_slots = [
+        ('08:00-09:00', '8:00 AM - 9:00 AM'),
+        ('09:00-10:00', '9:00 AM - 10:00 AM'),
+        ('10:00-11:00', '10:00 AM - 11:00 AM'),
+        ('11:00-12:00', '11:00 AM - 12:00 PM'),
+        ('12:00-13:00', '12:00 PM - 1:00 PM'),
+        ('15:00-16:00', '3:00 PM - 4:00 PM'),
+        ('16:00-17:00', '4:00 PM - 5:00 PM'),
+        ('17:00-18:00', '5:00 PM - 6:00 PM'),
+        ('18:00-19:00', '6:00 PM - 7:00 PM'),
+    ]
+    
+    context = {
+        'page_obj': page_obj,
+        'students': page_obj.object_list,
+        'search_query': search_query,
+        'course_filter': course_filter,
+        'batch_month_filter': batch_month_filter,
+        'batch_year_filter': batch_year_filter,
+        'theory_batch_filter': theory_batch_filter,
+        'practical_batch_filter': practical_batch_filter,
+        'all_courses': all_courses,
+        'available_batch_months': available_batch_months,
+        'available_batch_years': available_batch_years,
+        'available_theory_batches': available_theory_batches,
+        'available_practical_batches': available_practical_batches,
+        'time_slot_display_map': time_slot_display_map,
+        'total_students': students.count(),
+        'time_slots': time_slots,
+        'active_page': 'student_timetable'
+    }
+    
+    return render(request, 'core/timetable/student_timetable.html', context)
+
+
+@login_required
+@staff_member_required
+def edit_student_batch(request, student_id):
+    """Edit student's theory and practical batch assignments"""
+    student = get_object_or_404(AdmittedStudent, id=student_id)
+    
     if request.method == 'POST':
-        student_id = request.POST.get('student_id')
-        theory_slot = request.POST.get('theory_slot')
-        practical_slot = request.POST.get('practical_slot')
+        theory_batch = request.POST.get('theory_batch_time', '').strip()
+        practical_batch = request.POST.get('practical_batch_time', '').strip()
         
-        if student_id and theory_slot and practical_slot:
-            try:
-                student = AdmittedStudent.objects.get(id=student_id)
+        # Update student batches
+        if theory_batch:
+            student.theory_batch_time = theory_batch
+        if practical_batch:
+            student.practical_batch_time = practical_batch
+        
+        student.save()
+        messages.success(request, f"✅ Batch timing updated for {student.full_name}")
+        return redirect('student_timetable')
+    
+    # Get only existing theory and practical batches
+    theory_batches = Batch.objects.filter(batch_type='Theory', course__isnull=True).values_list('time_slot', flat=True)
+    practical_batches = Batch.objects.filter(batch_type='Practical', course__isnull=True).values_list('time_slot', flat=True)
+    
+    time_slots = [
+        ('08:00-09:00', '8:00 AM - 9:00 AM'),
+        ('09:00-10:00', '9:00 AM - 10:00 AM'),
+        ('10:00-11:00', '10:00 AM - 11:00 AM'),
+        ('11:00-12:00', '11:00 AM - 12:00 PM'),
+        ('12:00-13:00', '12:00 PM - 1:00 PM'),
+        ('15:00-16:00', '3:00 PM - 4:00 PM'),
+        ('16:00-17:00', '4:00 PM - 5:00 PM'),
+        ('17:00-18:00', '5:00 PM - 6:00 PM'),
+        ('18:00-19:00', '6:00 PM - 7:00 PM'),
+    ]
+    
+    # Filter to only show existing batches
+    available_theory_slots = [(slot, display) for slot, display in time_slots if slot in theory_batches]
+    available_practical_slots = [(slot, display) for slot, display in time_slots if slot in practical_batches]
+    
+    context = {
+        'student': student,
+        'theory_batches': available_theory_slots,
+        'practical_batches': available_practical_slots,
+        'active_page': 'student_timetable'
+    }
+    
+    return render(request, 'core/timetable/edit_batch.html', context)
+
+
+@login_required
+@staff_member_required
+def batch_overview_dashboard(request):
+    """Dashboard showing batch-wise student distribution"""
+    from django.db.models import Count
+    
+    time_slots = [
+        ('08:00-09:00', '8:00 AM - 9:00 AM'),
+        ('09:00-10:00', '9:00 AM - 10:00 AM'),
+        ('10:00-11:00', '10:00 AM - 11:00 AM'),
+        ('11:00-12:00', '11:00 AM - 12:00 PM'),
+        ('12:00-13:00', '12:00 PM - 1:00 PM'),
+        ('15:00-16:00', '3:00 PM - 4:00 PM'),
+        ('16:00-17:00', '4:00 PM - 5:00 PM'),
+        ('17:00-18:00', '5:00 PM - 6:00 PM'),
+        ('18:00-19:00', '6:00 PM - 7:00 PM'),
+    ]
+    
+    # Get only existing theory batches from database
+    theory_batches = []
+    for batch in Batch.objects.filter(batch_type='Theory', course__isnull=True):
+        count = AdmittedStudent.objects.filter(theory_batch_time=batch.time_slot).count()
+        display = dict(time_slots).get(batch.time_slot, batch.time_slot)
+        theory_batches.append({
+            'id': batch.id,
+            'slot': batch.time_slot,
+            'display': display,
+            'count': count,
+            'capacity': batch.capacity
+        })
+    
+    # Get only existing practical batches from database
+    practical_batches = []
+    for batch in Batch.objects.filter(batch_type='Practical', course__isnull=True):
+        count = AdmittedStudent.objects.filter(practical_batch_time=batch.time_slot).count()
+        display = dict(time_slots).get(batch.time_slot, batch.time_slot)
+        practical_batches.append({
+            'id': batch.id,
+            'slot': batch.time_slot,
+            'display': display,
+            'count': count,
+            'capacity': batch.capacity
+        })
+    
+    # Total statistics
+    total_students = AdmittedStudent.objects.count()
+    students_with_theory = AdmittedStudent.objects.filter(theory_batch_time__isnull=False).exclude(theory_batch_time='').count()
+    students_with_practical = AdmittedStudent.objects.filter(practical_batch_time__isnull=False).exclude(practical_batch_time='').count()
+    
+    context = {
+        'theory_batches': theory_batches,
+        'practical_batches': practical_batches,
+        'total_students': total_students,
+        'students_with_theory': students_with_theory,
+        'students_with_practical': students_with_practical,
+        'students_without_batch': total_students - max(students_with_theory, students_with_practical),
+        'active_page': 'batch_overview'
+    }
+    
+    return render(request, 'core/timetable/batch_overview.html', context)
+
+
+@login_required
+@staff_member_required
+def mark_attendance_page(request):
+    """Page to mark attendance for a specific batch and date"""
+    from datetime import datetime, date as date_class
+    
+    if request.method == 'POST':
+        attendance_date = request.POST.get('attendance_date')
+        batch_time = request.POST.get('batch_time')
+        batch_type = request.POST.get('batch_type')
+        
+        if not all([attendance_date, batch_time, batch_type]):
+            messages.error(request, "❌ Please select date, batch time, and batch type")
+            return redirect('mark_attendance')
+        
+        return redirect('save_attendance', date=attendance_date, batch_time=batch_time, batch_type=batch_type)
+    
+    # Get only existing theory batches
+    theory_batches = Batch.objects.filter(
+        batch_type='Theory',
+        course__isnull=True
+    ).values_list('time_slot', flat=True).distinct()
+    
+    # Get only existing practical batches
+    practical_batches = Batch.objects.filter(
+        batch_type='Practical',
+        course__isnull=True
+    ).values_list('time_slot', flat=True).distinct()
+    
+    # Map time slots to display format
+    time_slot_display_map = {
+        '08:00-09:00': '8:00 AM - 9:00 AM',
+        '09:00-10:00': '9:00 AM - 10:00 AM',
+        '10:00-11:00': '10:00 AM - 11:00 AM',
+        '11:00-12:00': '11:00 AM - 12:00 PM',
+        '12:00-13:00': '12:00 PM - 1:00 PM',
+        '15:00-16:00': '3:00 PM - 4:00 PM',
+        '16:00-17:00': '4:00 PM - 5:00 PM',
+        '17:00-18:00': '5:00 PM - 6:00 PM',
+        '18:00-19:00': '6:00 PM - 7:00 PM',
+    }
+    
+    # Create filtered time slots for display
+    theory_slots = [(slot, time_slot_display_map.get(slot, slot)) for slot in theory_batches]
+    practical_slots = [(slot, time_slot_display_map.get(slot, slot)) for slot in practical_batches]
+    
+    context = {
+        'theory_slots': theory_slots,
+        'practical_slots': practical_slots,
+        'today': date_class.today().isoformat(),
+        'active_page': 'mark_attendance'
+    }
+    
+    return render(request, 'core/timetable/mark_attendance.html', context)
+
+
+@login_required
+@staff_member_required
+def save_attendance(request, date, batch_time, batch_type):
+    """Save attendance for students in a specific batch"""
+    from datetime import datetime as dt
+    
+    # Parse date
+    try:
+        attendance_date = dt.strptime(date, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        messages.error(request, "❌ Invalid date format")
+        return redirect('mark_attendance')
+    
+    # Get students for the selected batch
+    if batch_type == 'theory':
+        students = AdmittedStudent.objects.filter(theory_batch_time=batch_time).order_by('full_name')
+    else:  # practical
+        students = AdmittedStudent.objects.filter(practical_batch_time=batch_time).order_by('full_name')
+    
+    if request.method == 'POST':
+        with transaction.atomic():
+            for student in students:
+                # Get attendance status
+                attendance_key = f'attendance_{student.id}'
+                status = request.POST.get(attendance_key, 'A')
+                remarks = request.POST.get(f'remarks_{student.id}', '').strip()
                 
-                # Save or update theory slot (Monday as default day)
-                theory_timetable, created = StudentTimetable.objects.update_or_create(
+                # Create or update attendance record
+                attendance, created = Attendance.objects.get_or_create(
                     student=student,
-                    session_type='Theory',
-                    defaults={
-                        'day': 'Monday',  # You can make this dynamic if needed
-                        'time_slot': theory_slot,
-                        'batch_month': student.batch_month,
-                        'batch_year': student.batch_year,
-                        'course': student.course,
-                    }
+                    date=attendance_date,
+                    defaults={'marked_by': request.user}
                 )
                 
-                # Save or update practical slot (Monday as default day)
-                practical_timetable, created = StudentTimetable.objects.update_or_create(
-                    student=student,
-                    session_type='Practical',
-                    defaults={
-                        'day': 'Monday',  # You can make this dynamic if needed
-                        'time_slot': practical_slot,
-                        'batch_month': student.batch_month,
-                        'batch_year': student.batch_year,
-                        'course': student.course,
-                    }
-                )
+                # Update attendance based on batch type
+                if batch_type == 'theory':
+                    attendance.theory_attendance = status
+                else:
+                    attendance.practical_attendance = status
                 
-                messages.success(request, f'✓ Timetable saved for {student.full_name}')
-                return redirect('student_timetable')
+                if remarks:
+                    attendance.remarks = remarks
                 
-            except AdmittedStudent.DoesNotExist:
-                messages.error(request, '✗ Student not found')
-            except Exception as e:
-                messages.error(request, f'✗ Error saving timetable: {str(e)}')
-    
-    context = {
-        'admitted_students': admitted_students,
-        'active_page': 'student_timetable',
-    }
-    
-    return render(request, 'core/student_timetable.html', context)
-
-
-def student_timetable_partial(request):
-    """Display student timetables partial (for AJAX loading in statistics)"""
-    
-    # Start with all timetables
-    timetables = StudentTimetable.objects.select_related('student').all()
-    
-    # Apply filters if provided
-    student_name = request.GET.get('student_name', '').strip()
-    batch = request.GET.get('batch', '').strip()
-    course = request.GET.get('course', '').strip()
-    day = request.GET.get('day', '').strip()
-    time_slot = request.GET.get('time_slot', '').strip()
-    
-    if student_name:
-        timetables = timetables.filter(
-            Q(student__full_name__icontains=student_name) |
-            Q(student__student_name__icontains=student_name)
-        )
-    
-    if batch:
-        timetables = timetables.filter(student__batch_month=batch)
-    
-    if course:
-        timetables = timetables.filter(student__course=course)
-    
-    if day:
-        timetables = timetables.filter(day=day)
-    
-    if time_slot:
-        timetables = timetables.filter(time_slot=time_slot)
-    
-    # Order timetables
-    timetables = timetables.order_by('day', 'time_slot', 'student__full_name')
-    
-    context = {
-        'timetables': timetables,
-        'total_count': timetables.count(),
-    }
-    
-    return render(request, 'core/student_timetable_partial.html', context)
-
-
-def add_student_timetable(request):
-    """Add new student timetable slot"""
-    
-    if request.method == 'POST':
-        form = StudentTimetableForm(request.POST)
-        if form.is_valid():
-            timetable = form.save(commit=False)
-            
-            # Auto-fill batch and course from student
-            if timetable.student:
-                timetable.batch_month = timetable.student.batch_month
-                timetable.batch_year = timetable.student.batch_year
-                timetable.course = timetable.student.course
-            
-            timetable.save()
-            
-            messages.success(request, f"Timetable slot added successfully for {timetable.student.full_name}!")
-            return redirect('student_timetable')
-    else:
-        form = StudentTimetableForm()
-    
-    context = {
-        'form': form,
-        'title': 'Add Student Timetable',
-    }
-    
-    return render(request, 'core/add_student_timetable.html', context)
-
-
-def edit_student_timetable(request, timetable_id):
-    """Edit existing student timetable slot"""
-    
-    try:
-        timetable = StudentTimetable.objects.get(id=timetable_id)
-    except StudentTimetable.DoesNotExist:
-        messages.error(request, "Timetable slot not found!")
-        return redirect('student_timetable')
-    
-    if request.method == 'POST':
-        form = StudentTimetableForm(request.POST, instance=timetable)
-        if form.is_valid():
-            timetable = form.save(commit=False)
-            
-            # Update batch and course
-            if timetable.student:
-                timetable.batch_month = timetable.student.batch_month
-                timetable.batch_year = timetable.student.batch_year
-                timetable.course = timetable.student.course
-            
-            timetable.save()
-            
-            messages.success(request, "Timetable slot updated successfully!")
-            return redirect('student_timetable')
-    else:
-        form = StudentTimetableForm(instance=timetable)
-    
-    context = {
-        'form': form,
-        'timetable': timetable,
-        'title': 'Edit Student Timetable',
-    }
-    
-    return render(request, 'core/add_student_timetable.html', context)
-
-
-def delete_student_timetable(request, timetable_id):
-    """Delete student timetable slot"""
-    
-    try:
-        timetable = StudentTimetable.objects.get(id=timetable_id)
-    except StudentTimetable.DoesNotExist:
-        messages.error(request, "Timetable slot not found!")
-        return redirect('student_timetable')
-    
-    if request.method == 'POST':
-        student_name = timetable.student.full_name
-        timetable.delete()
-        messages.success(request, f"Timetable slot deleted successfully!")
-        return redirect('student_timetable')
-    
-    context = {
-        'timetable': timetable,
-    }
-    
-    return render(request, 'core/delete_student_timetable.html', context)
-
-
-def time_slot_students(request):
-    """View students in a specific time slot"""
-    
-    day = request.GET.get('day', '').strip()
-    time_slot = request.GET.get('time_slot', '').strip()
-    
-    students_in_slot = []
-    slot_display = ''
-    total_count = 0
-    
-    if day and time_slot:
-        # Get all timetables for this slot
-        timetables = StudentTimetable.objects.filter(
-            day=day,
-            time_slot=time_slot
-        ).select_related('student').order_by('session_type', 'student__full_name')
+                attendance.marked_by = request.user
+                attendance.save()
         
-        total_count = timetables.count()
+        messages.success(request, f"✅ Attendance saved for {batch_type.capitalize()} batch on {attendance_date}")
+        return redirect('attendance_reports')
+    
+    # Display form to mark attendance
+    time_slot_display_map = {
+        '08:00-09:00': '8:00 AM - 9:00 AM',
+        '09:00-10:00': '9:00 AM - 10:00 AM',
+        '10:00-11:00': '10:00 AM - 11:00 AM',
+        '11:00-12:00': '11:00 AM - 12:00 PM',
+        '12:00-13:00': '12:00 PM - 1:00 PM',
+        '15:00-16:00': '3:00 PM - 4:00 PM',
+        '16:00-17:00': '4:00 PM - 5:00 PM',
+        '17:00-18:00': '5:00 PM - 6:00 PM',
+        '18:00-19:00': '6:00 PM - 7:00 PM',
+    }
+    
+    # Get time slot display
+    time_slot_display = time_slot_display_map.get(batch_time, batch_time)
+    
+    context = {
+        'students': students,
+        'attendance_date': attendance_date,
+        'batch_time': batch_time,
+        'time_slot_display': time_slot_display,
+        'batch_type': batch_type,
+        'status_choices': [('P', 'Present'), ('A', 'Absent'), ('L', 'Leave'), ('H', 'Holiday')],
+        'active_page': 'mark_attendance'
+    }
+    
+    return render(request, 'core/timetable/save_attendance.html', context)
+
+
+@login_required
+@staff_member_required
+def attendance_reports(request):
+    """Comprehensive attendance reports"""
+    from datetime import datetime, date as date_class, timedelta
+    
+    report_type = request.GET.get('report_type', 'student')
+    
+    # Student Attendance Report
+    if report_type == 'student':
+        students = AdmittedStudent.objects.all().order_by('full_name')
         
-        # Group by session type
-        theory_students = []
-        practical_students = []
-        
-        for timetable in timetables:
-            student_info = {
-                'id': timetable.student.id,
-                'name': timetable.student.full_name,
-                'course': timetable.student.course,
-                'batch': timetable.student.batch_display,
-                'session_type': timetable.session_type,
-                'timetable_id': timetable.id,
-            }
+        student_reports = []
+        for student in students:
+            total_records = student.attendance_records.count()
+            present_count = student.attendance_records.filter(
+                Q(theory_attendance='P') | Q(practical_attendance='P')
+            ).count()
+            absent_count = total_records - present_count
             
-            if timetable.session_type == 'Theory':
-                theory_students.append(student_info)
+            if total_records > 0:
+                percentage = (present_count / total_records) * 100
             else:
-                practical_students.append(student_info)
+                percentage = 0
+            
+            student_reports.append({
+                'student': student,
+                'total': total_records,
+                'present': present_count,
+                'absent': absent_count,
+                'percentage': round(percentage, 2)
+            })
         
-        students_in_slot = {
-            'theory': theory_students,
-            'practical': practical_students,
+        context = {
+            'report_type': 'student',
+            'student_reports': student_reports,
+            'title': 'Student Attendance Report'
+        }
+    
+    # Daily Report
+    elif report_type == 'daily':
+        selected_date = request.GET.get('date')
+        
+        if selected_date:
+            try:
+                report_date = dt.strptime(selected_date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                report_date = date_class.today()
+        else:
+            report_date = date_class.today()
+        
+        # Get all attendance records for the date
+        attendance_records = Attendance.objects.filter(date=report_date).select_related('student')
+        
+        total_students = AdmittedStudent.objects.count()
+        present_count = attendance_records.filter(Q(theory_attendance='P') | Q(practical_attendance='P')).count()
+        absent_count = total_students - present_count
+        
+        context = {
+            'report_type': 'daily',
+            'report_date': report_date,
+            'attendance_records': attendance_records,
+            'total_students': total_students,
+            'present_count': present_count,
+            'absent_count': absent_count,
+            'title': f'Daily Attendance Report - {report_date}'
+        }
+    
+    # Batch Attendance Report
+    else:  # batch
+        selected_date = request.GET.get('date')
+        
+        if selected_date:
+            try:
+                report_date = dt.strptime(selected_date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                report_date = date_class.today()
+        else:
+            report_date = date_class.today()
+        
+        time_slot_display_map = {
+            '08:00-09:00': '8:00 AM - 9:00 AM',
+            '09:00-10:00': '9:00 AM - 10:00 AM',
+            '10:00-11:00': '10:00 AM - 11:00 AM',
+            '11:00-12:00': '11:00 AM - 12:00 PM',
+            '12:00-13:00': '12:00 PM - 1:00 PM',
+            '15:00-16:00': '3:00 PM - 4:00 PM',
+            '16:00-17:00': '4:00 PM - 5:00 PM',
+            '17:00-18:00': '5:00 PM - 6:00 PM',
+            '18:00-19:00': '6:00 PM - 7:00 PM',
         }
         
-        # Get display name
-        time_slot_obj = StudentTimetable.objects.filter(
-            time_slot=time_slot
+        # Get all existing theory and practical batch time slots
+        theory_slots = Batch.objects.filter(
+            batch_type='Theory',
+            course__isnull=True
+        ).values_list('time_slot', flat=True).distinct()
+        
+        practical_slots = Batch.objects.filter(
+            batch_type='Practical',
+            course__isnull=True
+        ).values_list('time_slot', flat=True).distinct()
+        
+        # Combine all unique slots
+        all_slots = sorted(set(theory_slots) | set(practical_slots))
+        
+        batch_reports = []
+        for slot in all_slots:
+            display = time_slot_display_map.get(slot, slot)
+            
+            # Theory batch
+            theory_students = AdmittedStudent.objects.filter(theory_batch_time=slot)
+            theory_present = Attendance.objects.filter(
+                student__in=theory_students,
+                date=report_date,
+                theory_attendance='P'
+            ).count()
+            theory_absent = theory_students.count() - theory_present
+            
+            # Practical batch
+            practical_students = AdmittedStudent.objects.filter(practical_batch_time=slot)
+            practical_present = Attendance.objects.filter(
+                student__in=practical_students,
+                date=report_date,
+                practical_attendance='P'
+            ).count()
+            practical_absent = practical_students.count() - practical_present
+            
+            batch_reports.append({
+                'slot': slot,
+                'display': display,
+                'theory': {
+                    'total': theory_students.count(),
+                    'present': theory_present,
+                    'absent': theory_absent
+                },
+                'practical': {
+                    'total': practical_students.count(),
+                    'present': practical_present,
+                    'absent': practical_absent
+                }
+            })
+        
+        context = {
+            'report_type': 'batch',
+            'report_date': report_date,
+            'batch_reports': batch_reports,
+            'title': f'Batch Attendance Report - {report_date}',
+            'active_page': 'attendance_reports'
+        }
+    
+    return render(request, 'core/timetable/attendance_reports.html', context)
+
+
+@login_required
+@staff_member_required
+def export_timetable_excel(request):
+    """Export student timetable to Excel"""
+    students = AdmittedStudent.objects.all().order_by('full_name')
+    
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Student Timetable"
+    
+    # Headers
+    headers = ['Student Name', 'Gender', 'Course', 'Theory Batch', 'Practical Batch', 'Admission Date']
+    ws.append(headers)
+    
+    # Style header
+    header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    header_font = Font(bold=True, color='FFFFFF')
+    
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Add data
+    for student in students:
+        theory_display = next(
+            (display for slot, display in [
+                ('08:00-09:00', '8:00 AM - 9:00 AM'),
+                ('09:00-10:00', '9:00 AM - 10:00 AM'),
+                ('10:00-11:00', '10:00 AM - 11:00 AM'),
+                ('11:00-12:00', '11:00 AM - 12:00 PM'),
+                ('12:00-13:00', '12:00 PM - 1:00 PM'),
+                ('15:00-16:00', '3:00 PM - 4:00 PM'),
+                ('16:00-17:00', '4:00 PM - 5:00 PM'),
+                ('17:00-18:00', '5:00 PM - 6:00 PM'),
+                ('18:00-19:00', '6:00 PM - 7:00 PM'),
+            ] if slot == student.theory_batch_time),
+            student.theory_batch_time or 'Not Assigned'
+        )
+        
+        practical_display = next(
+            (display for slot, display in [
+                ('08:00-09:00', '8:00 AM - 9:00 AM'),
+                ('09:00-10:00', '9:00 AM - 10:00 AM'),
+                ('10:00-11:00', '10:00 AM - 11:00 AM'),
+                ('11:00-12:00', '11:00 AM - 12:00 PM'),
+                ('12:00-13:00', '12:00 PM - 1:00 PM'),
+                ('15:00-16:00', '3:00 PM - 4:00 PM'),
+                ('16:00-17:00', '4:00 PM - 5:00 PM'),
+                ('17:00-18:00', '5:00 PM - 6:00 PM'),
+                ('18:00-19:00', '6:00 PM - 7:00 PM'),
+            ] if slot == student.practical_batch_time),
+            student.practical_batch_time or 'Not Assigned'
+        )
+        
+        ws.append([
+            student.full_name,
+            student.gender,
+            student.course or 'N/A',
+            theory_display,
+            practical_display,
+            student.admission_date.strftime('%Y-%m-%d')
+        ])
+    
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 25
+    ws.column_dimensions['B'].width = 12
+    ws.column_dimensions['C'].width = 18
+    ws.column_dimensions['D'].width = 18
+    ws.column_dimensions['E'].width = 18
+    ws.column_dimensions['F'].width = 15
+    
+    # Return as attachment
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="student_timetable.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@staff_member_required
+def export_attendance_report_excel(request):
+    """Export attendance reports to Excel"""
+    report_type = request.GET.get('report_type', 'student')
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    
+    if report_type == 'student':
+        ws.title = "Student Attendance"
+        
+        # Headers
+        headers = ['Student Name', 'Course', 'Total Days', 'Present Days', 'Absent Days', 'Attendance %']
+        ws.append(headers)
+        
+        # Style header
+        header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+        header_font = Font(bold=True, color='FFFFFF')
+        
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        # Add data
+        students = AdmittedStudent.objects.all().order_by('full_name')
+        for student in students:
+            total_records = student.attendance_records.count()
+            present_count = student.attendance_records.filter(
+                Q(theory_attendance='P') | Q(practical_attendance='P')
+            ).count()
+            absent_count = total_records - present_count
+            
+            if total_records > 0:
+                percentage = (present_count / total_records) * 100
+            else:
+                percentage = 0
+            
+            ws.append([
+                student.full_name,
+                student.course or 'N/A',
+                total_records,
+                present_count,
+                absent_count,
+                f"{percentage:.2f}%"
+            ])
+        
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 25
+        ws.column_dimensions['B'].width = 18
+        ws.column_dimensions['C'].width = 15
+        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['E'].width = 15
+        ws.column_dimensions['F'].width = 15
+    
+    # Return as attachment
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="attendance_report_{report_type}.xlsx"'
+    wb.save(response)
+    return response
+
+
+# ================= BATCH MANAGEMENT VIEWS =================
+
+@login_required
+@staff_member_required
+@require_http_methods(["POST"])
+@csrf_protect
+def create_batch(request):
+    """Create a new batch - AJAX endpoint"""
+    try:
+        data = json.loads(request.body)
+        batch_type = data.get('batch_type', '').strip()
+        time_slot = data.get('time_slot', '').strip()
+        capacity = data.get('capacity', 50)
+        
+        # Validate inputs
+        if not batch_type or not time_slot:
+            return JsonResponse({
+                'success': False,
+                'error': 'Batch type and time slot are required'
+            }, status=400)
+        
+        if batch_type not in ['Theory', 'Practical']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid batch type. Must be Theory or Practical'
+            }, status=400)
+        
+        # Validate time slot
+        valid_slots = [
+            '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
+            '12:00-13:00', '15:00-16:00', '16:00-17:00', '17:00-18:00', '18:00-19:00'
+        ]
+        if time_slot not in valid_slots:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid time slot'
+            }, status=400)
+        
+        # Convert capacity to int
+        try:
+            capacity = int(capacity) if capacity else 50
+            if capacity < 1:
+                capacity = 50
+        except (ValueError, TypeError):
+            capacity = 50
+        
+        # Check if batch already exists
+        from .models import Batch
+        existing_batch = Batch.objects.filter(
+            batch_type=batch_type,
+            time_slot=time_slot,
+            course__isnull=True
         ).first()
         
-        if time_slot_obj:
-            slot_display = f"{day}, {time_slot_obj.get_time_slot_display()}"
-        else:
-            slot_display = f"{day}, {time_slot}"
+        if existing_batch:
+            return JsonResponse({
+                'success': False,
+                'error': f'{batch_type} batch at {time_slot} already exists'
+            }, status=400)
+        
+        # Create the batch
+        batch = Batch.objects.create(
+            batch_type=batch_type,
+            time_slot=time_slot,
+            capacity=capacity,
+            course=None
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'✅ New {batch_type} batch created at {batch.get_time_slot_display()}',
+            'batch': {
+                'id': batch.id,
+                'type': batch_type,
+                'time_slot': time_slot,
+                'display': batch.get_time_slot_display(),
+                'capacity': capacity
+            }
+        }, status=201)
     
-    context = {
-        'day': day,
-        'time_slot': time_slot,
-        'slot_display': slot_display,
-        'students_in_slot': students_in_slot,
-        'total_count': total_count,
-        'theory_count': len(students_in_slot.get('theory', [])) if students_in_slot else 0,
-        'practical_count': len(students_in_slot.get('practical', [])) if students_in_slot else 0,
-    }
-    
-    return render(request, 'core/time_slot_students.html', context)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        print(f"Error creating batch: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }, status=500)
 
+
+@login_required
+@staff_member_required
+@require_http_methods(["POST"])
+@csrf_protect
+def delete_batch(request, batch_id):
+    """Delete a batch - AJAX endpoint"""
+    try:
+        from .models import Batch
+        
+        batch = get_object_or_404(Batch, id=batch_id)
+        batch_type = batch.batch_type
+        time_slot_display = batch.get_time_slot_display()
+        
+        # Unassign all students from this batch before deleting
+        if batch_type == 'Theory':
+            students = AdmittedStudent.objects.filter(theory_batch_time=batch.time_slot)
+            student_count = students.count()
+            # Unassign students
+            students.update(theory_batch_time=None)
+        else:
+            students = AdmittedStudent.objects.filter(practical_batch_time=batch.time_slot)
+            student_count = students.count()
+            # Unassign students
+            students.update(practical_batch_time=None)
+        
+        # Delete the batch
+        batch.delete()
+        
+        message = f'✅ {batch_type} batch at {time_slot_display} has been deleted'
+        if student_count > 0:
+            message += f' ({student_count} student(s) were unassigned)'
+        
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'students_unassigned': student_count
+        })
+    
+    except Batch.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Batch not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error deleting batch: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@staff_member_required
+def get_batch_list(request):
+    """Get updated list of theory and practical batches - AJAX endpoint"""
+    try:
+        from .models import Batch
+        
+        time_slots = [
+            ('08:00-09:00', '8:00 AM - 9:00 AM'),
+            ('09:00-10:00', '9:00 AM - 10:00 AM'),
+            ('10:00-11:00', '10:00 AM - 11:00 AM'),
+            ('11:00-12:00', '11:00 AM - 12:00 PM'),
+            ('12:00-13:00', '12:00 PM - 1:00 PM'),
+            ('15:00-16:00', '3:00 PM - 4:00 PM'),
+            ('16:00-17:00', '4:00 PM - 5:00 PM'),
+            ('17:00-18:00', '5:00 PM - 6:00 PM'),
+            ('18:00-19:00', '6:00 PM - 7:00 PM'),
+        ]
+        
+        # Get theory batches that actually exist in database
+        theory_batches = []
+        for batch in Batch.objects.filter(batch_type='Theory', course__isnull=True):
+            count = AdmittedStudent.objects.filter(theory_batch_time=batch.time_slot).count()
+            display = dict(time_slots).get(batch.time_slot, batch.time_slot)
+            theory_batches.append({
+                'id': batch.id,
+                'slot': batch.time_slot,
+                'display': display,
+                'count': count,
+                'capacity': batch.capacity,
+                'exists': True
+            })
+        
+        # Get practical batches that actually exist in database
+        practical_batches = []
+        for batch in Batch.objects.filter(batch_type='Practical', course__isnull=True):
+            count = AdmittedStudent.objects.filter(practical_batch_time=batch.time_slot).count()
+            display = dict(time_slots).get(batch.time_slot, batch.time_slot)
+            practical_batches.append({
+                'id': batch.id,
+                'slot': batch.time_slot,
+                'display': display,
+                'count': count,
+                'capacity': batch.capacity,
+                'exists': True
+            })
+        
+        # Total statistics
+        total_students = AdmittedStudent.objects.count()
+        students_with_theory = AdmittedStudent.objects.filter(theory_batch_time__isnull=False).exclude(theory_batch_time='').count()
+        students_with_practical = AdmittedStudent.objects.filter(practical_batch_time__isnull=False).exclude(practical_batch_time='').count()
+        
+        return JsonResponse({
+            'success': True,
+            'theory_batches': theory_batches,
+            'practical_batches': practical_batches,
+            'total_students': total_students,
+            'students_with_theory': students_with_theory,
+            'students_with_practical': students_with_practical,
+            'students_without_batch': total_students - max(students_with_theory, students_with_practical)
+        })
+    
+    except Exception as e:
+        print(f"Error getting batch list: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@staff_member_required
+def get_batch_id(request):
+    """Helper endpoint to get batch ID by type and time_slot"""
+    try:
+        batch_type = request.GET.get('type')
+        time_slot = request.GET.get('time_slot')
+        
+        if not batch_type or not time_slot:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing type or time_slot parameter'
+            }, status=400)
+        
+        # Find the batch - match the same filter used in create_batch
+        batch = Batch.objects.get(
+            batch_type=batch_type, 
+            time_slot=time_slot,
+            course__isnull=True
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'batch_id': batch.id
+        })
+    
+    except Batch.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Batch not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error getting batch ID: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@staff_member_required
+@require_http_methods(["POST"])
+@csrf_protect
+def edit_batch(request, batch_id):
+    """Edit a batch - AJAX endpoint"""
+    try:
+        import json
+        from .models import Batch
+        
+        batch = get_object_or_404(Batch, id=batch_id)
+        data = json.loads(request.body)
+        
+        new_time_slot = data.get('time_slot')
+        new_capacity = data.get('capacity')
+        
+        if not new_time_slot:
+            return JsonResponse({
+                'success': False,
+                'error': 'Time slot is required'
+            }, status=400)
+        
+        # Validate time slot
+        valid_slots = [
+            '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
+            '12:00-13:00', '15:00-16:00', '16:00-17:00', '17:00-18:00', '18:00-19:00'
+        ]
+        if new_time_slot not in valid_slots:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid time slot'
+            }, status=400)
+        
+        # Check if another batch already has this time slot
+        existing_batch = Batch.objects.filter(
+            batch_type=batch.batch_type,
+            time_slot=new_time_slot,
+            course__isnull=True
+        ).exclude(id=batch.id).first()
+        
+        if existing_batch:
+            return JsonResponse({
+                'success': False,
+                'error': f'A {batch.batch_type.lower()} batch already exists at {new_time_slot}'
+            }, status=400)
+        
+        # Update batch
+        batch.time_slot = new_time_slot
+        if new_capacity:
+            try:
+                capacity = int(new_capacity)
+                if capacity > 0:
+                    batch.capacity = capacity
+            except (ValueError, TypeError):
+                pass
+        
+        batch.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'✅ {batch.batch_type} batch updated successfully',
+            'batch': {
+                'id': batch.id,
+                'type': batch.batch_type,
+                'time_slot': batch.time_slot,
+                'capacity': batch.capacity
+            }
+        })
+    
+    except Batch.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Batch not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error editing batch: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }, status=500)

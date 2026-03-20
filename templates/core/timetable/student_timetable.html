@@ -1,0 +1,753 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Student Timetable{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">📚</div>
+            <div>
+                <h1 class="page-title">Student Timetable</h1>
+                <p class="page-subtitle">View and manage student batch assignments</p>
+            </div>
+        </div>
+        <div class="page-filters">
+            <div class="filter-buttons">
+                <a href="{% url 'batch_overview' %}" class="btn btn-secondary btn-sm">
+                    <span>📊</span> Batch Overview
+                </a>
+                <a href="{% url 'export_timetable' %}" class="btn btn-info btn-sm">
+                    <span>📥</span> Export to Excel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Search and Filter Section -->
+    <div class="filter-section">
+        <form method="get" class="search-form">
+            <div class="search-inputs">
+                <div class="search-group">
+                    <input type="text" name="search" placeholder="Search by name, mobile..." 
+                           class="form-control search-input" value="{{ search_query }}">
+                </div>
+                <div class="filter-group">
+                    <select name="course" class="form-control">
+                        <option value="">All Courses</option>
+                        {% for course_code, course_name in all_courses %}
+                            <option value="{{ course_code }}" {% if course_code == course_filter %}selected{% endif %}>
+                                {{ course_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select name="batch_month" class="form-control">
+                        <option value="">All Batch Months</option>
+                        {% for month in available_batch_months %}
+                            <option value="{{ month }}" {% if month == batch_month_filter %}selected{% endif %}>
+                                {{ month }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select name="batch_year" class="form-control">
+                        <option value="">All Batch Years</option>
+                        {% for year in available_batch_years %}
+                            <option value="{{ year }}" {% if year == batch_year_filter %}selected{% endif %}>
+                                {{ year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select name="theory_batch" class="form-control">
+                        <option value="">All Theory Batches</option>
+                        {% for slot in available_theory_batches %}
+                            <option value="{{ slot }}" {% if slot == theory_batch_filter %}selected{% endif %}>
+                                {% for s, d in time_slots %}
+                                    {% if s == slot %}{{ d }}{% endif %}
+                                {% endfor %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select name="practical_batch" class="form-control">
+                        <option value="">All Practical Batches</option>
+                        {% for slot in available_practical_batches %}
+                            <option value="{{ slot }}" {% if slot == practical_batch_filter %}selected{% endif %}>
+                                {% for s, d in time_slots %}
+                                    {% if s == slot %}{{ d }}{% endif %}
+                                {% endfor %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">🔍 Search</button>
+                <a href="{% url 'student_timetable' %}" class="btn btn-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-number">{{ total_students }}</div>
+            <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-number">9</div>
+            <div class="stat-label">Available Time Slots</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-number">{{ students|length }}</div>
+            <div class="stat-label">Displayed</div>
+        </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Gender</th>
+                    <th>Course</th>
+                    <th>Theory Batch</th>
+                    <th>Practical Batch</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>
+                        <strong style="cursor: pointer; color: #0066cc; text-decoration: underline;" 
+                                onclick="viewStudentDetails({{ student.id }})">
+                            {{ student.full_name }}
+                        </strong>
+                    </td>
+                    <td>{{ student.gender }}</td>
+                    <td>{{ student.course }}</td>
+                    <td>
+                        {% if student.theory_batch_time %}
+                            <span class="badge badge-info">
+                                {% for slot, display in time_slots %}
+                                    {% if slot == student.theory_batch_time %}
+                                        {{ display }}
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                        {% else %}
+                            <span class="badge badge-warning">Not Assigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if student.practical_batch_time %}
+                            <span class="badge badge-success">
+                                {% for slot, display in time_slots %}
+                                    {% if slot == student.practical_batch_time %}
+                                        {{ display }}
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                        {% else %}
+                            <span class="badge badge-warning">Not Assigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'edit_student_batch' student.id %}" class="btn btn-sm btn-primary">
+                            ✏️ Edit
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+                        No students found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-container">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+                <li><a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}" class="btn btn-sm">First</a></li>
+                <li><a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}" class="btn btn-sm">← Previous</a></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                <li>
+                    {% if page_obj.number == num %}
+                        <span class="btn btn-sm btn-primary">{{ num }}</span>
+                    {% else %}
+                        <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}" class="btn btn-sm">{{ num }}</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li><a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}" class="btn btn-sm">Next →</a></li>
+                <li><a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}" class="btn btn-sm">Last</a></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .filter-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+
+    .search-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+    }
+
+    .search-inputs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        width: 100%;
+        align-items: flex-end;
+    }
+
+    .search-group {
+        flex: 1;
+        min-width: 220px;
+    }
+
+    .search-group input {
+        height: 38px;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 180px;
+    }
+
+    .filter-group select {
+        height: 38px;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        background-color: white;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table thead {
+        background: #f8f9fa;
+        font-weight: bold;
+    }
+
+    .data-table th {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 2px solid #dee2e6;
+        font-size: 14px;
+    }
+
+    .data-table td {
+        padding: 10px 15px;
+        border-bottom: 1px solid #dee2e6;
+        font-size: 14px;
+    }
+
+    .data-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .badge-info {
+        background: #e7f3ff;
+        color: #0066cc;
+    }
+
+    .badge-success {
+        background: #e7f5e7;
+        color: #00aa00;
+    }
+
+    .badge-warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .btn {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 14px;
+        display: inline-block;
+        transition: all 0.3s ease;
+        height: 38px;
+        line-height: 22px;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #545b62;
+    }
+
+    .btn-info {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .btn-info:hover {
+        background: #138496;
+    }
+
+    .btn-sm {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .pagination-container {
+        margin-top: 30px;
+        text-align: center;
+    }
+
+    .pagination {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .page-filters {
+        display: flex;
+        gap: 10px;
+    }
+
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .search-inputs {
+            flex-direction: column;
+        }
+
+        .search-group, .filter-group {
+            min-width: auto;
+            width: 100%;
+        }
+
+        .data-table {
+            font-size: 12px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 8px 10px;
+        }
+    }
+
+    /* Student Detail Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.4);
+        overflow: auto;
+    }
+
+    .modal-content {
+        background-color: #f9f9f9;
+        margin: 5% auto;
+        padding: 0;
+        border: 1px solid #888;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 900px;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+        background-color: #007bff;
+        color: white;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .modal-close {
+        color: white;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .modal-close:hover {
+        color: #f0f0f0;
+    }
+
+    .modal-body {
+        padding: 30px;
+    }
+
+    .detail-section {
+        margin-bottom: 30px;
+    }
+
+    .detail-section h4 {
+        background-color: #f0f0f0;
+        padding: 10px 15px;
+        margin: 0 0 15px 0;
+        border-left: 4px solid #007bff;
+        font-size: 16px;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .detail-item {
+        margin-bottom: 15px;
+    }
+
+    .detail-label {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+        font-size: 14px;
+    }
+
+    .detail-value {
+        color: #666;
+        padding: 8px;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .payment-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+
+    .payment-table th {
+        background-color: #f0f0f0;
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+        font-weight: bold;
+    }
+
+    .payment-table td {
+        padding: 10px;
+        border: 1px solid #ddd;
+    }
+
+    .student-photo {
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 2px solid #ddd;
+    }
+</style>
+
+<!-- Student Detail Modal -->
+<div id="studentDetailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Student Details</h2>
+            <button class="modal-close" onclick="closeStudentModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '{{ csrf_token }}';
+
+    function viewStudentDetails(studentId) {
+        fetch(`/admission/${studentId}/detail/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                displayStudentDetails(data);
+                document.getElementById('studentDetailModal').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error fetching student details:', error);
+                alert('Error loading student details');
+            });
+    }
+
+    function displayStudentDetails(student) {
+        let paymentHTML = '';
+        if (student.payment_history && student.payment_history.length > 0) {
+            paymentHTML = `
+                <table class="payment-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Mode</th>
+                            <th>Receipt</th>
+                            <th>Remaining</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            student.payment_history.forEach(payment => {
+                paymentHTML += `
+                    <tr>
+                        <td>${payment.payment_date}</td>
+                        <td>₹${payment.amount.toFixed(2)}</td>
+                        <td>${payment.payment_mode}</td>
+                        <td>${payment.receipt_no || 'N/A'}</td>
+                        <td>₹${payment.remaining_after.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            paymentHTML += `
+                    </tbody>
+                </table>
+            `;
+        } else {
+            paymentHTML = '<p style="color: #999;">No payment records found.</p>';
+        }
+
+        const photoHTML = student.photo ? `<img src="${student.photo}" alt="Student Photo" class="student-photo">` : '<div style="width: 150px; height: 150px; background-color: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center;">No Photo</div>';
+
+        const modalBody = `
+            <div class="detail-section">
+                <div style="display: grid; grid-template-columns: 150px 1fr; gap: 30px; margin-bottom: 20px;">
+                    <div>${photoHTML}</div>
+                    <div>
+                        <h3 style="margin: 0 0 15px 0;">${student.full_name}</h3>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">Mobile:</div>
+                                <div class="detail-value">${student.mobile_own || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Parent Mobile:</div>
+                                <div class="detail-value">${student.parent_mobile || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Date of Birth:</div>
+                                <div class="detail-value">${student.date_of_birth || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Gender:</div>
+                                <div class="detail-value">${student.gender || 'N/A'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Personal Information</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Student Name:</div>
+                        <div class="detail-value">${student.student_name || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Father Name:</div>
+                        <div class="detail-value">${student.father_name || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Surname:</div>
+                        <div class="detail-value">${student.surname || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Mother Name:</div>
+                        <div class="detail-value">${student.mother_name || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Marital Status:</div>
+                        <div class="detail-value">${student.marital_status || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Educational Qualification:</div>
+                        <div class="detail-value">${student.educational_qualification || 'N/A'}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Course & Batch Information</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Course:</div>
+                        <div class="detail-value">${student.course || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Custom Course:</div>
+                        <div class="detail-value">${student.custom_course || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Batch Month:</div>
+                        <div class="detail-value">${student.batch_month || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Batch Year:</div>
+                        <div class="detail-value">${student.batch_year || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Batch Display:</div>
+                        <div class="detail-value">${student.batch_display || 'Not Assigned'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Admission Date:</div>
+                        <div class="detail-value">${student.admission_date || 'N/A'}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Address Information</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Address:</div>
+                        <div class="detail-value">${student.address || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">City:</div>
+                        <div class="detail-value">${student.city || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Tehsil/Block:</div>
+                        <div class="detail-value">${student.tehsil_block || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">District:</div>
+                        <div class="detail-value">${student.district || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Pin Code:</div>
+                        <div class="detail-value">${student.pin_code || 'N/A'}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Fee Information</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Total Fees:</div>
+                        <div class="detail-value">₹${student.total_fees.toFixed(2)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Paid Fees:</div>
+                        <div class="detail-value">₹${student.paid_fees.toFixed(2)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Remaining Fees:</div>
+                        <div class="detail-value">₹${student.remaining_fees.toFixed(2)}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Payment History</h4>
+                ${paymentHTML}
+            </div>
+        `;
+
+        document.getElementById('modalTitle').textContent = `${student.full_name} - Student Details`;
+        document.getElementById('modalBody').innerHTML = modalBody;
+    }
+
+    function closeStudentModal() {
+        document.getElementById('studentDetailModal').style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('studentDetailModal');
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+</script>
+{% endblock %}

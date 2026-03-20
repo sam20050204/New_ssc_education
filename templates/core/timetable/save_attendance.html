@@ -1,0 +1,407 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Mark Attendance - {{ batch_type|title }}{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">✅</div>
+            <div>
+                <h1 class="page-title">Mark Attendance</h1>
+                <p class="page-subtitle">{{ batch_type|upper }} Batch - {{ time_slot_display }} - {{ attendance_date }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="attendance-header">
+        <div class="header-info">
+            <h5>Batch Details</h5>
+            <p><strong>Date:</strong> {{ attendance_date }}</p>
+            <p><strong>Type:</strong> {{ batch_type|upper }}</p>
+            <p><strong>Time:</strong> {{ time_slot_display }}</p>
+            <p><strong>Total Students:</strong> <span class="badge">{{ students|length }}</span></p>
+        </div>
+    </div>
+
+    <form method="post" class="attendance-form">
+        {% csrf_token %}
+
+        {% if students %}
+        <div class="table-container">
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th class="sn-col">#</th>
+                        <th class="name-col">Student Name</th>
+                        <th class="attendance-col">Status</th>
+                        <th class="remarks-col">Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr data-student-id="{{ student.id }}">
+                        <td class="sn-col">{{ forloop.counter }}</td>
+                        <td class="name-col">
+                            <strong>{{ student.full_name }}</strong>
+                            {% if student.mobile_own %}
+                                <br><small style="color: #999;">{{ student.mobile_own }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="attendance-col">
+                            <div class="status-buttons">
+                                {% for status_code, status_label in status_choices %}
+                                    <label class="status-btn">
+                                        <input type="radio" name="attendance_{{ student.id }}" 
+                                               value="{{ status_code }}" class="status-input">
+                                        <span class="btn-text">{{ status_label }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="remarks-col">
+                            <input type="text" name="remarks_{{ student.id }}" 
+                                   placeholder="Add remarks..." class="form-control-small">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success btn-lg">
+                ✅ Save Attendance
+            </button>
+            <button type="button" class="btn btn-secondary btn-lg" onclick="markAllPresent()">
+                📍 Mark All Present
+            </button>
+            <button type="button" class="btn btn-warning btn-lg" onclick="markAllAbsent()">
+                ❌ Mark All Absent
+            </button>
+            <a href="{% url 'mark_attendance' %}" class="btn btn-secondary btn-lg">
+                🔙 Back
+            </a>
+        </div>
+        {% else %}
+        <div class="alert-no-students">
+            <div class="alert-icon">📭</div>
+            <h5>No Students Found</h5>
+            <p>There are no students assigned to this {{ batch_type }} batch at {{ time_slot_display }}</p>
+            <a href="{% url 'mark_attendance' %}" class="btn btn-primary">
+                ← Go Back
+            </a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<style>
+    .attendance-header {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .header-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+    }
+
+    .header-info h5 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #333;
+    }
+
+    .header-info p {
+        margin: 5px 0;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .badge {
+        background: #007bff;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 12px;
+    }
+
+    .attendance-form {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin-bottom: 30px;
+    }
+
+    .attendance-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .attendance-table thead {
+        background: #f8f9fa;
+    }
+
+    .attendance-table th {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .attendance-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+
+    .attendance-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .sn-col {
+        width: 50px;
+        text-align: center;
+    }
+
+    .name-col {
+        width: 200px;
+        font-weight: 500;
+    }
+
+    .attendance-col {
+        min-width: 350px;
+    }
+
+    .remarks-col {
+        min-width: 150px;
+    }
+
+    .status-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .status-btn {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .status-input {
+        display: none;
+    }
+
+    .btn-text {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 4px;
+        background: #e9ecef;
+        color: #333;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.3s;
+        border: 2px solid transparent;
+    }
+
+    .status-input:checked + .btn-text {
+        border-color: #007bff;
+        background: #007bff;
+        color: white;
+    }
+
+    .form-control-small {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+
+    .form-control-small:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #dee2e6;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+        flex: 1;
+        min-width: 150px;
+        text-align: center;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #218838;
+        transform: translateY(-2px);
+    }
+
+    .btn-warning {
+        background: #ffc107;
+        color: #333;
+    }
+
+    .btn-warning:hover {
+        background: #e0a800;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #545b62;
+    }
+
+    .btn-lg {
+        padding: 14px 28px;
+        font-size: 15px;
+    }
+
+    .alert-no-students {
+        text-align: center;
+        padding: 60px 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .alert-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+
+    .alert-no-students h5 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .alert-no-students p {
+        color: #666;
+        margin-bottom: 20px;
+    }
+
+    @media (max-width: 1024px) {
+        .attendance-col {
+            min-width: 280px;
+        }
+
+        .status-buttons {
+            flex-direction: column;
+        }
+
+        .btn-text {
+            display: block;
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            flex: none;
+            width: 100%;
+            min-width: auto;
+        }
+
+        .attendance-table th,
+        .attendance-table td {
+            padding: 10px 8px;
+            font-size: 12px;
+        }
+
+        .name-col {
+            width: auto;
+            min-width: 150px;
+        }
+
+        .attendance-col {
+            min-width: 200px;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .attendance-table {
+            font-size: 11px;
+        }
+
+        .attendance-col {
+            min-width: 150px;
+        }
+
+        .status-buttons {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .btn-text {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+    }
+</style>
+
+<script>
+    function markAllPresent() {
+        document.querySelectorAll('input[name^="attendance_"]').forEach(input => {
+            if (input.value === 'P') {
+                input.checked = true;
+            }
+        });
+    }
+
+    function markAllAbsent() {
+        document.querySelectorAll('input[name^="attendance_"]').forEach(input => {
+            if (input.value === 'A') {
+                input.checked = true;
+            }
+        });
+    }
+</script>
+{% endblock %}

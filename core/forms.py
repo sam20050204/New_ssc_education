@@ -6,7 +6,7 @@ Provides proper form handling with validation instead of manual HTML processing.
 
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Enquiry, AdmittedStudent, FeePayment, Course, StudentTimetable
+from .models import Enquiry, AdmittedStudent, FeePayment, Course
 import re
 
 
@@ -329,108 +329,86 @@ class CourseForm(forms.ModelForm):
         return name
 
 
-class StudentTimetableForm(forms.ModelForm):
-    """Form for managing student timetables"""
-    
-    class Meta:
-        model = StudentTimetable
-        fields = ['student', 'day', 'time_slot', 'session_type', 'notes']
-        widgets = {
-            'student': forms.Select(attrs={
-                'class': 'form-control',
-                'required': True
-            }),
-            'day': forms.Select(attrs={
-                'class': 'form-control',
-                'required': True
-            }),
-            'time_slot': forms.Select(attrs={
-                'class': 'form-control',
-                'required': True
-            }),
-            'session_type': forms.Select(attrs={
-                'class': 'form-control',
-                'required': True
-            }),
-            'notes': forms.Textarea(attrs={
-                'class': 'form-control',
-                'placeholder': 'Additional notes (optional)',
-                'rows': 3
-            }),
-        }
-    
-    def clean(self):
-        """Validate form data"""
-        cleaned_data = super().clean()
-        student = cleaned_data.get('student')
-        day = cleaned_data.get('day')
-        time_slot = cleaned_data.get('time_slot')
-        
-        if student and day and time_slot:
-            # Check for duplicate timetable entry
-            existing = StudentTimetable.objects.filter(
-                student=student,
-                day=day,
-                time_slot=time_slot
-            ).exclude(pk=self.instance.pk if self.instance.pk else None)
-            
-            if existing.exists():
-                raise ValidationError(
-                    f"This student already has a {day} {time_slot} slot."
-                )
-        
-        return cleaned_data
-
-
-class StudentTimetableFilterForm(forms.Form):
-    """Form for filtering student timetables"""
-    
-    BATCH_CHOICES = [('', 'All Batches')] + list(
-        AdmittedStudent.objects.values_list('batch_month', 'batch_month')
-        .filter(batch_month__isnull=False)
-        .distinct()
-    )
-    
-    COURSE_CHOICES = [('', 'All Courses')] + list(
-        AdmittedStudent.objects.values_list('course', 'course')
-        .distinct()
-    )
-    
-    student_name = forms.CharField(
+class BatchManagementForm(forms.Form):
+    """Form for editing student batch assignments"""
+    theory_batch_time = forms.ChoiceField(
+        label="Theory Batch Time",
+        choices=[
+            ('08:00-09:00', '8:00 AM - 9:00 AM'),
+            ('09:00-10:00', '9:00 AM - 10:00 AM'),
+            ('10:00-11:00', '10:00 AM - 11:00 AM'),
+            ('11:00-12:00', '11:00 AM - 12:00 PM'),
+            ('12:00-13:00', '12:00 PM - 1:00 PM'),
+            ('15:00-16:00', '3:00 PM - 4:00 PM'),
+            ('16:00-17:00', '4:00 PM - 5:00 PM'),
+            ('17:00-18:00', '5:00 PM - 6:00 PM'),
+            ('18:00-19:00', '6:00 PM - 7:00 PM'),
+        ],
         required=False,
-        widget=forms.TextInput(attrs={
+        widget=forms.Select(attrs={
             'class': 'form-control',
-            'placeholder': 'Search by student name',
-            'maxlength': '100'
         })
     )
-    
-    batch = forms.CharField(
+    practical_batch_time = forms.ChoiceField(
+        label="Practical Batch Time",
+        choices=[
+            ('08:00-09:00', '8:00 AM - 9:00 AM'),
+            ('09:00-10:00', '9:00 AM - 10:00 AM'),
+            ('10:00-11:00', '10:00 AM - 11:00 AM'),
+            ('11:00-12:00', '11:00 AM - 12:00 PM'),
+            ('12:00-13:00', '12:00 PM - 1:00 PM'),
+            ('15:00-16:00', '3:00 PM - 4:00 PM'),
+            ('16:00-17:00', '4:00 PM - 5:00 PM'),
+            ('17:00-18:00', '5:00 PM - 6:00 PM'),
+            ('18:00-19:00', '6:00 PM - 7:00 PM'),
+        ],
         required=False,
         widget=forms.Select(attrs={
-            'class': 'form-control'
-        }, choices=BATCH_CHOICES)
+            'class': 'form-control',
+        })
     )
-    
-    course = forms.CharField(
-        required=False,
+
+
+class AttendanceForm(forms.Form):
+    """Form for marking attendance"""
+    date = forms.DateField(
+        label="Select Date",
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date',
+            'required': True
+        })
+    )
+    batch_time = forms.ChoiceField(
+        label="Select Batch Time",
+        choices=[
+            ('', '-- Select Batch --'),
+            ('08:00-09:00', '8:00 AM - 9:00 AM'),
+            ('09:00-10:00', '9:00 AM - 10:00 AM'),
+            ('10:00-11:00', '10:00 AM - 11:00 AM'),
+            ('11:00-12:00', '11:00 AM - 12:00 PM'),
+            ('12:00-13:00', '12:00 PM - 1:00 PM'),
+            ('15:00-16:00', '3:00 PM - 4:00 PM'),
+            ('16:00-17:00', '4:00 PM - 5:00 PM'),
+            ('17:00-18:00', '5:00 PM - 6:00 PM'),
+            ('18:00-19:00', '6:00 PM - 7:00 PM'),
+        ],
+        required=True,
         widget=forms.Select(attrs={
-            'class': 'form-control'
-        }, choices=COURSE_CHOICES)
+            'class': 'form-control',
+        })
     )
-    
-    day = forms.ChoiceField(
-        required=False,
+    batch_type = forms.ChoiceField(
+        label="Select Batch Type",
+        choices=[
+            ('', '-- Select Type --'),
+            ('theory', 'Theory'),
+            ('practical', 'Practical'),
+        ],
+        required=True,
         widget=forms.Select(attrs={
-            'class': 'form-control'
-        }),
-        choices=[('', 'All Days')] + StudentTimetable.DAYS_OF_WEEK
+            'class': 'form-control',
+        })
     )
-    
-    time_slot = forms.ChoiceField(
-        required=False,
-        widget=forms.Select(attrs={
-            'class': 'form-control'
-        }),
-        choices=[('', 'All Time Slots')] + StudentTimetable.TIME_SLOT_CHOICES
-    )
+
+

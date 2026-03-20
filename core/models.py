@@ -1,5 +1,6 @@
 from django.db import models, transaction
 from django.core.validators import MinValueValidator
+from django.contrib.auth.models import User
 from decimal import Decimal
 from datetime import date
 from core.validators import validate_image_file
@@ -95,6 +96,42 @@ class AdmittedStudent(models.Model):
         blank=True, 
         null=True,
         help_text="Year of batch (e.g., 2024, 2025)"
+    )
+    
+    # Timetable & Attendance Management Fields
+    theory_batch_time = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        choices=[
+            ('08:00-09:00', '8:00 AM - 9:00 AM'),
+            ('09:00-10:00', '9:00 AM - 10:00 AM'),
+            ('10:00-11:00', '10:00 AM - 11:00 AM'),
+            ('11:00-12:00', '11:00 AM - 12:00 PM'),
+            ('12:00-13:00', '12:00 PM - 1:00 PM'),
+            ('15:00-16:00', '3:00 PM - 4:00 PM'),
+            ('16:00-17:00', '4:00 PM - 5:00 PM'),
+            ('17:00-18:00', '5:00 PM - 6:00 PM'),
+            ('18:00-19:00', '6:00 PM - 7:00 PM'),
+        ],
+        help_text="Fixed daily theory batch timing"
+    )
+    practical_batch_time = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        choices=[
+            ('08:00-09:00', '8:00 AM - 9:00 AM'),
+            ('09:00-10:00', '9:00 AM - 10:00 AM'),
+            ('10:00-11:00', '10:00 AM - 11:00 AM'),
+            ('11:00-12:00', '11:00 AM - 12:00 PM'),
+            ('12:00-13:00', '12:00 PM - 1:00 PM'),
+            ('15:00-16:00', '3:00 PM - 4:00 PM'),
+            ('16:00-17:00', '4:00 PM - 5:00 PM'),
+            ('17:00-18:00', '5:00 PM - 6:00 PM'),
+            ('18:00-19:00', '6:00 PM - 7:00 PM'),
+        ],
+        help_text="Fixed daily practical batch timing"
     )
 
     @property
@@ -387,10 +424,12 @@ class StudentFinanceDetail(models.Model):
 
 
 class Attendance(models.Model):
-    """Daily attendance records for admitted students"""
+    """Daily attendance records for admitted students with theory and practical tracking"""
     STATUS_CHOICES = [
         ('P', 'Present'),
         ('A', 'Absent'),
+        ('L', 'Leave'),
+        ('H', 'Holiday'),
     ]
 
     student = models.ForeignKey(
@@ -399,18 +438,63 @@ class Attendance(models.Model):
         related_name='attendance_records'
     )
     date = models.DateField(db_index=True)
-    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='A')
+    
+    # Original field (kept for backward compatibility)
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='A', blank=True, null=True)
+    
+    # New fields for theory and practical attendance
+    theory_attendance = models.CharField(
+        max_length=1,
+        choices=STATUS_CHOICES,
+        default='A',
+        help_text="Theory session attendance"
+    )
+    practical_attendance = models.CharField(
+        max_length=1,
+        choices=STATUS_CHOICES,
+        default='A',
+        help_text="Practical session attendance"
+    )
+    
     remarks = models.CharField(max_length=255, blank=True, null=True)
+    marked_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='marked_attendances'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Attendance'
         verbose_name_plural = 'Attendance Records'
         unique_together = ('student', 'date')
         ordering = ['-date', 'student']
+        indexes = [
+            models.Index(fields=['student', 'date']),
+            models.Index(fields=['date']),
+        ]
 
     def __str__(self):
-        return f"{self.student.full_name} - {self.date} - {self.get_status_display()}"
+        theory_status = self.get_theory_attendance_display()
+        practical_status = self.get_practical_attendance_display()
+        return f"{self.student.full_name} - {self.date} - Theory: {theory_status} / Practical: {practical_status}"
+    
+    def get_theory_attendance_display(self):
+        """Get display name for theory attendance"""
+        for value, display in self.STATUS_CHOICES:
+            if value == self.theory_attendance:
+                return display
+        return 'Absent'
+    
+    def get_practical_attendance_display(self):
+        """Get display name for practical attendance"""
+        for value, display in self.STATUS_CHOICES:
+            if value == self.practical_attendance:
+                return display
+        return 'Absent'
 
 
 class SalesItem(models.Model):
@@ -451,112 +535,76 @@ class SalesItem(models.Model):
         return self.quantity * self.purchase_rate
 
 
-class StudentTimetable(models.Model):
-    """Student timetable for theory and practical sessions"""
-    
-    SESSION_TYPE_CHOICES = [
-        ('Theory', 'Theory'),
-        ('Practical', 'Practical'),
+class Batch(models.Model):
+    """Predefined batch timings for theory and practical sessions"""
+    BATCH_TIME_CHOICES = [
+        ('08:00-09:00', '8:00 AM - 9:00 AM'),
+        ('09:00-10:00', '9:00 AM - 10:00 AM'),
+        ('10:00-11:00', '10:00 AM - 11:00 AM'),
+        ('11:00-12:00', '11:00 AM - 12:00 PM'),
+        ('12:00-13:00', '12:00 PM - 1:00 PM'),
+        ('15:00-16:00', '3:00 PM - 4:00 PM'),
+        ('16:00-17:00', '4:00 PM - 5:00 PM'),
+        ('17:00-18:00', '5:00 PM - 6:00 PM'),
+        ('18:00-19:00', '6:00 PM - 7:00 PM'),
     ]
     
-    TIME_SLOT_CHOICES = [
-        ('09:00-10:00', '09:00 - 10:00 AM'),
-        ('10:00-11:00', '10:00 - 11:00 AM'),
-        ('11:00-12:00', '11:00 - 12:00 PM'),
-        ('12:00-13:00', '12:00 - 1:00 PM'),
-        ('13:00-14:00', '1:00 - 2:00 PM'),
-        ('14:00-15:00', '2:00 - 3:00 PM'),
-        ('15:00-16:00', '3:00 - 4:00 PM'),
-        ('16:00-17:00', '4:00 - 5:00 PM'),
-        ('17:00-18:00', '5:00 - 6:00 PM'),
-    ]
-    
-    DAYS_OF_WEEK = [
-        ('Monday', 'Monday'),
-        ('Tuesday', 'Tuesday'),
-        ('Wednesday', 'Wednesday'),
-        ('Thursday', 'Thursday'),
-        ('Friday', 'Friday'),
-        ('Saturday', 'Saturday'),
-        ('Sunday', 'Sunday'),
-    ]
-    
-    # Foreign Keys
-    student = models.ForeignKey(
-        AdmittedStudent,
-        on_delete=models.CASCADE,
-        related_name='timetable_slots'
+    batch_type = models.CharField(
+        max_length=20, 
+        choices=[('Theory', 'Theory'), ('Practical', 'Practical')],
+        help_text="Type of batch session"
     )
-    
-    # Timetable Fields
-    day = models.CharField(
-        max_length=10,
-        choices=DAYS_OF_WEEK,
-        help_text="Day of the week"
-    )
-    
     time_slot = models.CharField(
-        max_length=11,
-        choices=TIME_SLOT_CHOICES,
-        help_text="Time slot for the session (1 hour each)"
-    )
-    
-    session_type = models.CharField(
         max_length=20,
-        choices=SESSION_TYPE_CHOICES,
-        default='Theory',
-        help_text="Type of session - Theory or Practical"
-    )
-    
-    batch_month = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
+        choices=BATCH_TIME_CHOICES,
         db_index=True,
-        help_text="Batch month for filtering"
+        help_text="Time slot for the batch"
     )
-    
-    batch_year = models.CharField(
-        max_length=4,
-        blank=True,
+    course = models.ForeignKey(
+        'Course',
+        on_delete=models.CASCADE,
+        related_name='batches',
         null=True,
-        db_index=True,
-        help_text="Batch year for filtering"
-    )
-    
-    course = models.CharField(
-        max_length=50,
         blank=True,
-        null=True,
-        db_index=True,
-        help_text="Course name for filtering"
+        help_text="Course this batch belongs to (optional for common batches)"
     )
-    
-    notes = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Additional notes for this slot"
+    capacity = models.PositiveIntegerField(
+        default=50,
+        help_text="Maximum students in this batch"
     )
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['day', 'time_slot']
-        verbose_name = 'Student Timetable'
-        verbose_name_plural = 'Student Timetables'
-        unique_together = ['student', 'day', 'time_slot']
+        verbose_name = 'Batch'
+        verbose_name_plural = 'Batches'
+        unique_together = ('batch_type', 'time_slot', 'course')
+        ordering = ['batch_type', 'time_slot']
         indexes = [
-            models.Index(fields=['student']),
-            models.Index(fields=['day', 'time_slot']),
-            models.Index(fields=['batch_month', 'batch_year']),
-            models.Index(fields=['course']),
+            models.Index(fields=['batch_type', 'time_slot']),
         ]
     
     def __str__(self):
-        return f"{self.student.full_name} - {self.day} {self.time_slot} ({self.session_type})"
+        return f"{self.batch_type} - {self.get_time_slot_display()} - {self.course or 'All Courses'}"
+    
+    def get_time_slot_display(self):
+        """Return formatted time slot"""
+        for value, display in self.BATCH_TIME_CHOICES:
+            if value == self.time_slot:
+                return display
+        return self.time_slot
     
     @property
-    def day_time_display(self):
-        """Return formatted day and time"""
-        return f"{self.day}, {self.get_time_slot_display()}"
+    def current_strength(self):
+        """Get current number of students in this batch"""
+        if self.batch_type == 'Theory':
+            return AdmittedStudent.objects.filter(
+                theory_batch_time=self.time_slot,
+                course=self.course
+            ).count()
+        else:
+            return AdmittedStudent.objects.filter(
+                practical_batch_time=self.time_slot,
+                course=self.course
+            ).count()
+

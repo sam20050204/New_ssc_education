@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment, StudentFinanceDetail, SalesItem, StudentTimetable
+from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment, StudentFinanceDetail, SalesItem, Attendance, Batch
 from .admin_customization import (
     CustomAdminSite,
     EnquiryAdmin,
@@ -27,38 +27,66 @@ admin.site.register(StudentFinanceDetail, StudentFinanceDetailAdmin)
 admin.site.register(SalesItem, SalesItemAdmin)
 
 
-class StudentTimetableAdmin(admin.ModelAdmin):
-    """Admin interface for Student Timetable"""
+class AttendanceAdmin(admin.ModelAdmin):
+    """Admin interface for Student Attendance Records"""
     
-    list_display = ['student', 'day', 'time_slot', 'session_type', 'batch_month', 'course']
-    list_filter = ['day', 'session_type', 'batch_month', 'course']
-    search_fields = ['student__full_name', 'student__student_name', 'batch_month']
-    readonly_fields = ['created_at', 'updated_at', 'batch_month', 'batch_year', 'course']
+    list_display = ['student', 'date', 'theory_status', 'practical_status', 'marked_by', 'created_at']
+    list_filter = ['date', 'theory_attendance', 'practical_attendance', 'created_at']
+    search_fields = ['student__full_name', 'student__student_name', 'student__mobile_own']
+    readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['student', 'marked_by']
     
     fieldsets = (
         ('Student Information', {
-            'fields': ('student',)
+            'fields': ('student', 'date')
         }),
-        ('Timetable Details', {
-            'fields': ('day', 'time_slot', 'session_type', 'notes')
+        ('Attendance Details', {
+            'fields': ('theory_attendance', 'practical_attendance', 'remarks')
         }),
-        ('Auto-filled Information', {
-            'fields': ('batch_month', 'batch_year', 'course'),
-            'classes': ('collapse',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
+        ('Tracking Information', {
+            'fields': ('marked_by', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
     
+    def theory_status(self, obj):
+        """Display theory attendance status with color"""
+        return obj.get_theory_attendance_display()
+    theory_status.short_description = 'Theory'
+    
+    def practical_status(self, obj):
+        """Display practical attendance status with color"""
+        return obj.get_practical_attendance_display()
+    practical_status.short_description = 'Practical'
+    
     def save_model(self, request, obj, form, change):
-        """Auto-fill batch and course from student"""
-        if obj.student:
-            obj.batch_month = obj.student.batch_month
-            obj.batch_year = obj.student.batch_year
-            obj.course = obj.student.course
+        """Auto-fill marked_by with current user"""
+        if not obj.marked_by:
+            obj.marked_by = request.user
         super().save_model(request, obj, form, change)
 
 
-admin.site.register(StudentTimetable, StudentTimetableAdmin)
+class BatchAdmin(admin.ModelAdmin):
+    """Admin interface for Batch Management"""
+    
+    list_display = ['batch_type', 'time_slot', 'course', 'capacity', 'current_strength']
+    list_filter = ['batch_type', 'time_slot', 'course']
+    search_fields = ['course__name']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Batch Information', {
+            'fields': ('batch_type', 'time_slot', 'course')
+        }),
+        ('Capacity', {
+            'fields': ('capacity',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+admin.site.register(Attendance, AttendanceAdmin)
+admin.site.register(Batch, BatchAdmin)
