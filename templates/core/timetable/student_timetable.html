@@ -3,6 +3,10 @@
 
 {% block title %}Student Timetable{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/student_timetable.css' %}">
+{% endblock %}
+
 {% block page_heading %}
 <div class="page-header">
     <div class="page-header-content">
@@ -30,69 +34,84 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Search and Filter Section -->
-    <div class="filter-section">
-        <form method="get" class="search-form">
-            <div class="search-inputs">
-                <div class="search-group">
-                    <input type="text" name="search" placeholder="Search by name, mobile..." 
-                           class="form-control search-input" value="{{ search_query }}">
-                </div>
-                <div class="filter-group">
-                    <select name="course" class="form-control">
-                        <option value="">All Courses</option>
-                        {% for course_code, course_name in all_courses %}
-                            <option value="{{ course_code }}" {% if course_code == course_filter %}selected{% endif %}>
-                                {{ course_name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <select name="batch_month" class="form-control">
-                        <option value="">All Batch Months</option>
-                        {% for month in available_batch_months %}
-                            <option value="{{ month }}" {% if month == batch_month_filter %}selected{% endif %}>
-                                {{ month }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <select name="batch_year" class="form-control">
-                        <option value="">All Batch Years</option>
-                        {% for year in available_batch_years %}
-                            <option value="{{ year }}" {% if year == batch_year_filter %}selected{% endif %}>
-                                {{ year }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <select name="theory_batch" class="form-control">
-                        <option value="">All Theory Batches</option>
-                        {% for slot in available_theory_batches %}
-                            <option value="{{ slot }}" {% if slot == theory_batch_filter %}selected{% endif %}>
-                                {% for s, d in time_slots %}
-                                    {% if s == slot %}{{ d }}{% endif %}
-                                {% endfor %}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <select name="practical_batch" class="form-control">
-                        <option value="">All Practical Batches</option>
-                        {% for slot in available_practical_batches %}
-                            <option value="{{ slot }}" {% if slot == practical_batch_filter %}selected{% endif %}>
-                                {% for s, d in time_slots %}
-                                    {% if s == slot %}{{ d }}{% endif %}
-                                {% endfor %}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">🔍 Search</button>
-                <a href="{% url 'student_timetable' %}" class="btn btn-secondary">Reset</a>
+    <div class="filters-container">
+        <form method="get" class="filters-form" id="filterForm">
+            <div class="filter-group search-group">
+                <label for="search">🔍 Search Student</label>
+                <input type="text" name="search" id="search" placeholder="Search by name, mobile..." 
+                       class="filter-input" value="{{ search_query }}">
+            </div>
+            <div class="filter-group">
+                <label for="course">📚 Course</label>
+                <select name="course" id="course" class="filter-select">
+                    <option value="">All Courses</option>
+                    {% for course_code, course_name in all_courses %}
+                        <option value="{{ course_code }}" {% if course_code == course_filter %}selected{% endif %}>
+                            {{ course_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="batch_month">📅 Batch Month</label>
+                <select name="batch_month" id="batch_month" class="filter-select">
+                    <option value="">All Months</option>
+                    {% for month in available_batch_months %}
+                        <option value="{{ month }}" {% if month == batch_month_filter %}selected{% endif %}>
+                            {{ month }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="batch_year">📆 Year</label>
+                <select name="batch_year" id="batch_year" class="filter-select">
+                    <option value="">All Years</option>
+                    {% for year in available_batch_years %}
+                        <option value="{{ year }}" {% if year == batch_year_filter %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="theory_batch">⏰ Theory Batch</label>
+                <select name="theory_batch" id="theory_batch" class="filter-select">
+                    <option value="">All Theory Batches</option>
+                    {% for slot in available_theory_batches %}
+                        <option value="{{ slot }}" {% if slot == theory_batch_filter %}selected{% endif %}>
+                            {% for s, d in time_slots %}
+                                {% if s == slot %}{{ d }}{% endif %}
+                            {% endfor %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="practical_batch">⏰ Practical Batch</label>
+                <select name="practical_batch" id="practical_batch" class="filter-select">
+                    <option value="">All Practical Batches</option>
+                    {% for slot in available_practical_batches %}
+                        <option value="{{ slot }}" {% if slot == practical_batch_filter %}selected{% endif %}>
+                            {% for s, d in time_slots %}
+                                {% if s == slot %}{{ d }}{% endif %}
+                            {% endfor %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="gender">👥 Gender</label>
+                <select name="gender" id="gender" class="filter-select">
+                    <option value="">All Genders</option>
+                    <option value="Male" {% if gender_filter == "Male" %}selected{% endif %}>Male</option>
+                    <option value="Female" {% if gender_filter == "Female" %}selected{% endif %}>Female</option>
+                    <option value="Other" {% if gender_filter == "Other" %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+            <div class="filter-buttons">
+                <button type="submit" class="btn btn-primary btn-sm">🔍 Search</button>
+                <a href="{% url 'student_timetable' %}" class="btn btn-secondary btn-sm">Reset</a>
             </div>
         </form>
     </div>
@@ -100,19 +119,31 @@
     <!-- Stats Cards -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-icon">👥</div>
-            <div class="stat-number">{{ total_students }}</div>
-            <div class="stat-label">Total Students</div>
+            <div class="stat-content">
+                <div class="stat-icon">👥</div>
+                <div class="stat-info">
+                    <span class="stat-label">Total Students</span>
+                    <span class="stat-number">{{ total_students }}</span>
+                </div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">📅</div>
-            <div class="stat-number">9</div>
-            <div class="stat-label">Available Time Slots</div>
+            <div class="stat-content">
+                <div class="stat-icon">📅</div>
+                <div class="stat-info">
+                    <span class="stat-label">Available Time Slots</span>
+                    <span class="stat-number">{{ total_available_slots }}</span>
+                </div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-number">{{ students|length }}</div>
-            <div class="stat-label">Displayed</div>
+            <div class="stat-content">
+                <div class="stat-icon">✅</div>
+                <div class="stat-info">
+                    <span class="stat-label">Displayed</span>
+                    <span class="stat-number">{{ students|length }}</span>
+                </div>
+            </div>
         </div>
     </div>
 

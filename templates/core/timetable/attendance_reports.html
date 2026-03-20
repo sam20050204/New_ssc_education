@@ -86,9 +86,9 @@
     <div class="report-section">
         <!-- Date Selector -->
         <div class="date-selector">
-            <form method="get" class="date-form">
+            <form method="get" class="date-form" id="dailyReportForm">
                 <input type="hidden" name="report_type" value="daily">
-                <input type="date" name="date" class="form-control" value="{{ report_date|date:'Y-m-d' }}" onchange="this.form.submit()">
+                <input type="date" name="date" id="dailyDateInput" class="form-control" value="{{ report_date|date:'Y-m-d' }}" onchange="submitDateForm('dailyReportForm', 'daily')">
             </form>
         </div>
 
@@ -174,9 +174,9 @@
     <div class="report-section">
         <!-- Date Selector -->
         <div class="date-selector">
-            <form method="get" class="date-form">
+            <form method="get" class="date-form" id="batchReportForm">
                 <input type="hidden" name="report_type" value="batch">
-                <input type="date" name="date" class="form-control" value="{{ report_date|date:'Y-m-d' }}" onchange="this.form.submit()">
+                <input type="date" name="date" id="batchDateInput" class="form-control" value="{{ report_date|date:'Y-m-d' }}" onchange="submitDateForm('batchReportForm', 'batch')">
             </form>
         </div>
 
@@ -514,4 +514,25 @@
         }
     }
 </style>
+
+<script>
+    // Submit date form without closing menu
+    function submitDateForm(formId, reportType) {
+        const form = document.getElementById(formId);
+        
+        // Get the date value
+        const dateInput = form.querySelector('input[name="date"]');
+        const dateValue = dateInput.value;
+        
+        // Navigate using window.location to avoid disrupting DOM state
+        const url = new URL(window.location);
+        url.searchParams.set('report_type', reportType);
+        url.searchParams.set('date', dateValue);
+        
+        // Use a small delay to allow the dropdown to properly register
+        setTimeout(() => {
+            window.location.href = url.toString();
+        }, 50);
+    }
+</script>
 {% endblock %}

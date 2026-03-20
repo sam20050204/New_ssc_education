@@ -53,12 +53,12 @@
         </div>
         <div class="batch-grid" id="theory-batches-grid">
             {% for batch in theory_batches %}
-            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Theory" data-batch-id="{{ batch.id }}">
+            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Theory" data-batch-id="{{ batch.id }}" onclick="openBatchStudentsModal('Theory', '{{ batch.slot }}', '{{ batch.display }}')">
                 <div class="batch-card-header">
-                    <div class="batch-time" onclick="editBatch({{ batch.id }}, 'Theory', '{{ batch.slot }}', {{ batch.capacity }})" style="cursor: pointer; flex-grow: 1;" title="Click to edit">
+                    <div class="batch-time" title="Click to view students">
                         {{ batch.display }}
                     </div>
-                    <button class="btn-delete-batch btn-xs" onclick="deleteBatch('Theory', '{{ batch.slot }}')" title="Delete batch">
+                    <button class="btn-delete-batch btn-xs" onclick="event.stopPropagation(); deleteBatch('Theory', '{{ batch.slot }}')" title="Delete batch">
                         ❌
                     </button>
                 </div>
@@ -92,12 +92,12 @@
         </div>
         <div class="batch-grid" id="practical-batches-grid">
             {% for batch in practical_batches %}
-            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Practical" data-batch-id="{{ batch.id }}">
+            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Practical" data-batch-id="{{ batch.id }}" onclick="openBatchStudentsModal('Practical', '{{ batch.slot }}', '{{ batch.display }}')">
                 <div class="batch-card-header">
-                    <div class="batch-time" onclick="editBatch({{ batch.id }}, 'Practical', '{{ batch.slot }}', {{ batch.capacity }})" style="cursor: pointer; flex-grow: 1;" title="Click to edit">
+                    <div class="batch-time" title="Click to view students">
                         {{ batch.display }}
                     </div>
-                    <button class="btn-delete-batch btn-xs" onclick="deleteBatch('Practical', '{{ batch.slot }}')" title="Delete batch">
+                    <button class="btn-delete-batch btn-xs" onclick="event.stopPropagation(); deleteBatch('Practical', '{{ batch.slot }}')" title="Delete batch">
                         ❌
                     </button>
                 </div>
@@ -759,7 +759,229 @@
             width: 100%;
         }
     }
+
+    /* Batch Students Modal */
+    .modal-lg {
+        max-width: 900px;
+    }
+
+    .batch-students-table-wrapper {
+        overflow-x: auto;
+        margin-bottom: 15px;
+    }
+
+    .batch-students-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .batch-students-table thead {
+        background: #f8f9fa;
+        border-bottom: 2px solid #e8e8e8;
+    }
+
+    .batch-students-table th {
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.3px;
+    }
+
+    .batch-students-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f0f0f0;
+        color: #333;
+    }
+
+    .batch-students-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .time-slot-select {
+        padding: 6px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 12px;
+        background: white;
+        cursor: pointer;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .time-slot-select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+
+    /* Student Detail Styles */
+    .student-detail-container {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .detail-section {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .detail-section h3 {
+        color: #667eea;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+    }
+
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .detail-item label {
+        font-size: 12px;
+        color: #999;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .detail-item span {
+        font-size: 13px;
+        color: #333;
+        font-weight: 500;
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    .btn-primary {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #764ba2;
+    }
+
+    .search-suggestions {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .suggestion-item {
+        padding: 12px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+
+    .suggestion-item:hover {
+        background-color: #f5f5f5;
+    }
+
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
 </style>
+
+<!-- Batch Students Modal -->
+<div id="batchStudentsModal" class="modal" style="display: none;">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2 id="batch-modal-title">Theory Batch - 8:00 AM - 9:00 AM</h2>
+            <button class="close-btn" onclick="closeBatchStudentsModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="batch-students-table-wrapper">
+                <table class="batch-students-table">
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Gender</th>
+                            <th>Theory Time</th>
+                            <th>Practical Time</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batch-students-tbody">
+                        <!-- Students will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn btn-success" onclick="openAddStudentToBatchModal()">➕ Add Student</button>
+            <button type="button" class="btn btn-primary" onclick="saveBatchStudentChanges()">💾 Save Changes</button>
+            <button type="button" class="btn btn-secondary" onclick="closeBatchStudentsModal()">❌ Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Student Detail Modal -->
+<div id="studentDetailModal" class="modal" style="display: none; z-index: 1001;">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2>Student Details</h2>
+            <button class="close-btn" onclick="closeStudentDetailModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="student-detail-content">
+            <!-- Student details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Add Student to Batch Modal -->
+<div id="addStudentToBatchModal" class="modal" style="display: none; z-index: 1002;">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h2>Add Student to Batch</h2>
+            <button class="close-btn" onclick="closeAddStudentToBatchModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="student-search-input">Search Student</label>
+                <div style="position: relative;">
+                    <input 
+                        type="text" 
+                        id="student-search-input" 
+                        class="filter-select" 
+                        placeholder="Search by name or ID..." 
+                        oninput="filterStudentOptions()"
+                        onkeydown="handleSearchKeydown(event)"
+                        autocomplete="off">
+                    <div id="student-search-suggestions" class="search-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; max-height: 250px; overflow-y: auto; z-index: 1003; border-radius: 0 0 4px 4px;"></div>
+                </div>
+            </div>
+            <input type="hidden" id="add-student-select" value="">
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn btn-primary" id="add-student-btn" onclick="addStudentToBatchButtonClicked()">✅ Add Student</button>
+            <button type="button" class="btn btn-secondary" onclick="closeAddStudentToBatchModal()">❌ Cancel</button>
+        </div>
+    </div>
+</div>
 
 <script>
 const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '{{ csrf_token }}';
@@ -1045,12 +1267,12 @@ function updateTheoryBatches(batches) {
         const total = parseInt(document.getElementById('stat-total').textContent) || 1;
         const width = Math.max(batch.count * 100 / total, 5);
         html += `
-            <div class="batch-card" data-slot="${batch.slot}" data-type="Theory" data-batch-id="${batch.id}">
+            <div class="batch-card" data-slot="${batch.slot}" data-type="Theory" data-batch-id="${batch.id}" onclick="openBatchStudentsModal('Theory', '${batch.slot}', '${batch.display}')">
                 <div class="batch-card-header">
-                    <div class="batch-time" onclick="editBatch(${batch.id}, 'Theory', '${batch.slot}', ${batch.capacity})" style="cursor: pointer; flex-grow: 1;" title="Click to edit">
+                    <div class="batch-time" title="Click to view students">
                         ${batch.display}
                     </div>
-                    <button class="btn-delete-batch btn-xs" onclick="deleteBatch('Theory', '${batch.slot}')" title="Delete batch">
+                    <button class="btn-delete-batch btn-xs" onclick="event.stopPropagation(); deleteBatch('Theory', '${batch.slot}')" title="Delete batch">
                         ❌
                     </button>
                 </div>
@@ -1087,12 +1309,12 @@ function updatePracticalBatches(batches) {
         const total = parseInt(document.getElementById('stat-total').textContent) || 1;
         const width = Math.max(batch.count * 100 / total, 5);
         html += `
-            <div class="batch-card" data-slot="${batch.slot}" data-type="Practical" data-batch-id="${batch.id}">
+            <div class="batch-card" data-slot="${batch.slot}" data-type="Practical" data-batch-id="${batch.id}" onclick="openBatchStudentsModal('Practical', '${batch.slot}', '${batch.display}')">
                 <div class="batch-card-header">
-                    <div class="batch-time" onclick="editBatch(${batch.id}, 'Practical', '${batch.slot}', ${batch.capacity})" style="cursor: pointer; flex-grow: 1;" title="Click to edit">
+                    <div class="batch-time" title="Click to view students">
                         ${batch.display}
                     </div>
-                    <button class="btn-delete-batch btn-xs" onclick="deleteBatch('Practical', '${batch.slot}')" title="Delete batch">
+                    <button class="btn-delete-batch btn-xs" onclick="event.stopPropagation(); deleteBatch('Practical', '${batch.slot}')" title="Delete batch">
                         ❌
                     </button>
                 </div>
@@ -1189,13 +1411,570 @@ function showAlert(message, type) {
     }, 5000);
 }
 
+// ===== BATCH STUDENTS MODAL =====
+let currentBatchData = {
+    type: '',
+    slot: '',
+    display: '',
+    students: []
+};
+
+async function openBatchStudentsModal(batchType, timeSlot, displayName) {
+    console.log('Opening batch modal:', batchType, timeSlot, displayName);
+    currentBatchData.type = batchType;
+    currentBatchData.slot = timeSlot;
+    currentBatchData.display = displayName;
+    
+    document.getElementById('batch-modal-title').textContent = `${batchType} Batch - ${displayName}`;
+    
+    try {
+        const params = new URLSearchParams({
+            batch_type: batchType,
+            time_slot: timeSlot
+        });
+        
+        console.log('Fetching from:', `/batch/students/?${params.toString()}`);
+        
+        const response = await fetch(`/batch/students/?${params.toString()}`, {
+            headers: {
+                'X-CSRFToken': CSRF_TOKEN
+            }
+        });
+        
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.success) {
+            currentBatchData.students = data.students;
+            loadBatchStudentsTable(data.students);
+            document.getElementById('batchStudentsModal').style.display = 'block';
+            console.log('Modal should be visible now');
+        } else {
+            showAlert(data.error || 'Error loading batch students', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert('Error loading batch students: ' + error.message, 'error');
+    }
+}
+
+function loadBatchStudentsTable(students) {
+    const tbody = document.getElementById('batch-students-tbody');
+    let html = '';
+    
+    const timeSlots = {
+        '08:00-09:00': '8:00 AM - 9:00 AM',
+        '09:00-10:00': '9:00 AM - 10:00 AM',
+        '10:00-11:00': '10:00 AM - 11:00 AM',
+        '11:00-12:00': '11:00 AM - 12:00 PM',
+        '12:00-13:00': '12:00 PM - 1:00 PM',
+        '15:00-16:00': '3:00 PM - 4:00 PM',
+        '16:00-17:00': '4:00 PM - 5:00 PM',
+        '17:00-18:00': '5:00 PM - 6:00 PM',
+        '18:00-19:00': '6:00 PM - 7:00 PM',
+    };
+    
+    students.forEach(student => {
+        const theoryDisplay = timeSlots[student.theory_batch_time] || student.theory_batch_time || '-';
+        const practicalDisplay = timeSlots[student.practical_batch_time] || student.practical_batch_time || '-';
+        
+        html += `
+            <tr>
+                <td>
+                    <button type="button" class="student-name-btn" onclick="viewStudentDetail(${student.id})" style="background: none; border: none; color: #667eea; cursor: pointer; font-weight: 600; text-decoration: underline;">
+                        ${student.full_name}
+                    </button>
+                </td>
+                <td>${student.gender || '-'}</td>
+                <td>
+                    <select class="time-slot-select" data-student-id="${student.id}" data-type="theory">
+                        <option value="">-- Select --</option>
+                        <option value="08:00-09:00" ${student.theory_batch_time === '08:00-09:00' ? 'selected' : ''}>8:00 AM - 9:00 AM</option>
+                        <option value="09:00-10:00" ${student.theory_batch_time === '09:00-10:00' ? 'selected' : ''}>9:00 AM - 10:00 AM</option>
+                        <option value="10:00-11:00" ${student.theory_batch_time === '10:00-11:00' ? 'selected' : ''}>10:00 AM - 11:00 AM</option>
+                        <option value="11:00-12:00" ${student.theory_batch_time === '11:00-12:00' ? 'selected' : ''}>11:00 AM - 12:00 PM</option>
+                        <option value="12:00-13:00" ${student.theory_batch_time === '12:00-13:00' ? 'selected' : ''}>12:00 PM - 1:00 PM</option>
+                        <option value="15:00-16:00" ${student.theory_batch_time === '15:00-16:00' ? 'selected' : ''}>3:00 PM - 4:00 PM</option>
+                        <option value="16:00-17:00" ${student.theory_batch_time === '16:00-17:00' ? 'selected' : ''}>4:00 PM - 5:00 PM</option>
+                        <option value="17:00-18:00" ${student.theory_batch_time === '17:00-18:00' ? 'selected' : ''}>5:00 PM - 6:00 PM</option>
+                        <option value="18:00-19:00" ${student.theory_batch_time === '18:00-19:00' ? 'selected' : ''}>6:00 PM - 7:00 PM</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="time-slot-select" data-student-id="${student.id}" data-type="practical">
+                        <option value="">-- Select --</option>
+                        <option value="08:00-09:00" ${student.practical_batch_time === '08:00-09:00' ? 'selected' : ''}>8:00 AM - 9:00 AM</option>
+                        <option value="09:00-10:00" ${student.practical_batch_time === '09:00-10:00' ? 'selected' : ''}>9:00 AM - 10:00 AM</option>
+                        <option value="10:00-11:00" ${student.practical_batch_time === '10:00-11:00' ? 'selected' : ''}>10:00 AM - 11:00 AM</option>
+                        <option value="11:00-12:00" ${student.practical_batch_time === '11:00-12:00' ? 'selected' : ''}>11:00 AM - 12:00 PM</option>
+                        <option value="12:00-13:00" ${student.practical_batch_time === '12:00-13:00' ? 'selected' : ''}>12:00 PM - 1:00 PM</option>
+                        <option value="15:00-16:00" ${student.practical_batch_time === '15:00-16:00' ? 'selected' : ''}>3:00 PM - 4:00 PM</option>
+                        <option value="16:00-17:00" ${student.practical_batch_time === '16:00-17:00' ? 'selected' : ''}>4:00 PM - 5:00 PM</option>
+                        <option value="17:00-18:00" ${student.practical_batch_time === '17:00-18:00' ? 'selected' : ''}>5:00 PM - 6:00 PM</option>
+                        <option value="18:00-19:00" ${student.practical_batch_time === '18:00-19:00' ? 'selected' : ''}>6:00 PM - 7:00 PM</option>
+                    </select>
+                </td>
+                <td style="text-align: center;">
+                    <button class="btn btn-sm btn-danger" onclick="removeStudentFromBatch(${student.id})" title="Remove from batch">🗑️</button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+function closeBatchStudentsModal() {
+    document.getElementById('batchStudentsModal').style.display = 'none';
+    currentBatchData = { type: '', slot: '', display: '', students: [] };
+}
+
+async function saveBatchStudentChanges() {
+    try {
+        const changes = [];
+        
+        document.querySelectorAll('.time-slot-select').forEach(select => {
+            const studentId = select.getAttribute('data-student-id');
+            const type = select.getAttribute('data-type');
+            const value = select.value;
+            
+            const originalStudent = currentBatchData.students.find(s => s.id == studentId);
+            const originalValue = type === 'theory' ? originalStudent.theory_batch_time : originalStudent.practical_batch_time;
+            
+            if (value !== originalValue) {
+                changes.push({
+                    student_id: studentId,
+                    type: type + '_batch_time',
+                    value: value
+                });
+            }
+        });
+        
+        if (changes.length === 0) {
+            showAlert('No changes made', 'info');
+            return;
+        }
+        
+        const response = await fetch('/batch/students/update/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                changes: changes
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('Changes saved successfully!', 'success');
+            closeBatchStudentsModal();
+            updateBatchList();
+        } else {
+            showAlert(data.error || 'Error saving changes', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert('Error saving changes: ' + error.message, 'error');
+    }
+}
+
+function removeStudentFromBatch(studentId) {
+    if (confirm('Remove student from this batch?')) {
+        const type = currentBatchData.type === 'Theory' ? 'theory_batch_time' : 'practical_batch_time';
+        
+        const request = {};
+        request[type] = '';
+        
+        fetch(`/admission/${studentId}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify(request)
+        }).then(response => response.json()).then(data => {
+            if (data.success) {
+                showAlert('Student removed from batch', 'success');
+                openBatchStudentsModal(currentBatchData.type, currentBatchData.slot, currentBatchData.display);
+                updateBatchList();
+            }
+        });
+    }
+}
+
+// ===== STUDENT DETAIL MODAL =====
+async function viewStudentDetail(studentId) {
+    try {
+        console.log('Fetching student detail for ID:', studentId);
+        const response = await fetch(`/admission/${studentId}/batch-detail/`, {
+            headers: {
+                'X-CSRFToken': CSRF_TOKEN
+            }
+        });
+        
+        console.log('Student detail response status:', response.status);
+        const data = await response.json();
+        console.log('Student detail response:', data);
+        
+        if (data.success) {
+            displayStudentDetailModal(data.student);
+            document.getElementById('studentDetailModal').style.display = 'block';
+            console.log('Student detail modal displayed');
+        } else {
+            console.error('Error response:', data);
+            showAlert(data.error || 'Error loading student details', 'error');
+        }
+    } catch (error) {
+        console.error('Error in viewStudentDetail:', error);
+        showAlert('Error loading student details: ' + error.message, 'error');
+    }
+}
+
+function displayStudentDetailModal(student) {
+    const content = document.getElementById('student-detail-content');
+    
+    const timeSlots = {
+        '08:00-09:00': '8:00 AM - 9:00 AM',
+        '09:00-10:00': '9:00 AM - 10:00 AM',
+        '10:00-11:00': '10:00 AM - 11:00 AM',
+        '11:00-12:00': '11:00 AM - 12:00 PM',
+        '12:00-13:00': '12:00 PM - 1:00 PM',
+        '15:00-16:00': '3:00 PM - 4:00 PM',
+        '16:00-17:00': '4:00 PM - 5:00 PM',
+        '17:00-18:00': '5:00 PM - 6:00 PM',
+        '18:00-19:00': '6:00 PM - 7:00 PM',
+    };
+    
+    const theoryDisplay = timeSlots[student.theory_batch_time] || student.theory_batch_time || 'Not assigned';
+    const practicalDisplay = timeSlots[student.practical_batch_time] || student.practical_batch_time || 'Not assigned';
+    
+    content.innerHTML = `
+        <div class="student-detail-container">
+            <div class="detail-section">
+                <h3>👤 Personal Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Name:</label>
+                        <span>${student.full_name || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Mobile:</label>
+                        <span>${student.mobile_own || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Gender:</label>
+                        <span>${student.gender || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Email:</label>
+                        <span>${student.email || '-'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>📚 Course & Batch Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Course:</label>
+                        <span>${student.course || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Theory Batch:</label>
+                        <span>${theoryDisplay}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Practical Batch:</label>
+                        <span>${practicalDisplay}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Admission Date:</label>
+                        <span>${student.admission_date || '-'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>📍 Address</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Address:</label>
+                        <span>${student.address || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>City:</label>
+                        <span>${student.city || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>District:</label>
+                        <span>${student.district || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Pincode:</label>
+                        <span>${student.pincode || '-'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>💰 Financial Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Total Fees:</label>
+                        <span>₹ ${student.total_fees || '0'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Paid Fees:</label>
+                        <span>₹ ${student.paid_fees || '0'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Remaining:</label>
+                        <span>₹ ${(student.total_fees || 0) - (student.paid_fees || 0)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function closeStudentDetailModal() {
+    document.getElementById('studentDetailModal').style.display = 'none';
+}
+
+// ===== ADD STUDENT TO BATCH =====
+async function openAddStudentToBatchModal() {
+    try {
+        console.log('Opening add student modal...');
+        // Get all students
+        const response = await fetch('/admission/all/', {
+            headers: {
+                'X-CSRFToken': CSRF_TOKEN
+            }
+        });
+        
+        console.log('Add student response status:', response.status);
+        const data = await response.json();
+        console.log('Add student response data:', data);
+        
+        if (data.success && data.students) {
+            const searchInput = document.getElementById('student-search-input');
+            const currentStudentIds = currentBatchData.students.map(s => s.id);
+            
+            console.log('Current batch students:', currentStudentIds);
+            
+            // Filter out already added students and store for search
+            const availableStudents = data.students.filter(s => !currentStudentIds.includes(s.id));
+            window.allAvailableStudents = availableStudents;
+            
+            console.log('Available students:', availableStudents);
+            
+            // Clear search input
+            searchInput.value = '';
+            document.getElementById('student-search-suggestions').style.display = 'none';
+            
+            document.getElementById('addStudentToBatchModal').style.display = 'block';
+            
+            // Focus on search input for convenience
+            setTimeout(() => searchInput.focus(), 100);
+        } else {
+            showAlert('No students available or error loading students', 'error');
+        }
+    } catch (error) {
+        console.error('Error in openAddStudentToBatchModal:', error);
+        showAlert('Error loading students: ' + error.message, 'error');
+    }
+}
+
+function filterStudentOptions() {
+    const searchInput = document.getElementById('student-search-input').value.toLowerCase().trim();
+    const suggestionsDiv = document.getElementById('student-search-suggestions');
+    
+    if (!window.allAvailableStudents) return;
+    
+    // If search is empty, hide suggestions
+    if (!searchInput) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    
+    // Filter students based on search
+    let filteredStudents = window.allAvailableStudents.filter(student => {
+        const nameMatch = student.full_name.toLowerCase().includes(searchInput);
+        const idMatch = student.id.toString().includes(searchInput);
+        return nameMatch || idMatch;
+    });
+    
+    // Show suggestions if there are matches
+    if (filteredStudents.length > 0) {
+        let html = '';
+        filteredStudents.forEach(student => {
+            const escapedName = student.full_name.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html += `<div class="suggestion-item" data-student-id="${student.id}" data-student-name="${escapedName}" style="cursor: pointer;">
+                <div style="font-weight: 500; color: #333;">${student.full_name}</div>
+                <div style="font-size: 0.85em; color: #666;">ID: ${student.id} | ${student.gender || 'N/A'}</div>
+            </div>`;
+        });
+        suggestionsDiv.innerHTML = html;
+        suggestionsDiv.style.display = 'block';
+        
+        // Add click handlers to all suggestion items
+        document.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const studentId = this.getAttribute('data-student-id');
+                const studentName = this.getAttribute('data-student-name');
+                selectStudentFromSuggestion(parseInt(studentId), studentName);
+            });
+        });
+    } else {
+        suggestionsDiv.innerHTML = '<div style="padding: 10px; color: #999; text-align: center;">No matching students found</div>';
+        suggestionsDiv.style.display = 'block';
+    }
+}
+
+function selectStudentFromSuggestion(studentId, studentName) {
+    // Set the hidden select to the student ID
+    document.getElementById('add-student-select').value = studentId;
+    
+    // Update search input with student name
+    document.getElementById('student-search-input').value = studentName;
+    
+    // Hide suggestions
+    document.getElementById('student-search-suggestions').style.display = 'none';
+}
+
+function handleSearchKeydown(event) {
+    // Close suggestions on Escape
+    if (event.key === 'Escape') {
+        document.getElementById('student-search-suggestions').style.display = 'none';
+    }
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', function(event) {
+    const searchInput = document.getElementById('student-search-input');
+    const suggestionsDiv = document.getElementById('student-search-suggestions');
+    
+    if (searchInput && !searchInput.contains(event.target) && !suggestionsDiv.contains(event.target)) {
+        suggestionsDiv.style.display = 'none';
+    }
+});
+
+function closeAddStudentToBatchModal() {
+    document.getElementById('addStudentToBatchModal').style.display = 'none';
+}
+
+async function addStudentToBatch() {
+    const studentIdInput = document.getElementById('add-student-select');
+    const studentId = studentIdInput.value;
+    
+    console.log('=== addStudentToBatch called ===');
+    console.log('Student ID input value:', studentId);
+    console.log('Current batch data:', currentBatchData);
+    
+    // Alert for debugging
+    alert('Add Student clicked. Student ID: ' + studentId + ', Batch Type: ' + (currentBatchData ? currentBatchData.type : 'UNDEFINED'));
+    
+    if (!studentId || studentId === '') {
+        showAlert('Please select a student from the suggestions', 'error');
+        return;
+    }
+    
+    if (!currentBatchData || !currentBatchData.type || !currentBatchData.slot) {
+        console.error('Invalid batch data:', currentBatchData);
+        showAlert('Error: Batch information not available. Please close and reopen the batch.', 'error');
+        return;
+    }
+    
+    try {
+        const fieldName = currentBatchData.type === 'Theory' ? 'theory_batch_time' : 'practical_batch_time';
+        
+        const request = {};
+        request[fieldName] = currentBatchData.slot;
+        
+        console.log('Field name:', fieldName);
+        console.log('Batch slot:', currentBatchData.slot);
+        console.log('Sending request to /admission/', studentId, '/update/');
+        console.log('Request body:', JSON.stringify(request));
+        
+        const response = await fetch(`/admission/${studentId}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify(request)
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.success) {
+            showAlert('Student added to batch successfully!', 'success');
+            closeAddStudentToBatchModal();
+            // Refresh the batch students modal
+            openBatchStudentsModal(currentBatchData.type, currentBatchData.slot, currentBatchData.display);
+            updateBatchList();
+        } else {
+            showAlert(data.error || 'Error adding student to batch', 'error');
+        }
+    } catch (error) {
+        console.error('Error in addStudentToBatch:', error);
+        showAlert('Error adding student: ' + error.message, 'error');
+    }
+}
+
+// Wrapper function that will definitely be called from button
+function addStudentToBatchButtonClicked() {
+    console.log('BUTTON CLICKED - addStudentToBatchButtonClicked called');
+    alert('Button was clicked!');
+    addStudentToBatch();
+}
+
+// Close modals when clicking outside
+window.addEventListener('click', function(event) {
+    const batchModal = document.getElementById('batchStudentsModal');
+    const detailModal = document.getElementById('studentDetailModal');
+    const addModal = document.getElementById('addStudentToBatchModal');
+    
+    if (event.target === batchModal) {
+        batchModal.style.display = 'none';
+    }
+    if (event.target === detailModal) {
+        detailModal.style.display = 'none';
+    }
+    if (event.target === addModal) {
+        addModal.style.display = 'none';
+    }
+});
+
 // Refresh data every 10 seconds
 setInterval(updateBatchList, 10000);
 
 // Initialize summary table on page load
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== Batch Overview Page Loaded ===');
+    console.log('addStudentToBatch function exists:', typeof addStudentToBatch);
+    console.log('openAddStudentToBatchModal function exists:', typeof openAddStudentToBatchModal);
     updateBatchList();
 });
+
+// Test that functions are available globally
+console.log('Script loaded. Functions available:');
+console.log('- addStudentToBatch:', typeof addStudentToBatch);
+console.log('- addStudentToBatchButtonClicked:', typeof addStudentToBatchButtonClicked);
+console.log('- openAddStudentToBatchModal:', typeof openAddStudentToBatchModal);
+console.log('- filterStudentOptions:', typeof filterStudentOptions);
+console.log('- selectStudentFromSuggestion:', typeof selectStudentFromSuggestion);
 </script>
 {% endblock %}
 

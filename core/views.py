@@ -626,51 +626,80 @@ def update_student_admitted(request, student_id):
     if request.method == 'POST':
         student = get_object_or_404(AdmittedStudent, id=student_id)
         
-        student.student_name = request.POST.get('student_name')
-        student.father_name = request.POST.get('father_name')
-        student.surname = request.POST.get('surname')
-        student.mother_name = request.POST.get('mother_name')
-        student.full_name = request.POST.get('full_name')
-        student.date_of_birth = request.POST.get('date_of_birth')
-        student.admission_date = request.POST.get('admission_date')
-        student.mobile_own = request.POST.get('mobile_own')
-        student.parent_mobile = request.POST.get('parent_mobile')
-        student.gender = request.POST.get('gender')
-        student.marital_status = request.POST.get('marital_status')
-        student.course = request.POST.get('course')
-        student.custom_course = request.POST.get('custom_course')
-        student.educational_qualification = request.POST.get('educational_qualification')
-        student.address = request.POST.get('address')
-        student.city = request.POST.get('city')
-        student.tehsil_block = request.POST.get('tehsil_block')
-        student.district = request.POST.get('district')
-        student.pin_code = request.POST.get('pin_code')
+        # Handle both JSON and POST form data
+        if request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        else:
+            data = request.POST.dict()
         
-        # NEW: Update batch information
-        student.batch_month = request.POST.get('batch_month', '')
-        student.batch_year = request.POST.get('batch_year', '')
+        # Only update fields that are provided
+        if 'student_name' in data:
+            student.student_name = data.get('student_name')
+        if 'father_name' in data:
+            student.father_name = data.get('father_name')
+        if 'surname' in data:
+            student.surname = data.get('surname')
+        if 'mother_name' in data:
+            student.mother_name = data.get('mother_name')
+        if 'full_name' in data:
+            student.full_name = data.get('full_name')
+        if 'date_of_birth' in data:
+            student.date_of_birth = data.get('date_of_birth')
+        if 'admission_date' in data:
+            student.admission_date = data.get('admission_date')
+        if 'mobile_own' in data:
+            student.mobile_own = data.get('mobile_own')
+        if 'parent_mobile' in data:
+            student.parent_mobile = data.get('parent_mobile')
+        if 'gender' in data:
+            student.gender = data.get('gender')
+        if 'marital_status' in data:
+            student.marital_status = data.get('marital_status')
+        if 'course' in data:
+            student.course = data.get('course')
+        if 'custom_course' in data:
+            student.custom_course = data.get('custom_course')
+        if 'educational_qualification' in data:
+            student.educational_qualification = data.get('educational_qualification')
+        if 'address' in data:
+            student.address = data.get('address')
+        if 'city' in data:
+            student.city = data.get('city')
+        if 'tehsil_block' in data:
+            student.tehsil_block = data.get('tehsil_block')
+        if 'district' in data:
+            student.district = data.get('district')
+        if 'pin_code' in data:
+            student.pin_code = data.get('pin_code')
+        
+        # Update batch information
+        if 'batch_month' in data:
+            student.batch_month = data.get('batch_month', '')
+        if 'batch_year' in data:
+            student.batch_year = data.get('batch_year', '')
+        if 'theory_batch_time' in data:
+            student.theory_batch_time = data.get('theory_batch_time', '')
+        if 'practical_batch_time' in data:
+            student.practical_batch_time = data.get('practical_batch_time', '')
         
         # Update fees information
-        total_fees = request.POST.get('total_fees')
-        
-        if total_fees:
-            student.total_fees = Decimal(total_fees)
-        
-        # Note: paid_fees is now readonly and should not be edited here
-        # It's calculated from FeePayment records only
-        
-        if request.FILES.get('photo'):
-            student.photo = request.FILES['photo']
+        if 'total_fees' in data:
+            total_fees = data.get('total_fees')
+            if total_fees:
+                student.total_fees = Decimal(total_fees)
         
         student.save()
         
         # Update StudentFinanceDetail if total_fees changed
-        if total_fees:
-            finance_detail, created = StudentFinanceDetail.objects.get_or_create(student=student)
-            # The profit will be calculated dynamically based on student.paid_fees and total_mkcl_fees
-            finance_detail.save()
+        if 'total_fees' in data:
+            total_fees = data.get('total_fees')
+            if total_fees:
+                finance_detail, created = StudentFinanceDetail.objects.get_or_create(student=student)
+                finance_detail.save()
         
-        messages.success(request, 'Student details updated successfully!')
         return JsonResponse({'success': True})
     
     return JsonResponse({'success': False, 'error': 'Invalid request'})
@@ -2198,6 +2227,7 @@ def student_timetable(request):
     batch_year_filter = request.GET.get('batch_year', '')
     theory_batch_filter = request.GET.get('theory_batch', '')
     practical_batch_filter = request.GET.get('practical_batch', '')
+    gender_filter = request.GET.get('gender', '')
     
     # Get all students with batch assignments
     students = AdmittedStudent.objects.all()
@@ -2229,6 +2259,10 @@ def student_timetable(request):
     # Apply practical batch filter
     if practical_batch_filter:
         students = students.filter(practical_batch_time=practical_batch_filter)
+    
+    # Apply gender filter
+    if gender_filter:
+        students = students.filter(gender=gender_filter)
     
     # Paginate results
     paginator = Paginator(students, 25)
@@ -2276,6 +2310,10 @@ def student_timetable(request):
         course__isnull=True
     ).values_list('time_slot', flat=True).distinct().order_by('time_slot')
     
+    # Calculate total unique available time slots
+    all_available_slots = set(list(available_theory_batches) + list(available_practical_batches))
+    total_available_slots = len(all_available_slots)
+    
     # Map time slots to display format
     time_slot_display_map = {
         '08:00-09:00': '8:00 AM - 9:00 AM',
@@ -2310,11 +2348,13 @@ def student_timetable(request):
         'batch_year_filter': batch_year_filter,
         'theory_batch_filter': theory_batch_filter,
         'practical_batch_filter': practical_batch_filter,
+        'gender_filter': gender_filter,
         'all_courses': all_courses,
         'available_batch_months': available_batch_months,
         'available_batch_years': available_batch_years,
         'available_theory_batches': available_theory_batches,
         'available_practical_batches': available_practical_batches,
+        'total_available_slots': total_available_slots,
         'time_slot_display_map': time_slot_display_map,
         'total_students': students.count(),
         'time_slots': time_slots,
@@ -3205,4 +3245,149 @@ def edit_batch(request, batch_id):
         return JsonResponse({
             'success': False,
             'error': f'Server error: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@staff_member_required
+def get_batch_students(request):
+    """Get all students in a specific batch"""
+    try:
+        batch_type = request.GET.get('batch_type', '')
+        time_slot = request.GET.get('time_slot', '')
+        
+        if not batch_type or not time_slot:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing batch_type or time_slot'
+            }, status=400)
+        
+        # Get all students in this batch
+        if batch_type == 'Theory':
+            students = AdmittedStudent.objects.filter(
+                theory_batch_time=time_slot
+            ).values(
+                'id', 'full_name', 'gender', 
+                'theory_batch_time', 'practical_batch_time'
+            ).order_by('full_name')
+        else:  # Practical
+            students = AdmittedStudent.objects.filter(
+                practical_batch_time=time_slot
+            ).values(
+                'id', 'full_name', 'gender',
+                'theory_batch_time', 'practical_batch_time'
+            ).order_by('full_name')
+        
+        students_list = list(students)
+        
+        return JsonResponse({
+            'success': True,
+            'students': students_list
+        })
+    except Exception as e:
+        print(f"Error fetching batch students: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@staff_member_required
+def update_batch_students(request):
+    """Update student batch assignments"""
+    try:
+        data = json.loads(request.body)
+        changes = data.get('changes', [])
+        
+        for change in changes:
+            student_id = change.get('student_id')
+            field_type = change.get('type')
+            value = change.get('value')
+            
+            student = AdmittedStudent.objects.get(id=student_id)
+            
+            if field_type == 'theory_batch_time':
+                student.theory_batch_time = value if value else None
+            elif field_type == 'practical_batch_time':
+                student.practical_batch_time = value if value else None
+            
+            student.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Updated {len(changes)} student(s)'
+        })
+    except AdmittedStudent.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Student not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error updating batch students: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@staff_member_required
+def get_all_students(request):
+    """Get all admitted students for adding to batches"""
+    try:
+        students = AdmittedStudent.objects.all().values(
+            'id', 'full_name', 'gender'
+        ).order_by('full_name')
+        
+        return JsonResponse({
+            'success': True,
+            'students': list(students)
+        })
+    except Exception as e:
+        print(f"Error fetching students: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def get_student_detail_batch(request, student_id):
+    """Get student details for batch modal display"""
+    try:
+        student = AdmittedStudent.objects.get(id=student_id)
+        
+        data = {
+            'success': True,
+            'student': {
+                'id': student.id,
+                'full_name': student.full_name,
+                'gender': student.gender,
+                'mobile_own': student.mobile_own,
+                'email': student.email or '',
+                'course': student.course or '',
+                'theory_batch_time': student.theory_batch_time or '',
+                'practical_batch_time': student.practical_batch_time or '',
+                'admission_date': student.admission_date.strftime('%Y-%m-%d') if student.admission_date else '',
+                'address': student.address or '',
+                'city': student.city or '',
+                'district': student.district or '',
+                'pincode': student.pin_code or '',
+                'total_fees': float(student.total_fees) if student.total_fees else 0,
+                'paid_fees': float(student.paid_fees) if student.paid_fees else 0,
+                'remaining_fees': float(student.remaining_fees) if student.remaining_fees else 0,
+            }
+        }
+        
+        return JsonResponse(data)
+    except AdmittedStudent.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Student not found'
+        }, status=404)
+    except Exception as e:
+        print(f"Error fetching student details: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
         }, status=500)

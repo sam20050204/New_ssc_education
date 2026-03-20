@@ -92,6 +92,10 @@ function toggleStudentsMenu(button) {
     
     submenu.classList.toggle('active');
     icon.classList.toggle('rotated');
+    
+    // Save menu state to localStorage
+    const isOpen = submenu.classList.contains('active');
+    localStorage.setItem('menu-students-open', isOpen);
 }
 
 function toggleAttendanceMenu(button) {
@@ -100,18 +104,67 @@ function toggleAttendanceMenu(button) {
     
     submenu.classList.toggle('active');
     icon.classList.toggle('rotated');
+    
+    // Save menu state to localStorage
+    const isOpen = submenu.classList.contains('active');
+    localStorage.setItem('menu-attendance-open', isOpen);
 }
 
-// On page load, expand Students menu if we're on a student-related page
+// On page load, restore menu states based on localStorage only
 document.addEventListener('DOMContentLoaded', function() {
-    const activeSubmenuItem = document.querySelector('.submenu-item.active');
-    if (activeSubmenuItem) {
-        const submenu = activeSubmenuItem.closest('.submenu');
-        const button = submenu.previousElementSibling;
+    // Get all menu sections
+    const menuSections = document.querySelectorAll('.menu-section');
+    
+    menuSections.forEach(section => {
+        const button = section.querySelector('.menu-toggle');
+        const submenu = section.querySelector('.submenu');
+        const icon = button.querySelector('.toggle-icon');
+        const buttonText = button.textContent.trim();
         
-        // Keep the submenu expanded
-        submenu.classList.add('active');
-        button.querySelector('.toggle-icon').classList.add('rotated');
-    }
+        let menuKey = '';
+        if (buttonText.includes('Students')) {
+            menuKey = 'menu-students-open';
+        } else if (buttonText.includes('Attendance')) {
+            menuKey = 'menu-attendance-open';
+        }
+        
+        if (!menuKey) return;
+        
+        // Only open if it was explicitly opened and saved in localStorage
+        const shouldBeOpen = localStorage.getItem(menuKey) === 'true';
+        
+        // Apply the state
+        if (shouldBeOpen) {
+            submenu.classList.add('active');
+            icon.classList.add('rotated');
+        } else {
+            submenu.classList.remove('active');
+            icon.classList.remove('rotated');
+            localStorage.setItem(menuKey, 'false');
+        }
+    });
+});
+
+// Before page unload, save the current menu states
+window.addEventListener('beforeunload', function() {
+    const menuSections = document.querySelectorAll('.menu-section');
+    
+    menuSections.forEach(section => {
+        const button = section.querySelector('.menu-toggle');
+        const submenu = section.querySelector('.submenu');
+        const buttonText = button.textContent.trim();
+        
+        let menuKey = '';
+        if (buttonText.includes('Students')) {
+            menuKey = 'menu-students-open';
+        } else if (buttonText.includes('Attendance')) {
+            menuKey = 'menu-attendance-open';
+        }
+        
+        if (menuKey) {
+            const isOpen = submenu.classList.contains('active');
+            localStorage.setItem(menuKey, isOpen);
+        }
+    });
 });
 </script>
