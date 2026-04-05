@@ -7,6 +7,8 @@ Provides proper form handling with validation instead of manual HTML processing.
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import Enquiry, AdmittedStudent, FeePayment, Course
+from .constants import TIME_SLOT_CHOICES, BATCH_TYPE_CHOICES
+from .utils import is_valid_mobile, is_valid_pincode
 import re
 
 
@@ -69,12 +71,8 @@ class EnquiryForm(forms.ModelForm):
         if not mobile:
             raise ValidationError("Mobile number is required.")
         
-        if not mobile.isdigit() or len(mobile) != 10:
-            raise ValidationError("Mobile number must be exactly 10 digits.")
-        
-        # Check if starts with valid digit for Indian phones (7-9)
-        if mobile[0] not in '6789':
-            raise ValidationError("Invalid mobile number. Must start with 6, 7, 8, or 9.")
+        if not is_valid_mobile(mobile):
+            raise ValidationError("Invalid mobile number. Must be 10 digits starting with 6, 7, 8, or 9.")
         
         return mobile
     
@@ -202,8 +200,8 @@ class AdmittedStudentForm(forms.ModelForm):
         if not mobile:
             raise ValidationError("Student mobile number is required.")
         
-        if not mobile.isdigit() or len(mobile) != 10:
-            raise ValidationError("Mobile number must be exactly 10 digits.")
+        if not is_valid_mobile(mobile):
+            raise ValidationError("Invalid mobile number. Must be 10 digits starting with 6, 7, 8, or 9.")
         
         return mobile
     
@@ -214,7 +212,7 @@ class AdmittedStudentForm(forms.ModelForm):
         if not pin_code:
             raise ValidationError("Pin code is required.")
         
-        if not pin_code.isdigit() or len(pin_code) != 6:
+        if not is_valid_pincode(pin_code):
             raise ValidationError("Pin code must be exactly 6 digits.")
         
         return pin_code
@@ -333,39 +331,15 @@ class BatchManagementForm(forms.Form):
     """Form for editing student batch assignments"""
     theory_batch_time = forms.ChoiceField(
         label="Theory Batch Time",
-        choices=[
-            ('08:00-09:00', '8:00 AM - 9:00 AM'),
-            ('09:00-10:00', '9:00 AM - 10:00 AM'),
-            ('10:00-11:00', '10:00 AM - 11:00 AM'),
-            ('11:00-12:00', '11:00 AM - 12:00 PM'),
-            ('12:00-13:00', '12:00 PM - 1:00 PM'),
-            ('15:00-16:00', '3:00 PM - 4:00 PM'),
-            ('16:00-17:00', '4:00 PM - 5:00 PM'),
-            ('17:00-18:00', '5:00 PM - 6:00 PM'),
-            ('18:00-19:00', '6:00 PM - 7:00 PM'),
-        ],
+        choices=TIME_SLOT_CHOICES,
         required=False,
-        widget=forms.Select(attrs={
-            'class': 'form-control',
-        })
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
     practical_batch_time = forms.ChoiceField(
         label="Practical Batch Time",
-        choices=[
-            ('08:00-09:00', '8:00 AM - 9:00 AM'),
-            ('09:00-10:00', '9:00 AM - 10:00 AM'),
-            ('10:00-11:00', '10:00 AM - 11:00 AM'),
-            ('11:00-12:00', '11:00 AM - 12:00 PM'),
-            ('12:00-13:00', '12:00 PM - 1:00 PM'),
-            ('15:00-16:00', '3:00 PM - 4:00 PM'),
-            ('16:00-17:00', '4:00 PM - 5:00 PM'),
-            ('17:00-18:00', '5:00 PM - 6:00 PM'),
-            ('18:00-19:00', '6:00 PM - 7:00 PM'),
-        ],
+        choices=TIME_SLOT_CHOICES,
         required=False,
-        widget=forms.Select(attrs={
-            'class': 'form-control',
-        })
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
 
 
@@ -381,34 +355,15 @@ class AttendanceForm(forms.Form):
     )
     batch_time = forms.ChoiceField(
         label="Select Batch Time",
-        choices=[
-            ('', '-- Select Batch --'),
-            ('08:00-09:00', '8:00 AM - 9:00 AM'),
-            ('09:00-10:00', '9:00 AM - 10:00 AM'),
-            ('10:00-11:00', '10:00 AM - 11:00 AM'),
-            ('11:00-12:00', '11:00 AM - 12:00 PM'),
-            ('12:00-13:00', '12:00 PM - 1:00 PM'),
-            ('15:00-16:00', '3:00 PM - 4:00 PM'),
-            ('16:00-17:00', '4:00 PM - 5:00 PM'),
-            ('17:00-18:00', '5:00 PM - 6:00 PM'),
-            ('18:00-19:00', '6:00 PM - 7:00 PM'),
-        ],
+        choices=[('', '-- Select Batch --')] + TIME_SLOT_CHOICES,
         required=True,
-        widget=forms.Select(attrs={
-            'class': 'form-control',
-        })
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
     batch_type = forms.ChoiceField(
         label="Select Batch Type",
-        choices=[
-            ('', '-- Select Type --'),
-            ('theory', 'Theory'),
-            ('practical', 'Practical'),
-        ],
+        choices=[('', '-- Select Type --')] + BATCH_TYPE_CHOICES,
         required=True,
-        widget=forms.Select(attrs={
-            'class': 'form-control',
-        })
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
 
 

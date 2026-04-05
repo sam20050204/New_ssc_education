@@ -148,12 +148,15 @@ function exportToExcel() {
         console.log('Table found');
         
         // Create CSV content with headers
-        let csv = 'Sr.No.,Learner Name,Mobile No.,Batch,Course,I Inst,II Inst,III Inst,Total Paid,Total Fees,Balance Fees,MKCL I Inst,MKCL II Inst,MKCL Total,Profit\n';
+        let csv = 'Sr.No.,Learner Name,Mobile No.,Batch,Course,I Inst,II Inst,III Inst,IV Inst,V Inst,Total Paid,Total Fees,Balance Fees,MKCL I Inst,MKCL II Inst,MKCL Total,Profit\n';
         
         const rows = table.querySelectorAll('tbody tr');
         console.log('Total rows found:', rows.length);
         
         let rowCount = 0;
+        let totalProfitSum = 0;
+        let totalMKCLSum = 0;
+        let totalPaidSum = 0;
         
         rows.forEach((row, index) => {
             // Skip empty rows or rows with colspan
@@ -172,60 +175,60 @@ function exportToExcel() {
             rowCount++;
             console.log('Processing row', rowCount);
             
-            // Extract data from cells
+            // Extract data from cells (fixed indexing for 16 columns)
             const srNo = rowCount;
             
-            // Learner Name
+            // Student Details (cells 0-4)
             const learnerName = cells[1] ? cells[1].textContent.trim() : '';
-            const mobile = cells[2] ? cells[2].textContent.trim() : '';
-            const batch = cells[3] ? cells[3].textContent.trim() : '';
-            const course = cells[4] ? cells[4].textContent.trim() : '';
+            const course = cells[2] ? cells[2].textContent.trim() : '';
+            const mobile = cells[3] ? cells[3].textContent.trim() : '';
+            const batch = cells[4] ? cells[4].textContent.trim() : '';
             
-            // Get installment values (from input fields in editable cells)
+            // Fees Paid By Learner - 5 installments (cells 5-9)
             let firstInst = '0';
             let secondInst = '0';
             let thirdInst = '0';
+            let fourthInst = '0';
+            let fifthInst = '0';
             
-            if (cells[5]) {
-                const firstInstInput = cells[5].querySelector('input');
-                firstInst = firstInstInput ? firstInstInput.value : cells[5].textContent.replace('₹', '').trim();
-            }
+            if (cells[5]) firstInst = cells[5].textContent.replace('₹', '').trim() || '0';
+            if (cells[6]) secondInst = cells[6].textContent.replace('₹', '').trim() || '0';
+            if (cells[7]) thirdInst = cells[7].textContent.replace('₹', '').trim() || '0';
+            if (cells[8]) fourthInst = cells[8].textContent.replace('₹', '').trim() || '0';
+            if (cells[9]) fifthInst = cells[9].textContent.replace('₹', '').trim() || '0';
             
-            if (cells[6]) {
-                const secondInstInput = cells[6].querySelector('input');
-                secondInst = secondInstInput ? secondInstInput.value : cells[6].textContent.replace('₹', '').trim();
-            }
+            // Auto-calculated fields (cells 10-12)
+            const totalPaid = cells[10] ? parseFloat(cells[10].textContent.replace('₹', '').trim()) || 0 : 0;
+            const totalFees = cells[11] ? parseFloat(cells[11].textContent.replace('₹', '').trim()) || 0 : 0;
+            const balanceFees = cells[12] ? parseFloat(cells[12].textContent.replace('₹', '').trim()) || 0 : 0;
             
-            if (cells[7]) {
-                const thirdInstInput = cells[7].querySelector('input');
-                thirdInst = thirdInstInput ? thirdInstInput.value : cells[7].textContent.replace('₹', '').trim();
-            }
-            
-            // Get readonly values
-            const totalPaid = cells[8] ? cells[8].textContent.replace('₹', '').trim() : '0';
-            const totalFees = cells[9] ? cells[9].textContent.replace('₹', '').trim() : '0';
-            const balanceFees = cells[10] ? cells[10].textContent.replace('₹', '').trim() : '0';
-            
-            // Get MKCL values (from input fields in editable cells)
+            // Get MKCL values from input fields (cells 13-14)
             let mkclFirst = '0';
             let mkclSecond = '0';
             
-            if (cells[11]) {
-                const mkclFirstInput = cells[11].querySelector('input');
-                mkclFirst = mkclFirstInput ? mkclFirstInput.value : cells[11].textContent.replace('₹', '').trim();
+            if (cells[13]) {
+                const mkclFirstInput = cells[13].querySelector('input');
+                mkclFirst = mkclFirstInput ? mkclFirstInput.value : cells[13].textContent.replace('₹', '').trim() || '0';
             }
             
-            if (cells[12]) {
-                const mkclSecondInput = cells[12].querySelector('input');
-                mkclSecond = mkclSecondInput ? mkclSecondInput.value : cells[12].textContent.replace('₹', '').trim();
+            if (cells[14]) {
+                const mkclSecondInput = cells[14].querySelector('input');
+                mkclSecond = mkclSecondInput ? mkclSecondInput.value : cells[14].textContent.replace('₹', '').trim() || '0';
             }
             
-            const mkclTotal = cells[13] ? cells[13].textContent.replace('₹', '').trim() : '0';
-            const profit = cells[14] ? cells[14].textContent.replace('₹', '').trim() : '0';
+            // MKCL Total and Profit (cells 15-16)
+            const mkclTotal = cells[15] ? parseFloat(cells[15].textContent.replace('₹', '').trim()) || 0 : 0;
+            const profitText = cells[16] ? cells[16].textContent.replace('₹', '').trim() : '0';
+            const profit = parseFloat(profitText) || 0;
+            
+            // Add to totals
+            totalProfitSum += profit;
+            totalMKCLSum += mkclTotal;
+            totalPaidSum += totalPaid;
             
             // Build CSV row - escape quotes in names
             const escapeName = (str) => String(str).replace(/"/g, '""');
-            csv += `${srNo},"${escapeName(learnerName)}","${escapeName(mobile)}","${escapeName(batch)}","${escapeName(course)}",${firstInst},${secondInst},${thirdInst},${totalPaid},${totalFees},${balanceFees},${mkclFirst},${mkclSecond},${mkclTotal},${profit}\n`;
+            csv += `${srNo},"${escapeName(learnerName)}","${escapeName(mobile)}","${escapeName(batch)}","${escapeName(course)}",${firstInst},${secondInst},${thirdInst},${fourthInst},${fifthInst},${totalPaid},${totalFees},${balanceFees},${mkclFirst},${mkclSecond},${mkclTotal},${profit}\n`;
         });
         
         console.log('Total rows processed:', rowCount);
@@ -234,6 +237,13 @@ function exportToExcel() {
             alert('No data to export');
             return;
         }
+        
+        // Add summary section with totals
+        csv += '\n\n--- SUMMARY ---\n';
+        csv += `Total Records,${rowCount}\n`;
+        csv += `Total Fees Paid by Learners,${totalPaidSum.toFixed(2)}\n`;
+        csv += `Total Fees Paid to MKCL,${totalMKCLSum.toFixed(2)}\n`;
+        csv += `Total Profit,${totalProfitSum.toFixed(2)}\n`;
         
         // Create and download file
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

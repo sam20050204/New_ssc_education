@@ -379,6 +379,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const studentId = document.getElementById('studentId').value;
             const formData = new FormData(studentForm);
             
+            // Debug: log what's in the formData
+            console.log('Form submission debug:');
+            for (let [key, value] of formData.entries()) {
+                if (value instanceof File) {
+                    console.log(`  ${key}: File - ${value.name} (${value.size} bytes)`);
+                } else {
+                    console.log(`  ${key}: ${value}`);
+                }
+            }
+            
             // Validate mobile from the right-side field
             const mobileOwnRight = document.getElementById('mobileOwnRight').value;
             if (mobileOwnRight.length !== 10) {
@@ -408,6 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())
             .then(data => {
+                console.log('Update response:', data);
                 if (data.success) {
                     showNotification('✅ Student details updated successfully!', 'success');
                     closeModal();

@@ -18,6 +18,8 @@ urlpatterns = [
     
     # Admission URLs
     path('admission/', views.new_admission, name='new_admission'),
+    path('admission/import/', views.import_admissions_excel, name='import_admissions_excel'),
+    path('admission/import-photos/', views.import_student_photos_zip, name='import_photos'),
     path('admission/list/', views.admitted_students, name='admitted_students'),
     path('admission/search-students/', views.search_admitted_students, name='search_admitted_students'),
     path('admission/<int:student_id>/detail/', views.student_detail_admitted, name='student_detail_admitted'),
@@ -75,6 +77,7 @@ urlpatterns = [
     path('batch/get-id/', views.get_batch_id, name='get_batch_id'),
     path('batch/students/', views.get_batch_students, name='get_batch_students'),
     path('batch/students/update/', views.update_batch_students, name='update_batch_students'),
+    path('batch/update-capacity/', views.update_batch_capacity, name='update_batch_capacity'),
     path('admission/all/', views.get_all_students, name='get_all_students'),
     path('admission/<int:student_id>/batch-detail/', views.get_student_detail_batch, name='get_student_detail_batch'),
     path('attendance/mark/', views.mark_attendance_page, name='mark_attendance'),

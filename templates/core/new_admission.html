@@ -136,6 +136,15 @@
                 {% endif %}
             </div>
         </div>
+        <!-- Import Buttons -->
+        <div style="display: flex; gap: 10px;">
+            <button type="button" id="importBtn" class="import-btn" onclick="openImportModal()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+                📥 Import New Students
+            </button>
+            <button type="button" id="importPhotosBtn" class="import-photos-btn" onclick="openPhotoImportModal()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+                📷 Import Photos
+            </button>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -757,4 +766,276 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Import Admissions Modal -->
+<div id="importModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <button type="button" class="modal-close" onclick="closeImportModal()">×</button>
+        <h2 style="margin-top: 0;">📥 Import Admissions from Excel</h2>
+        
+        <div style="margin-bottom: 20px;">
+            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                Upload an Excel file that was exported from the "Export Admitted Students" feature. Only the specific format is supported.
+            </p>
+            
+            <div id="fileDropZone" style="border: 2px dashed #667eea; border-radius: 8px; padding: 30px; text-align: center; background: #f9fafb; cursor: pointer; transition: all 0.3s ease;">
+                <input type="file" id="importFile" accept=".xlsx,.xls" style="display: none;" onchange="handleFileSelect(event)">
+                <div style="font-size: 32px; margin-bottom: 10px;">📊</div>
+                <p style="margin: 0; color: #333; font-weight: 600;">Click to select or drag Excel file here</p>
+                <p style="margin: 5px 0 0 0; color: #999; font-size: 12px;">Supported formats: .xlsx, .xls</p>
+            </div>
+            
+            <div id="fileNameDisplay" style="margin-top: 15px; padding: 10px; background: #e8f5e9; border-radius: 6px; display: none; color: #2e7d32; font-size: 14px;">
+                ✅ <span id="fileName"></span>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" onclick="closeImportModal()" style="padding: 10px 20px; background: #e0e7ff; color: #667eea; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                Cancel
+            </button>
+            <button type="button" id="importSubmitBtn" onclick="submitImport()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: none;">
+                Import Now
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openImportModal() {
+    document.getElementById('importModal').classList.add('active');
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').classList.remove('active');
+    document.getElementById('importFile').value = '';
+    document.getElementById('fileNameDisplay').style.display = 'none';
+    document.getElementById('importSubmitBtn').style.display = 'none';
+}
+
+function openPhotoImportModal() {
+    document.getElementById('importPhotosModal').classList.add('active');
+}
+
+function closePhotoImportModal() {
+    document.getElementById('importPhotosModal').classList.remove('active');
+    document.getElementById('photoZipFile').value = '';
+    document.getElementById('photoImportResult').style.display = 'none';
+    document.getElementById('photoImportResult').innerHTML = '';
+}
+
+// Handle file selection
+function handleFileSelect(event) {
+    const files = event.target.files;
+    if (files.length > 0) {
+        const file = files[0];
+        const fileName = file.name;
+        
+        document.getElementById('fileName').textContent = fileName;
+        document.getElementById('fileNameDisplay').style.display = 'block';
+        document.getElementById('importSubmitBtn').style.display = 'block';
+    }
+}
+
+// Handle drag and drop
+const dropZone = document.getElementById('fileDropZone');
+
+dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#10b981';
+    this.style.background = '#ecfdf5';
+});
+
+dropZone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#667eea';
+    this.style.background = '#f9fafb';
+});
+
+dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#667eea';
+    this.style.background = '#f9fafb';
+    
+    const files = e.dataTransfer.files;
+    document.getElementById('importFile').files = files;
+    
+    if (files.length > 0) {
+        const file = files[0];
+        const fileName = file.name;
+        
+        document.getElementById('fileName').textContent = fileName;
+        document.getElementById('fileNameDisplay').style.display = 'block';
+        document.getElementById('importSubmitBtn').style.display = 'block';
+    }
+});
+
+dropZone.addEventListener('click', function() {
+    document.getElementById('importFile').click();
+});
+
+// Submit import
+function submitImport() {
+    const fileInput = document.getElementById('importFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select a file first');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('excel_file', file);
+    
+    const submitBtn = document.getElementById('importSubmitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '⏳ Importing...';
+    submitBtn.disabled = true;
+    
+    fetch('{% url "import_admissions_excel" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        
+        if (data.success) {
+            let message = `✅ Successfully imported ${data.imported_count} admission(s)`;
+            
+            if (data.error_count && data.error_count > 0) {
+                message += `\n\n⚠️ ${data.error_count} row(s) had errors:\n`;
+                data.errors.forEach(err => {
+                    message += `• Row ${err.row}: ${err.error}\n`;
+                });
+            }
+            
+            alert(message);
+            closeImportModal();
+            
+            // Refresh the page after 1 second
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            alert('❌ Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        console.error('Error:', error);
+        alert('❌ Network error: ' + error.message);
+    });
+}
+
+// Close modal when clicking outside
+document.getElementById('importModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeImportModal();
+    }
+});
+
+// PHOTO IMPORT HANDLER
+function setupPhotoImport() {
+    let btn = document.getElementById('submitPhotoImportBtn');
+    console.log('Setting up photo import. Button found:', !!btn);
+    if (!btn) return;
+    
+    btn.onclick = function() {
+        console.log('Photo import button clicked');
+        let file = document.getElementById('photoZipFile').files[0];
+        if (!file) { 
+            alert('Select a ZIP file first');
+            return; 
+        }
+        
+        console.log('File selected:', file.name);
+        let fd = new FormData();
+        fd.append('zip_file', file);
+        
+        let result = document.getElementById('photoImportResult');
+        result.innerHTML = '<div class="alert alert-info">📤 Uploading...</div>';
+        result.style.display = 'block';
+        console.log('Starting upload...');
+        
+        fetch('{% url "import_photos" %}', {
+            method: 'POST',
+            body: fd,
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        })
+        .then(r => {
+            console.log('Response status:', r.status);
+            return r.json();
+        })
+        .then(d => {
+            console.log('Response data:', d);
+            if (d.success) {
+                result.innerHTML = `<div class="alert alert-success">✅ ${d.matched} photos imported</div>`;
+            } else {
+                result.innerHTML = `<div class="alert alert-danger">❌ ${d.message}</div>`;
+            }
+        })
+        .catch(e => {
+            console.error('Fetch error:', e);
+            result.innerHTML = `<div class="alert alert-danger">❌ Error: ${e.message}</div>`;
+        });
+    };
+}
+
+// Setup when page loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupPhotoImport);
+} else {
+    setupPhotoImport();
+}
+</script>
+
+<!-- Photo Import Modal -->
+<div class="modal" id="importPhotosModal">
+    <div class="modal-content" style="width: 95%; max-width: 600px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px 12px 0 0; padding: 20px;">
+            <h3 style="margin: 0; font-size: 18px; font-weight: 600;">📷 Import Student Photos (ZIP)</h3>
+            <button type="button" class="close" onclick="closePhotoImportModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0;">
+                ×
+            </button>
+        </div>
+        <div class="modal-body" style="padding: 25px;">
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #2196F3;">
+                <strong style="color: #1565c0;">📋 Instructions:</strong>
+                <ol style="margin: 10px 0 0 20px; padding: 0;">
+                    <li>Create a folder with student photos</li>
+                    <li>Name each photo as: <code><strong>Surname StudentName.jpg</strong></code></li>
+                    <li>Supported separators:
+                        <ul style="margin: 5px 0;">
+                            <li>✅ Space: <code>Chavan Akshay.jpg</code></li>
+                            <li>✅ Underscore: <code>Chavan_Akshay.jpg</code></li>
+                        </ul>
+                    </li>
+                    <li>Compress folder into a ZIP file</li>
+                    <li>Upload the ZIP file below</li>
+                </ol>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="photoZipFile" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;"><strong>📁 Select ZIP File:</strong></label>
+                <input type="file" id="photoZipFile" accept=".zip" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                <small style="display: block; margin-top: 5px; color: #666;">
+                    Supported formats: JPG, PNG, GIF (Max 5MB per photo)
+                </small>
+            </div>
+            
+            <div id="photoImportResult" style="display: none; margin-top: 15px; padding: 12px; border-radius: 4px; border-left: 4px solid #2196F3;"></div>
+        </div>
+        <div style="padding: 15px 25px; background: #f5f5f5; border-top: 1px solid #e0e0e0; border-radius: 0 0 12px 12px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" onclick="closePhotoImportModal()" style="padding: 8px 16px; background: #e0e0e0; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Cancel</button>
+            <button type="button" id="submitPhotoImportBtn" style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">📤 Import Photos</button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

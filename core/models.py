@@ -4,6 +4,11 @@ from django.contrib.auth.models import User
 from decimal import Decimal
 from datetime import date
 from core.validators import validate_image_file
+from core.constants import (
+    COURSE_CHOICES, GENDER_CHOICES, MARITAL_STATUS_CHOICES,
+    TIME_SLOT_CHOICES, PAYMENT_MODE_CHOICES, ATTENDANCE_STATUS_CHOICES,
+    BATCH_TYPE_CHOICES, DEFAULT_TOTAL_FEES
+)
 
 class Enquiry(models.Model):
     """Lead enquiries for prospective students"""
@@ -41,25 +46,9 @@ class Enquiry(models.Model):
 
     
 class AdmittedStudent(models.Model):
-    COURSE_CHOICES = [
-        ('MS-CIT', 'MS-CIT'),
-        ('Tally', 'Tally'),
-        ('Advance Excel', 'Advance Excel'),
-        ('IOT', 'IOT'),
-        ('Scratch', 'Scratch'),
-        ('Other', 'Other'),
-    ]
-    
-    GENDER_CHOICES = [
-        ('Male', 'Male'),
-        ('Female', 'Female'),
-        ('Other', 'Other'),
-    ]
-    
-    MARITAL_STATUS_CHOICES = [
-        ('Single', 'Single'),
-        ('Married', 'Married'),
-    ]
+    COURSE_CHOICES = COURSE_CHOICES
+    GENDER_CHOICES = GENDER_CHOICES
+    MARITAL_STATUS_CHOICES = MARITAL_STATUS_CHOICES
     
     course = models.CharField(max_length=50, choices=COURSE_CHOICES)
     custom_course = models.CharField(max_length=100, blank=True, null=True, help_text="If 'Other' is selected")
@@ -103,34 +92,14 @@ class AdmittedStudent(models.Model):
         max_length=20,
         blank=True,
         null=True,
-        choices=[
-            ('08:00-09:00', '8:00 AM - 9:00 AM'),
-            ('09:00-10:00', '9:00 AM - 10:00 AM'),
-            ('10:00-11:00', '10:00 AM - 11:00 AM'),
-            ('11:00-12:00', '11:00 AM - 12:00 PM'),
-            ('12:00-13:00', '12:00 PM - 1:00 PM'),
-            ('15:00-16:00', '3:00 PM - 4:00 PM'),
-            ('16:00-17:00', '4:00 PM - 5:00 PM'),
-            ('17:00-18:00', '5:00 PM - 6:00 PM'),
-            ('18:00-19:00', '6:00 PM - 7:00 PM'),
-        ],
+        choices=TIME_SLOT_CHOICES,
         help_text="Fixed daily theory batch timing"
     )
     practical_batch_time = models.CharField(
         max_length=20,
         blank=True,
         null=True,
-        choices=[
-            ('08:00-09:00', '8:00 AM - 9:00 AM'),
-            ('09:00-10:00', '9:00 AM - 10:00 AM'),
-            ('10:00-11:00', '10:00 AM - 11:00 AM'),
-            ('11:00-12:00', '11:00 AM - 12:00 PM'),
-            ('12:00-13:00', '12:00 PM - 1:00 PM'),
-            ('15:00-16:00', '3:00 PM - 4:00 PM'),
-            ('16:00-17:00', '4:00 PM - 5:00 PM'),
-            ('17:00-18:00', '5:00 PM - 6:00 PM'),
-            ('18:00-19:00', '6:00 PM - 7:00 PM'),
-        ],
+        choices=TIME_SLOT_CHOICES,
         help_text="Fixed daily practical batch timing"
     )
 
@@ -153,7 +122,7 @@ class AdmittedStudent(models.Model):
         max_digits=10, 
         decimal_places=2, 
         validators=[MinValueValidator(0)],
-        default=5000
+        default=DEFAULT_TOTAL_FEES
     )
     paid_fees = models.DecimalField(
         max_digits=10, 
@@ -284,12 +253,7 @@ class Student(models.Model):
 
 
 class FeePayment(models.Model):
-    PAYMENT_MODE_CHOICES = [
-        ('Cash', 'Cash'),
-        ('UPI', 'UPI'),
-        ('Card', 'Card'),
-        ('Bank Transfer', 'Bank Transfer'),
-    ]
+    PAYMENT_MODE_CHOICES = PAYMENT_MODE_CHOICES
     
     receipt_no = models.CharField(max_length=20, unique=True, editable=False)
     
@@ -425,12 +389,7 @@ class StudentFinanceDetail(models.Model):
 
 class Attendance(models.Model):
     """Daily attendance records for admitted students with theory and practical tracking"""
-    STATUS_CHOICES = [
-        ('P', 'Present'),
-        ('A', 'Absent'),
-        ('L', 'Leave'),
-        ('H', 'Holiday'),
-    ]
+    STATUS_CHOICES = ATTENDANCE_STATUS_CHOICES
 
     student = models.ForeignKey(
         'AdmittedStudent',
@@ -537,21 +496,11 @@ class SalesItem(models.Model):
 
 class Batch(models.Model):
     """Predefined batch timings for theory and practical sessions"""
-    BATCH_TIME_CHOICES = [
-        ('08:00-09:00', '8:00 AM - 9:00 AM'),
-        ('09:00-10:00', '9:00 AM - 10:00 AM'),
-        ('10:00-11:00', '10:00 AM - 11:00 AM'),
-        ('11:00-12:00', '11:00 AM - 12:00 PM'),
-        ('12:00-13:00', '12:00 PM - 1:00 PM'),
-        ('15:00-16:00', '3:00 PM - 4:00 PM'),
-        ('16:00-17:00', '4:00 PM - 5:00 PM'),
-        ('17:00-18:00', '5:00 PM - 6:00 PM'),
-        ('18:00-19:00', '6:00 PM - 7:00 PM'),
-    ]
+    BATCH_TIME_CHOICES = TIME_SLOT_CHOICES
     
     batch_type = models.CharField(
         max_length=20, 
-        choices=[('Theory', 'Theory'), ('Practical', 'Practical')],
+        choices=BATCH_TYPE_CHOICES,
         help_text="Type of batch session"
     )
     time_slot = models.CharField(

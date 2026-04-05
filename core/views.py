@@ -1,5 +1,6 @@
-from datetime import timedelta, datetime as dt
-from django.db import transaction  
+from datetime import timedelta, datetime as dt, date
+from django.db import transaction
+import uuid  
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -22,9 +23,13 @@ from decimal import Decimal, InvalidOperation
 import json
 import shutil
 import os
+import zipfile
+from PIL import Image
 from django.db.models import Sum, Count, Q, F
 from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem, Attendance, Batch
 from .forms import EnquiryForm, AdmittedStudentForm, FeePaymentForm, CourseForm, BatchManagementForm, AttendanceForm
+from .utils import number_to_words, get_time_slot_display, get_course_display, get_available_years_from_field, is_valid_mobile, is_valid_pincode, get_cached_courses
+from .constants import TIME_SLOT_CHOICES, TIME_SLOT_DISPLAY_MAP, DEFAULT_PAGE_SIZE
 from django.contrib.auth import authenticate, login as auth_login
 
 # ================= CUSTOM LOGIN =================
@@ -436,6 +441,426 @@ def new_admission(request):
     })
 
 
+# ================= IMPORT ADMISSIONS FROM EXCEL =================
+@login_required
+@staff_member_required
+@require_http_methods(["POST"])
+@csrf_protect
+def import_admissions_excel(request):
+    """Import multiple admissions from Excel file"""
+    try:
+        if 'excel_file' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No file uploaded'
+            }, status=400)
+        
+        excel_file = request.FILES['excel_file']
+        
+        # Validate file extension
+        if not excel_file.name.lower().endswith(('.xlsx', '.xls')):
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid file format. Please upload an Excel file (.xlsx or .xls)'
+            }, status=400)
+        
+        # Load the Excel file
+        try:
+            wb = openpyxl.load_workbook(excel_file)
+            ws = wb.active
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error reading Excel file: {str(e)}'
+            }, status=400)
+        
+        # Expected headers - matches actual Excel format from screenshots
+        expected_headers = [
+            'S.No', 'Full Name', 'Student Name', 'Father Name', 'Surname', 'Mother Name',
+            'Date of Birth', 'Mobile (Own)', 'Parent Mobile', 'Gender', 'Marital Status',
+            'Course', 'Batch Month', 'Batch Year', 'Educational Qualification',
+            'Address', 'City', 'Tehsil/Block', 'District', 'Pin Code',
+            'Total Fees (₹)', 'Paid Fees First Installment', 'Admission Date'
+        ]
+        
+        # Verify headers
+        file_headers = [cell.value for cell in ws[1]]
+        
+        # Check if the headers match the expected format
+        if file_headers != expected_headers:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid Excel format. Headers do not match the expected format. Please use the correct template from "Export Admitted Students".'
+            }, status=400)
+        
+        # Import rows
+        imported_count = 0
+        error_rows = []
+        
+        with transaction.atomic():
+            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=False), start=2):
+                try:
+                    # Extract values from row
+                    row_values = [cell.value for cell in row]
+                    
+                    # Skip empty rows
+                    if not any(row_values):
+                        continue
+                    
+                    # Handle the export format - Updated to match actual Excel headers
+                    # Columns: S.No(0), Full Name(1), Student Name(2), Father Name(3), Surname(4), Mother Name(5),
+                    # Date of Birth(6), Mobile(7), Parent Mobile(8), Gender(9), Marital Status(10),
+                    # Course(11), Batch Month(12), Batch Year(13), Educational Qualification(14),
+                    # Address(15), City(16), Tehsil/Block(17), District(18), Pin Code(19),
+                    # Total Fees(20), Paid Fees First Installment(21), Admission Date(22)
+                    
+                    full_name = row_values[1]
+                    student_name = row_values[2]
+                    father_name = row_values[3]
+                    surname = row_values[4]
+                    mother_name = row_values[5]
+                    dob_str = row_values[6]
+                    mobile_own = row_values[7]
+                    parent_mobile = row_values[8]
+                    gender = row_values[9]
+                    marital_status = row_values[10]
+                    course = row_values[11]
+                    batch_month = row_values[12]
+                    batch_year = row_values[13]
+                    educational_qualification = row_values[14]
+                    address = row_values[15]
+                    city = row_values[16]
+                    tehsil_block = row_values[17]
+                    district = row_values[18]
+                    pin_code = row_values[19]
+                    total_fees_val = row_values[20]
+                    first_installment_val = row_values[21]
+                    admission_date_str = row_values[22]
+                    custom_course = None
+                    payment_mode = 'Cash'  # Default payment mode
+                    
+                    # Validate required fields
+                    required_fields = {
+                        'Student Name': student_name,
+                        'Father Name': father_name,
+                        'Surname': surname,
+                        'Full Name': full_name,
+                        'Mobile (Own)': mobile_own,
+                        'Gender': gender,
+                        'Marital Status': marital_status,
+                        'Course': course,
+                        'Address': address,
+                        'City': city,
+                        'Tehsil/Block': tehsil_block,
+                        'District': district,
+                        'Pin Code': pin_code,
+                        'Educational Qualification': educational_qualification
+                    }
+                    
+                    missing_fields = [name for name, value in required_fields.items() if not value]
+                    
+                    if missing_fields:
+                        error_rows.append({
+                            'row': row_num,
+                            'error': f'Missing required fields: {", ".join(missing_fields[:3])}'
+                        })
+                        continue
+                    
+                    # Parse date of birth
+                    try:
+                        if isinstance(dob_str, str):
+                            dob = datetime.strptime(dob_str, '%d-%m-%Y').date()
+                        else:
+                            dob = dob_str
+                    except (ValueError, TypeError):
+                        error_rows.append({
+                            'row': row_num,
+                            'error': 'Invalid date format for Date of Birth. Use DD-MM-YYYY'
+                        })
+                        continue
+                    
+                    # Parse admission date
+                    try:
+                        if isinstance(admission_date_str, str):
+                            # Handle both formats: 'DD-MM-YYYY' and 'DD-MM-YYYY HH:MM AM/PM'
+                            if ' ' in admission_date_str:
+                                admission_date = datetime.strptime(admission_date_str, '%d-%m-%Y %I:%M %p').date()
+                            else:
+                                admission_date = datetime.strptime(admission_date_str, '%d-%m-%Y').date()
+                        else:
+                            admission_date = admission_date_str
+                    except (ValueError, TypeError):
+                        admission_date = date.today()
+                    
+                    # Parse fees
+                    try:
+                        total_fees = Decimal(str(total_fees_val)) if total_fees_val else Decimal('5000')
+                    except (ValueError, InvalidOperation):
+                        total_fees = Decimal('5000')
+                    
+                    # Parse first installment
+                    try:
+                        first_installment = Decimal(str(first_installment_val)) if first_installment_val else Decimal('0')
+                    except (ValueError, InvalidOperation):
+                        first_installment = Decimal('0')
+                    
+                    # Validate mobile
+                    mobile_str = str(mobile_own).strip()
+                    if not is_valid_mobile(mobile_str):
+                        error_detail = 'Mobile must be 10 digits starting with 6, 7, 8, or 9'
+                        error_rows.append({
+                            'row': row_num,
+                            'field': 'Mobile (Own)',
+                            'value': mobile_own,
+                            'error': error_detail
+                        })
+                        continue
+                    
+                    # Validate pin code
+                    pin_str = str(pin_code).strip()
+                    if not is_valid_pincode(pin_str):
+                        error_detail = 'Pin code must be exactly 6 digits'
+                        error_rows.append({
+                            'row': row_num,
+                            'field': 'Pin Code',
+                            'value': pin_code,
+                            'error': error_detail
+                        })
+                        continue
+                    
+                    # Check if student already exists (by full_name and mobile)
+                    existing = AdmittedStudent.objects.filter(
+                        full_name__iexact=full_name,
+                        mobile_own=mobile_str
+                    ).exists()
+                    
+                    if existing:
+                        error_rows.append({
+                            'row': row_num,
+                            'field': 'Full Name + Mobile',
+                            'value': f'{full_name} ({mobile_own})',
+                            'error': 'Duplicate student - already exists in database'
+                        })
+                        continue
+                    
+                    # Create admission record
+                    admission = AdmittedStudent.objects.create(
+                        student_name=student_name[:100],
+                        father_name=father_name[:100],
+                        surname=surname[:100],
+                        mother_name=mother_name[:100] if mother_name else '',
+                        full_name=full_name[:300],
+                        date_of_birth=dob,
+                        mobile_own=mobile_str,
+                        parent_mobile=str(parent_mobile).strip() if parent_mobile else '',
+                        gender=gender,
+                        marital_status=marital_status,
+                        course=course,
+                        custom_course=custom_course[:100] if custom_course else '',
+                        educational_qualification=educational_qualification[:200],
+                        address=address,
+                        city=city[:100],
+                        tehsil_block=tehsil_block[:100],
+                        district=district[:100],
+                        pin_code=pin_str,
+                        batch_month=str(batch_month).strip() if batch_month else None,
+                        batch_year=str(batch_year).strip() if batch_year else None,
+                        total_fees=total_fees,
+                        paid_fees=Decimal('0'),
+                        admission_date=admission_date
+                    )
+                    
+                    # Create FeePayment receipt if first_installment > 0 and payment_mode is valid
+                    valid_payment_modes = ['Cash', 'UPI', 'Card', 'Bank Transfer']
+                    if first_installment > Decimal('0') and payment_mode in valid_payment_modes:
+                        # Generate unique receipt_no: REC-DDMMYYYY-XXXXX
+                        receipt_prefix = admission_date.strftime('%d%m%Y')
+                        receipt_suffix = str(uuid.uuid4().hex[:5]).upper()
+                        receipt_no = f'REC-{receipt_prefix}-{receipt_suffix}'
+                        
+                        # Create FeePayment record
+                        FeePayment.objects.create(
+                            receipt_no=receipt_no,
+                            student=admission,
+                            amount=first_installment,
+                            payment_mode=payment_mode,
+                            payment_date=admission_date,
+                            total_fees_at_payment=total_fees,
+                            paid_before_this=Decimal('0'),
+                            remaining_after_this=total_fees - first_installment
+                        )
+                        
+                        # Update admission paid_fees to reflect this payment
+                        admission.paid_fees = first_installment
+                        admission.save(update_fields=['paid_fees'])
+                    
+                    imported_count += 1
+                    
+                except Exception as e:
+                    error_rows.append({
+                        'row': row_num,
+                        'error': str(e)[:100]
+                    })
+                    continue
+        
+        # Prepare response
+        success_message = f'✅ Successfully imported {imported_count} admission(s)'
+        
+        if error_rows:
+            error_message = f'⚠️ {len(error_rows)} row(s) had errors'
+            return JsonResponse({
+                'success': True,
+                'imported_count': imported_count,
+                'error_count': len(error_rows),
+                'message': success_message,
+                'warning': error_message,
+                'errors': error_rows[:10]  # Return first 10 errors
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'imported_count': imported_count,
+                'message': success_message
+            })
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }, status=500)
+
+
+# ================= IMPORT STUDENT PHOTOS FROM ZIP =================
+@login_required
+@staff_member_required
+@csrf_protect
+@require_http_methods(['POST'])
+def import_student_photos_zip(request):
+    """Import student photos from ZIP file - matches by surname and name"""
+    try:
+        zip_file = request.FILES.get('zip_file')
+        
+        if not zip_file:
+            return JsonResponse({
+                'success': False,
+                'message': 'Please select a ZIP file'
+            }, status=400)
+        
+        matched = 0
+        mismatched = []
+        errors = []
+        
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            for file_info in zip_ref.filelist:
+                # Skip directories and hidden files
+                if file_info.is_dir() or file_info.filename.startswith('__'):
+                    continue
+                
+                filename = os.path.basename(file_info.filename)
+                name_without_ext = os.path.splitext(filename)[0].strip()
+                
+                # Parse surname and name from filename
+                # Expected format: "Surname Name.jpg" or "surname_name.jpg"
+                # Try space separator first, then underscore
+                parts = None
+                if ' ' in name_without_ext:
+                    parts = name_without_ext.split(' ', 1)
+                elif '_' in name_without_ext:
+                    parts = name_without_ext.split('_', 1)
+                else:
+                    # Single name, try to match with student_name
+                    students = AdmittedStudent.objects.filter(
+                        student_name__icontains=name_without_ext
+                    )
+                    if not students.exists():
+                        mismatched.append(f"{filename} (Expected: 'Surname Name.jpg')")
+                        continue
+                    if students.count() > 1:
+                        errors.append(f"{filename}: Multiple students match. Use 'Surname Name' format")
+                        continue
+                    parts = None
+                
+                if parts and len(parts) == 2:
+                    surname, student_name = parts[0].strip(), parts[1].strip()
+                    
+                    # Search for student by surname AND name (case-insensitive)
+                    students = AdmittedStudent.objects.filter(
+                        surname__icontains=surname,
+                        student_name__icontains=student_name
+                    )
+                elif parts is None and len(mismatched) > 0:
+                    # Already handled above, skip
+                    continue
+                else:
+                    mismatched.append(f"{filename} (Expected: 'Surname Name.jpg')")
+                    continue
+                
+                if not students.exists():
+                    mismatched.append(f"{filename} (No match: {surname} {student_name})")
+                    continue
+                
+                if students.count() > 1:
+                    errors.append(f"{filename}: {students.count()} students match. Be more specific")
+                    continue
+                
+                student = students.first()
+                
+                # Read and validate image
+                try:
+                    file_content = zip_ref.read(file_info.filename)
+                    
+                    # Validate it's a real image
+                    img = Image.open(BytesIO(file_content))
+                    img.verify()
+                    
+                    # Save photo
+                    file_extension = os.path.splitext(filename)[1].lower()
+                    photo_name = f"student_photos/{student.id}_{student.surname}_{student.student_name}{file_extension}"
+                    
+                    # Remove old photo if exists
+                    if student.photo:
+                        student.photo.delete()
+                    
+                    # Save new photo
+                    from django.core.files.base import ContentFile
+                    student.photo.save(
+                        photo_name,
+                        ContentFile(file_content),
+                        save=True
+                    )
+                    matched += 1
+                    
+                except Exception as e:
+                    errors.append(f"{filename}: Invalid image file - {str(e)[:50]}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{matched} photos imported successfully',
+            'matched': matched,
+            'mismatched': mismatched,
+            'errors': errors,
+            'mismatched_count': len(mismatched),
+            'error_count': len(errors)
+        })
+    
+    except zipfile.BadZipFile:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid ZIP file. Please upload a valid ZIP file.',
+            'matched': 0,
+            'mismatched': [],
+            'errors': []
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}',
+            'matched': 0,
+            'mismatched': [],
+            'errors': []
+        }, status=500)
+
+
 # ================= ADD COURSE TO DATABASE (SINGLE DEFINITION) =================
 @login_required
 @require_http_methods(["POST"])
@@ -486,7 +911,11 @@ def admitted_students(request):
     batch_month = request.GET.get("batch_month", "")  # NEW
     batch_year = request.GET.get("batch_year", "")    # NEW
     
-    students = AdmittedStudent.objects.all().order_by('-admission_date')
+    # Optimized query with only required fields to reduce database hits
+    students = AdmittedStudent.objects.only(
+        'id', 'full_name', 'student_name', 'mobile_own', 'course', 
+        'admission_date', 'city', 'total_fees', 'paid_fees'
+    ).order_by('-admission_date')
     
     if search:
         students = students.filter(
@@ -511,6 +940,7 @@ def admitted_students(request):
     if batch_year:
         students = students.filter(batch_year=batch_year)
     
+    # Optimized: Use values_list instead of full objects for dropdown data
     available_years = (
         AdmittedStudent.objects
         .annotate(year=ExtractYear('admission_date'))
@@ -519,7 +949,7 @@ def admitted_students(request):
         .order_by('-year')
     )
     
-    # NEW: Get available batch months and years
+    # NEW: Get available batch months and years (optimized)
     available_batch_months = (
         AdmittedStudent.objects
         .exclude(batch_month__isnull=True)
@@ -538,8 +968,8 @@ def admitted_students(request):
         .order_by('-batch_year')
     )
     
-    # Get all courses from database
-    all_courses = Course.objects.all().order_by('name')
+    # Optimized: Cache courses (small table, rarely changes)
+    all_courses = get_cached_courses()
     
     return render(request, 'core/admitted_students.html', {
         'students': students,
@@ -690,6 +1120,23 @@ def update_student_admitted(request, student_id):
             total_fees = data.get('total_fees')
             if total_fees:
                 student.total_fees = Decimal(total_fees)
+        
+        # Handle photo upload
+        if 'photo' in request.FILES:
+            photo_file = request.FILES['photo']
+            print(f'[PHOTO DEBUG] Photo file found: {photo_file.name} ({photo_file.size} bytes)')
+            # Delete old photo if it exists
+            if student.photo:
+                try:
+                    print(f'[PHOTO DEBUG] Deleting old photo: {student.photo}')
+                    student.photo.delete()
+                except Exception as e:
+                    print(f'[PHOTO DEBUG] Error deleting old photo: {e}')
+            # Save new photo
+            student.photo = photo_file
+            print(f'[PHOTO DEBUG] Photo assigned to student')
+        else:
+            print(f'[PHOTO DEBUG] No photo in request.FILES. Keys: {list(request.FILES.keys())}')
         
         student.save()
         
@@ -1359,10 +1806,9 @@ def export_admitted_students_excel(request):
     headers = [
         'S.No', 'Full Name', 'Student Name', 'Father Name', 'Surname', 'Mother Name',
         'Date of Birth', 'Mobile (Own)', 'Parent Mobile', 'Gender', 'Marital Status',
-        'Course', 'Custom Course', 'Educational Qualification',
+        'Course', 'Batch Month', 'Batch Year', 'Educational Qualification',
         'Address', 'City', 'Tehsil/Block', 'District', 'Pin Code',
-        'Total Fees (₹)', 'Paid Fees (₹)', 'Remaining Fees (₹)', 'Fees % Paid',
-        'Admission Date'
+        'Total Fees (₹)', 'Paid Fees First Installment', 'Admission Date'
     ]
     
     header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
@@ -1388,19 +1834,17 @@ def export_admitted_students_excel(request):
         ws.cell(row=row_num, column=10).value = student.gender
         ws.cell(row=row_num, column=11).value = student.marital_status
         ws.cell(row=row_num, column=12).value = student.course
-        ws.cell(row=row_num, column=13).value = student.custom_course or ''
-        ws.cell(row=row_num, column=14).value = student.educational_qualification
-        ws.cell(row=row_num, column=15).value = student.address
-        ws.cell(row=row_num, column=16).value = student.city
-        ws.cell(row=row_num, column=17).value = student.tehsil_block
-        ws.cell(row=row_num, column=18).value = student.district
-        ws.cell(row=row_num, column=19).value = student.pin_code
-        ws.cell(row=row_num, column=20).value = float(student.total_fees)
-        ws.cell(row=row_num, column=21).value = float(student.paid_fees)
-        ws.cell(row=row_num, column=22).value = float(student.remaining_fees)
-        percentage = (student.paid_fees / student.total_fees * 100) if student.total_fees else 0
-        ws.cell(row=row_num, column=23).value = f"{percentage:.2f}%"
-        ws.cell(row=row_num, column=24).value = student.admission_date.strftime('%d-%m-%Y %I:%M %p')
+        ws.cell(row=row_num, column=13).value = student.batch_month or ''
+        ws.cell(row=row_num, column=14).value = student.batch_year or ''
+        ws.cell(row=row_num, column=15).value = student.educational_qualification
+        ws.cell(row=row_num, column=16).value = student.address
+        ws.cell(row=row_num, column=17).value = student.city
+        ws.cell(row=row_num, column=18).value = student.tehsil_block
+        ws.cell(row=row_num, column=19).value = student.district
+        ws.cell(row=row_num, column=20).value = student.pin_code
+        ws.cell(row=row_num, column=21).value = float(student.total_fees)
+        ws.cell(row=row_num, column=22).value = float(student.first_installment) if student.first_installment else 0
+        ws.cell(row=row_num, column=23).value = student.admission_date.strftime('%d-%m-%Y')
     
     for column in ws.columns:
         max_length = 0
@@ -1474,17 +1918,58 @@ def delete_admitted_students(request):
         
         delete_count = students_to_delete.count()
         
-        with transaction.atomic():
-            for student in students_to_delete:
-                if student.photo:
-                    try:
-                        if student.photo.path:
-                            if os.path.isfile(student.photo.path):
-                                os.remove(student.photo.path)
-                    except Exception as e:
-                        print(f"Error deleting photo: {str(e)}")
+        try:
+            from django.db import connection
             
-            students_to_delete.delete()
+            # For SQLite, disable foreign key constraints BEFORE the transaction
+            fk_disabled = False
+            if connection.settings_dict['ENGINE'] == 'django.db.backends.sqlite3':
+                cursor = connection.cursor()
+                cursor.execute('PRAGMA foreign_keys = OFF;')
+                connection.commit()
+                fk_disabled = True
+            
+            try:
+                with transaction.atomic():
+                    # Delete related records in proper order
+                    for student in students_to_delete:
+                        try:
+                            # Delete fee payments
+                            FeePayment.objects.filter(student=student).delete()
+                            
+                            # Delete attendance records
+                            Attendance.objects.filter(student=student).delete()
+                            
+                            # Delete finance details
+                            StudentFinanceDetail.objects.filter(student=student).delete()
+                            
+                            # Delete photo file if exists
+                            if student.photo:
+                                try:
+                                    if student.photo.path:
+                                        if os.path.isfile(student.photo.path):
+                                            os.remove(student.photo.path)
+                                except Exception as e:
+                                    print(f"Error deleting photo for student {student.id}: {str(e)}")
+                            
+                            # Finally delete the student
+                            student.delete()
+                        except Exception as e:
+                            print(f"Error deleting student {student.id}: {str(e)}")
+                            continue
+            finally:
+                # Re-enable foreign key constraints for SQLite
+                if fk_disabled:
+                    cursor = connection.cursor()
+                    cursor.execute('PRAGMA foreign_keys = ON;')
+                    connection.commit()
+                    
+        except Exception as e:
+            print(f"Error in delete transaction: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Error deleting students: {str(e)}'
+            }, status=500)
         
         return JsonResponse({
             'success': True,
@@ -1498,6 +1983,7 @@ def delete_admitted_students(request):
             'error': 'Invalid JSON data'
         }, status=400)
     except Exception as e:
+        print(f"Delete error: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': f'An error occurred: {str(e)}'
@@ -1694,8 +2180,11 @@ def statistics_view(request):
 @login_required
 @login_required
 def student_finance_details(request):
-    """Student Finance Details section"""
+    """Student Finance Details section with filtering and sorting"""
     selected_year = request.GET.get('year', '')
+    search_query = request.GET.get('search', '')
+    sort_by = request.GET.get('sort', 'name')  # default sort by name
+    course_filter = request.GET.get('course', '')
     
     # Get available years from AdmittedStudent
     available_years = (
@@ -1706,10 +2195,32 @@ def student_finance_details(request):
         .order_by('-year')
     )
     
-    # Get all admitted students for the selected year
+    # Get all available courses
+    available_courses = (
+        AdmittedStudent.objects
+        .values_list('course', flat=True)
+        .distinct()
+        .order_by('course')
+    )
+    
+    # Get all admitted students with filters
     students = AdmittedStudent.objects.all()
+    
+    # Apply year filter
     if selected_year:
         students = students.filter(admission_date__year=selected_year)
+    
+    # Apply course filter
+    if course_filter:
+        students = students.filter(course=course_filter)
+    
+    # Apply search filter (search by name or mobile)
+    if search_query:
+        students = students.filter(
+            Q(full_name__icontains=search_query) |
+            Q(student_name__icontains=search_query) |
+            Q(mobile_own__icontains=search_query)
+        )
     
     finance_data = []
     total_profit = Decimal('0.00')
@@ -1805,11 +2316,31 @@ def student_finance_details(request):
             'payment_history': payment_history,
         })
     
+    # Apply sorting
+    if sort_by == 'name':
+        finance_data.sort(key=lambda x: x['learner_name'])
+    elif sort_by == 'mobile':
+        finance_data.sort(key=lambda x: x['mobile_no'] or '')
+    elif sort_by == 'course':
+        finance_data.sort(key=lambda x: x['course'])
+    elif sort_by == 'batch':
+        finance_data.sort(key=lambda x: x['batch'])
+    elif sort_by == 'total_paid':
+        finance_data.sort(key=lambda x: float(x['total_paid'] or 0), reverse=True)
+    elif sort_by == 'balance':
+        finance_data.sort(key=lambda x: float(x['balance_fees'] or 0), reverse=True)
+    elif sort_by == 'profit':
+        finance_data.sort(key=lambda x: float(x['profit'] or 0), reverse=True)
+    
     context = {
         'finance_data': finance_data,
         'total_profit': total_profit,
         'selected_year': selected_year,
         'available_years': available_years,
+        'available_courses': available_courses,
+        'search_query': search_query,
+        'course_filter': course_filter,
+        'sort_by': sort_by,
         'active_page': 'student_finance_details',
     }
     
@@ -3391,3 +3922,45 @@ def get_student_detail_batch(request, student_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ================= UPDATE BATCH CAPACITY =================
+@login_required
+def update_batch_capacity(request):
+    """Update batch capacity"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
+    
+    try:
+        data = json.loads(request.body)
+        batch_id = data.get('batch_id')
+        new_capacity = data.get('capacity')
+        
+        if not batch_id or not new_capacity:
+            return JsonResponse({'success': False, 'error': 'Batch ID and capacity are required'}, status=400)
+        
+        # Get the batch
+        batch = Batch.objects.get(id=batch_id)
+        
+        # Update capacity
+        batch.capacity = int(new_capacity)
+        batch.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Batch capacity updated to {new_capacity}',
+            'batch': {
+                'id': batch.id,
+                'capacity': batch.capacity
+            }
+        })
+    
+    except Batch.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Batch not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': f'Invalid capacity value: {str(e)}'}, status=400)
+    except Exception as e:
+        print(f"Error updating batch capacity: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

@@ -22,22 +22,8 @@
             </div>
         </div>
         
-        <!-- Year Filter and Export in Header -->
-        <div class="finance-header-actions">
-            <form method="get" class="year-filter-form">
-                <label for="year-select">
-                    <span class="filter-label">Year:</span>
-                </label>
-                <select name="year" id="year-select" class="year-select" onchange="this.form.submit()">
-                    <option value="">All Years</option>
-                    {% for year in available_years %}
-                        <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>
-                            {{ year }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </form>
-            
+        <!-- Right Side: Total Profit and Export CSV -->
+        <div class="header-right-section">
             <!-- Total Profit Display -->
             <div class="total-profit-box">
                 <h3>Total Profit</h3>
@@ -48,6 +34,72 @@
                 📥 Export to CSV
             </button>
         </div>
+    </div>
+    
+    <!-- Filters Section Below -->
+    <div class="filters-section">
+        <form method="get" class="filter-form">
+            <!-- Year Filter -->
+            <div class="filter-group">
+                <label for="year-select">
+                    <span class="filter-label">Year:</span>
+                </label>
+                <select name="year" id="year-select" class="filter-select">
+                    <option value="">All Years</option>
+                    {% for year in available_years %}
+                        <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Course Filter -->
+            <div class="filter-group">
+                <label for="course-select">
+                    <span class="filter-label">Course:</span>
+                </label>
+                <select name="course" id="course-select" class="filter-select">
+                    <option value="">All Courses</option>
+                    {% for course in available_courses %}
+                        <option value="{{ course }}" {% if course == course_filter %}selected{% endif %}>
+                            {{ course }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Search Filter -->
+            <div class="filter-group">
+                <label for="search-input">
+                    <span class="filter-label">Search:</span>
+                </label>
+                <input type="text" name="search" id="search-input" class="filter-input" 
+                       placeholder="Name or Mobile" value="{{ search_query }}">
+            </div>
+            
+            <!-- Sort By Filter -->
+            <div class="filter-group">
+                <label for="sort-select">
+                    <span class="filter-label">Sort By:</span>
+                </label>
+                <select name="sort" id="sort-select" class="filter-select">
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                    <option value="mobile" {% if sort_by == 'mobile' %}selected{% endif %}>Mobile</option>
+                    <option value="course" {% if sort_by == 'course' %}selected{% endif %}>Course</option>
+                    <option value="batch" {% if sort_by == 'batch' %}selected{% endif %}>Batch</option>
+                    <option value="total_paid" {% if sort_by == 'total_paid' %}selected{% endif %}>Total Paid (Highest)</option>
+                    <option value="balance" {% if sort_by == 'balance' %}selected{% endif %}>Balance (Highest)</option>
+                    <option value="profit" {% if sort_by == 'profit' %}selected{% endif %}>Profit (Highest)</option>
+                </select>
+            </div>
+            
+            <!-- Apply Filters Button -->
+            <button type="submit" class="apply-filters-btn">🔍 Apply Filters</button>
+            
+            <!-- Reset Filters Button -->
+            <a href="{% url 'student_finance_details' %}" class="reset-filters-btn">⟲ Reset</a>
+        </form>
     </div>
 </div>
 {% endblock %}

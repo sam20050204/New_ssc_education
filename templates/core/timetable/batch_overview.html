@@ -53,7 +53,7 @@
         </div>
         <div class="batch-grid" id="theory-batches-grid">
             {% for batch in theory_batches %}
-            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Theory" data-batch-id="{{ batch.id }}" onclick="openBatchStudentsModal('Theory', '{{ batch.slot }}', '{{ batch.display }}')">
+            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Theory" data-batch-id="{{ batch.id }}" data-capacity="{{ batch.capacity }}" data-display="{{ batch.display }}" onclick="handleBatchClick(this)">
                 <div class="batch-card-header">
                     <div class="batch-time" title="Click to view students">
                         {{ batch.display }}
@@ -92,7 +92,7 @@
         </div>
         <div class="batch-grid" id="practical-batches-grid">
             {% for batch in practical_batches %}
-            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Practical" data-batch-id="{{ batch.id }}" onclick="openBatchStudentsModal('Practical', '{{ batch.slot }}', '{{ batch.display }}')">
+            <div class="batch-card" data-slot="{{ batch.slot }}" data-type="Practical" data-batch-id="{{ batch.id }}" data-capacity="{{ batch.capacity }}" data-display="{{ batch.display }}" onclick="handleBatchClick(this)">
                 <div class="batch-card-header">
                     <div class="batch-time" title="Click to view students">
                         {{ batch.display }}
@@ -909,9 +909,14 @@
 <!-- Batch Students Modal -->
 <div id="batchStudentsModal" class="modal" style="display: none;">
     <div class="modal-content modal-lg">
-        <div class="modal-header">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h2 id="batch-modal-title">Theory Batch - 8:00 AM - 9:00 AM</h2>
-            <button class="close-btn" onclick="closeBatchStudentsModal()">&times;</button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-warning btn-sm" onclick="openEditBatchCapacityModal()" title="Edit batch capacity">
+                    ✏️ Edit Capacity
+                </button>
+                <button class="close-btn" onclick="closeBatchStudentsModal()">&times;</button>
+            </div>
         </div>
         <div class="modal-body">
             <div class="batch-students-table-wrapper">
@@ -935,6 +940,37 @@
             <button type="button" class="btn btn-success" onclick="openAddStudentToBatchModal()">➕ Add Student</button>
             <button type="button" class="btn btn-primary" onclick="saveBatchStudentChanges()">💾 Save Changes</button>
             <button type="button" class="btn btn-secondary" onclick="closeBatchStudentsModal()">❌ Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Batch Capacity Modal -->
+<div id="editBatchCapacityModal" class="modal" style="display: none;">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h2>Edit Batch Capacity</h2>
+            <button class="close-btn" onclick="closeEditBatchCapacityModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editCapacityForm">
+                <div class="form-group">
+                    <label for="batchCapacityInput">New Capacity <span style="color: red;">*</span></label>
+                    <input type="number" id="batchCapacityInput" min="1" max="500" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Enter the maximum number of students this batch can accommodate
+                    </small>
+                </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label style="color: #666; font-size: 13px;">
+                        <strong>Current:</strong> <span id="currentCapacityDisplay">0</span> | 
+                        <strong>Students:</strong> <span id="currentStudentCountDisplay">0</span>
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn btn-primary" onclick="saveEditBatchCapacity()">💾 Save Capacity</button>
+            <button type="button" class="btn btn-secondary" onclick="closeEditBatchCapacityModal()">❌ Cancel</button>
         </div>
     </div>
 </div>
@@ -1267,7 +1303,7 @@ function updateTheoryBatches(batches) {
         const total = parseInt(document.getElementById('stat-total').textContent) || 1;
         const width = Math.max(batch.count * 100 / total, 5);
         html += `
-            <div class="batch-card" data-slot="${batch.slot}" data-type="Theory" data-batch-id="${batch.id}" onclick="openBatchStudentsModal('Theory', '${batch.slot}', '${batch.display}')">
+            <div class="batch-card" data-slot="${batch.slot}" data-type="Theory" data-batch-id="${batch.id}" data-capacity="${batch.capacity}" data-display="${batch.display}" onclick="handleBatchClick(this)">
                 <div class="batch-card-header">
                     <div class="batch-time" title="Click to view students">
                         ${batch.display}
@@ -1309,7 +1345,7 @@ function updatePracticalBatches(batches) {
         const total = parseInt(document.getElementById('stat-total').textContent) || 1;
         const width = Math.max(batch.count * 100 / total, 5);
         html += `
-            <div class="batch-card" data-slot="${batch.slot}" data-type="Practical" data-batch-id="${batch.id}" onclick="openBatchStudentsModal('Practical', '${batch.slot}', '${batch.display}')">
+            <div class="batch-card" data-slot="${batch.slot}" data-type="Practical" data-batch-id="${batch.id}" data-capacity="${batch.capacity}" data-display="${batch.display}" onclick="handleBatchClick(this)">
                 <div class="batch-card-header">
                     <div class="batch-time" title="Click to view students">
                         ${batch.display}
@@ -1416,16 +1452,81 @@ let currentBatchData = {
     type: '',
     slot: '',
     display: '',
-    students: []
+    students: [],
+    batchId: '',
+    capacity: 0
 };
 
-async function openBatchStudentsModal(batchType, timeSlot, displayName) {
-    console.log('Opening batch modal:', batchType, timeSlot, displayName);
+function handleBatchClick(element) {
+    console.log('=== handleBatchClick called ===');
+    console.log('Element:', element);
+    console.log('Element outerHTML:', element.outerHTML.substring(0, 500));
+    
+    const batchType = element.getAttribute('data-type');
+    const timeSlot = element.getAttribute('data-slot');
+    const batchId = element.getAttribute('data-batch-id');
+    const capacity = element.getAttribute('data-capacity');
+    const display = element.getAttribute('data-display');
+    
+    console.log('Data attributes retrieved:', {
+        batchType, timeSlot, batchId, capacity, display
+    });
+    
+    // Fallback: if data attributes are empty, try getting from dataset
+    if (!batchType) console.warn('WARNING: batchType is missing!');
+    if (!timeSlot) console.warn('WARNING: timeSlot is missing!');
+    if (!batchId) console.warn('WARNING: batchId is missing!');
+    if (!capacity) console.warn('WARNING: capacity is missing!');
+    if (!display) console.warn('WARNING: display is missing!');
+    
+    openBatchStudentsModal(batchType, timeSlot, display, batchId, capacity);
+}
+
+async function openBatchStudentsModal(batchType, timeSlot, displayName, batchId, capacity) {
+    console.log('=== openBatchStudentsModal called ===');
+    console.log('Received parameters:', {
+        batchType, timeSlot, displayName, batchId, capacity
+    });
+    
+    // Parse as integers - batchId and capacity come as strings from data attributes
+    const parsedBatchId = parseInt(batchId);
+    const parsedCapacity = parseInt(capacity);
+    
+    console.log('After parsing:', {
+        batchId: parsedBatchId,
+        capacity: parsedCapacity,
+        isNaN_batchId: isNaN(parsedBatchId),
+        isNaN_capacity: isNaN(parsedCapacity)
+    });
+    
+    if (isNaN(parsedBatchId)) {
+        console.error('ERROR: batchId is NaN! Original value:', batchId);
+        showAlert('Error: Invalid batch ID. Please try again.', 'error');
+        return;
+    }
+    
     currentBatchData.type = batchType;
     currentBatchData.slot = timeSlot;
     currentBatchData.display = displayName;
+    currentBatchData.batchId = parsedBatchId;
+    currentBatchData.capacity = parsedCapacity || 0;
+    
+    console.log('currentBatchData updated:', currentBatchData);
     
     document.getElementById('batch-modal-title').textContent = `${batchType} Batch - ${displayName}`;
+    
+    // First, try to show the modal immediately
+    const modal = document.getElementById('batchStudentsModal');
+    console.log('Modal element:', modal);
+    
+    if (!modal) {
+        console.error('Modal element not found!');
+        alert('Modal not found in DOM');
+        return;
+    }
+    
+    modal.style.display = 'block';
+    console.log('Modal display set to block');
     
     try {
         const params = new URLSearchParams({
@@ -1441,20 +1542,22 @@ async function openBatchStudentsModal(batchType, timeSlot, displayName) {
             }
         });
         
-        console.log('Response status:', response.status);
+        console.log('Fetch response status:', response.status);
+        
         const data = await response.json();
-        console.log('Response data:', data);
+        
+        console.log('Fetch response data:', data);
         
         if (data.success) {
             currentBatchData.students = data.students;
             loadBatchStudentsTable(data.students);
-            document.getElementById('batchStudentsModal').style.display = 'block';
-            console.log('Modal should be visible now');
+            console.log('Table loaded with', data.students.length, 'students');
         } else {
+            console.error('Fetch returned success=false:', data.error);
             showAlert(data.error || 'Error loading batch students', 'error');
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error loading batch students:', error);
         showAlert('Error loading batch students: ' + error.message, 'error');
     }
 }
@@ -1527,7 +1630,99 @@ function loadBatchStudentsTable(students) {
 
 function closeBatchStudentsModal() {
     document.getElementById('batchStudentsModal').style.display = 'none';
-    currentBatchData = { type: '', slot: '', display: '', students: [] };
+    currentBatchData = { type: '', slot: '', display: '', students: [], batchId: '', capacity: 0 };
+}
+
+function openEditBatchCapacityModal() {
+    console.log('=== openEditBatchCapacityModal called ===');
+    console.log('currentBatchData:', currentBatchData);
+    console.log('currentBatchData.batchId type:', typeof currentBatchData.batchId);
+    console.log('currentBatchData.batchId value:', currentBatchData.batchId);
+    
+    // Check if batchId is valid (can be 0, but not undefined, null, or empty string)
+    if (currentBatchData.batchId === undefined || currentBatchData.batchId === null || currentBatchData.batchId === '') {
+        showAlert('Error: Batch ID not found. Please close this modal and click on the batch again.', 'error');
+        console.error('Batch ID is invalid:', currentBatchData.batchId);
+        return;
+    }
+    
+    const capacityInput = document.getElementById('batchCapacityInput');
+    const capacityDisplay = document.getElementById('currentCapacityDisplay');
+    const studentCountDisplay = document.getElementById('currentStudentCountDisplay');
+    const editModal = document.getElementById('editBatchCapacityModal');
+    
+    console.log('DOM elements found:', {
+        capacityInput: !!capacityInput,
+        capacityDisplay: !!capacityDisplay,
+        studentCountDisplay: !!studentCountDisplay,
+        editModal: !!editModal
+    });
+    
+    // Set current capacity and student count
+    if (capacityInput) capacityInput.value = currentBatchData.capacity;
+    if (capacityDisplay) capacityDisplay.textContent = currentBatchData.capacity;
+    if (studentCountDisplay) studentCountDisplay.textContent = currentBatchData.students.length;
+    
+    console.log('Modal element style before:', editModal ? editModal.style.display : 'N/A');
+    
+    // Show modal
+    if (editModal) {
+        editModal.style.display = 'block';
+        console.log('Modal element style after:', editModal.style.display);
+    } else {
+        console.error('Edit modal element not found!');
+    }
+}
+
+function closeEditBatchCapacityModal() {
+    document.getElementById('editBatchCapacityModal').style.display = 'none';
+}
+
+async function saveEditBatchCapacity() {
+    const newCapacity = document.getElementById('batchCapacityInput').value;
+    
+    if (!newCapacity || newCapacity < 1) {
+        showAlert('Please enter a valid capacity', 'error');
+        return;
+    }
+    
+    if (newCapacity < currentBatchData.students.length) {
+        if (!confirm(`⚠️ New capacity (${newCapacity}) is less than current students (${currentBatchData.students.length}). Continue anyway?`)) {
+            return;
+        }
+    }
+    
+    try {
+        const response = await fetch('/batch/update-capacity/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                batch_id: currentBatchData.batchId,
+                capacity: parseInt(newCapacity)
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('✅ Batch capacity updated successfully!', 'success');
+            currentBatchData.capacity = parseInt(newCapacity);
+            closeEditBatchCapacityModal();
+            
+            // Refresh the batch display
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showAlert('Error: ' + (data.error || 'Failed to update capacity'), 'error');
+        }
+    } catch (error) {
+        console.error('Error updating capacity:', error);
+        showAlert('Error updating capacity: ' + error.message, 'error');
+    }
 }
 
 async function saveBatchStudentChanges() {
@@ -1609,27 +1804,22 @@ function removeStudentFromBatch(studentId) {
 // ===== STUDENT DETAIL MODAL =====
 async function viewStudentDetail(studentId) {
     try {
-        console.log('Fetching student detail for ID:', studentId);
         const response = await fetch(`/admission/${studentId}/batch-detail/`, {
             headers: {
                 'X-CSRFToken': CSRF_TOKEN
             }
         });
         
-        console.log('Student detail response status:', response.status);
         const data = await response.json();
-        console.log('Student detail response:', data);
         
         if (data.success) {
             displayStudentDetailModal(data.student);
             document.getElementById('studentDetailModal').style.display = 'block';
-            console.log('Student detail modal displayed');
         } else {
-            console.error('Error response:', data);
             showAlert(data.error || 'Error loading student details', 'error');
         }
     } catch (error) {
-        console.error('Error in viewStudentDetail:', error);
+        console.error('Error loading student details:', error);
         showAlert('Error loading student details: ' + error.message, 'error');
     }
 }
@@ -1748,29 +1938,21 @@ function closeStudentDetailModal() {
 // ===== ADD STUDENT TO BATCH =====
 async function openAddStudentToBatchModal() {
     try {
-        console.log('Opening add student modal...');
-        // Get all students
         const response = await fetch('/admission/all/', {
             headers: {
                 'X-CSRFToken': CSRF_TOKEN
             }
         });
         
-        console.log('Add student response status:', response.status);
         const data = await response.json();
-        console.log('Add student response data:', data);
         
         if (data.success && data.students) {
             const searchInput = document.getElementById('student-search-input');
             const currentStudentIds = currentBatchData.students.map(s => s.id);
             
-            console.log('Current batch students:', currentStudentIds);
-            
             // Filter out already added students and store for search
             const availableStudents = data.students.filter(s => !currentStudentIds.includes(s.id));
             window.allAvailableStudents = availableStudents;
-            
-            console.log('Available students:', availableStudents);
             
             // Clear search input
             searchInput.value = '';
@@ -1784,7 +1966,7 @@ async function openAddStudentToBatchModal() {
             showAlert('No students available or error loading students', 'error');
         }
     } catch (error) {
-        console.error('Error in openAddStudentToBatchModal:', error);
+        console.error('Error loading students:', error);
         showAlert('Error loading students: ' + error.message, 'error');
     }
 }
@@ -1871,20 +2053,12 @@ async function addStudentToBatch() {
     const studentIdInput = document.getElementById('add-student-select');
     const studentId = studentIdInput.value;
     
-    console.log('=== addStudentToBatch called ===');
-    console.log('Student ID input value:', studentId);
-    console.log('Current batch data:', currentBatchData);
-    
-    // Alert for debugging
-    alert('Add Student clicked. Student ID: ' + studentId + ', Batch Type: ' + (currentBatchData ? currentBatchData.type : 'UNDEFINED'));
-    
     if (!studentId || studentId === '') {
         showAlert('Please select a student from the suggestions', 'error');
         return;
     }
     
     if (!currentBatchData || !currentBatchData.type || !currentBatchData.slot) {
-        console.error('Invalid batch data:', currentBatchData);
         showAlert('Error: Batch information not available. Please close and reopen the batch.', 'error');
         return;
     }
@@ -1895,11 +2069,6 @@ async function addStudentToBatch() {
         const request = {};
         request[fieldName] = currentBatchData.slot;
         
-        console.log('Field name:', fieldName);
-        console.log('Batch slot:', currentBatchData.slot);
-        console.log('Sending request to /admission/', studentId, '/update/');
-        console.log('Request body:', JSON.stringify(request));
-        
         const response = await fetch(`/admission/${studentId}/update/`, {
             method: 'POST',
             headers: {
@@ -1909,14 +2078,11 @@ async function addStudentToBatch() {
             body: JSON.stringify(request)
         });
         
-        console.log('Response status:', response.status);
-        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('Response data:', data);
         
         if (data.success) {
             showAlert('Student added to batch successfully!', 'success');
@@ -1928,15 +2094,13 @@ async function addStudentToBatch() {
             showAlert(data.error || 'Error adding student to batch', 'error');
         }
     } catch (error) {
-        console.error('Error in addStudentToBatch:', error);
+        console.error('Error adding student to batch:', error);
         showAlert('Error adding student: ' + error.message, 'error');
     }
 }
 
-// Wrapper function that will definitely be called from button
+// Wrapper function for button click handler
 function addStudentToBatchButtonClicked() {
-    console.log('BUTTON CLICKED - addStudentToBatchButtonClicked called');
-    alert('Button was clicked!');
     addStudentToBatch();
 }
 
@@ -1962,19 +2126,11 @@ setInterval(updateBatchList, 10000);
 
 // Initialize summary table on page load
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('=== Batch Overview Page Loaded ===');
-    console.log('addStudentToBatch function exists:', typeof addStudentToBatch);
-    console.log('openAddStudentToBatchModal function exists:', typeof openAddStudentToBatchModal);
     updateBatchList();
 });
 
-// Test that functions are available globally
-console.log('Script loaded. Functions available:');
-console.log('- addStudentToBatch:', typeof addStudentToBatch);
-console.log('- addStudentToBatchButtonClicked:', typeof addStudentToBatchButtonClicked);
-console.log('- openAddStudentToBatchModal:', typeof openAddStudentToBatchModal);
-console.log('- filterStudentOptions:', typeof filterStudentOptions);
-console.log('- selectStudentFromSuggestion:', typeof selectStudentFromSuggestion);
+// Keep functions registered for debugging if needed
+console.log('Batch overview page loaded');
 </script>
 {% endblock %}
 

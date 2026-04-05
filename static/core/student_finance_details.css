@@ -22,8 +22,8 @@
     padding: 10px 15px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
+    align-items: flex-start;
+    flex-wrap: nowrap;
     gap: 15px;
 }
 
@@ -61,10 +61,142 @@
 .finance-header-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+/* Header Right Section - Total Profit and Export CSV */
+.header-right-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* Filters Section Below Title and Right Section */
+.filters-section {
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.filter-form {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 12px 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     flex-wrap: wrap;
 }
 
+.filter-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    color: #333;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.filter-select,
+.filter-input {
+    padding: 6px 10px;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    background: white;
+    color: #333;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.filter-select {
+    min-width: 120px;
+}
+
+.filter-input {
+    min-width: 130px;
+    cursor: text;
+    padding: 7px 11px;
+}
+
+.filter-select:hover,
+.filter-input:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.filter-select:focus,
+.filter-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: white;
+}
+
+.apply-filters-btn {
+    padding: 7px 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.apply-filters-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.apply-filters-btn:active {
+    transform: translateY(0);
+}
+
+.reset-filters-btn {
+    padding: 7px 12px;
+    background: #ecf0f1;
+    color: #555;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.reset-filters-btn:hover {
+    background: #d5dbdb;
+    border-color: #99a0a0;
+}
+
+/* Old year-filter-form styles for backward compatibility */
 .year-filter-form {
     display: flex;
     align-items: center;
