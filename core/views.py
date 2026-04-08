@@ -913,9 +913,9 @@ def admitted_students(request):
     
     # Optimized query with only required fields to reduce database hits
     students = AdmittedStudent.objects.only(
-        'id', 'full_name', 'student_name', 'mobile_own', 'course', 
-        'admission_date', 'city', 'total_fees', 'paid_fees'
-    ).order_by('-admission_date')
+        'id', 'full_name', 'student_name', 'father_name', 'surname', 'mobile_own', 'course', 
+        'admission_date', 'city', 'total_fees', 'paid_fees', 'photo', 'batch_month', 'batch_year'
+    ).order_by('surname', 'student_name')
     
     if search:
         students = students.filter(
@@ -1121,8 +1121,18 @@ def update_student_admitted(request, student_id):
             if total_fees:
                 student.total_fees = Decimal(total_fees)
         
-        # Handle photo upload
-        if 'photo' in request.FILES:
+        # Handle photo removal flag
+        if data.get('remove_photo') == 'true':
+            print(f'[PHOTO DEBUG] Remove photo flag detected')
+            if student.photo:
+                try:
+                    print(f'[PHOTO DEBUG] Deleting photo: {student.photo}')
+                    student.photo.delete()
+                    student.photo = None
+                except Exception as e:
+                    print(f'[PHOTO DEBUG] Error deleting photo: {e}')
+        # Handle photo upload (only if not removing)
+        elif 'photo' in request.FILES:
             photo_file = request.FILES['photo']
             print(f'[PHOTO DEBUG] Photo file found: {photo_file.name} ({photo_file.size} bytes)')
             # Delete old photo if it exists
@@ -1136,7 +1146,7 @@ def update_student_admitted(request, student_id):
             student.photo = photo_file
             print(f'[PHOTO DEBUG] Photo assigned to student')
         else:
-            print(f'[PHOTO DEBUG] No photo in request.FILES. Keys: {list(request.FILES.keys())}')
+            print(f'[PHOTO DEBUG] No photo action. Remove flag: {data.get("remove_photo")}, Files: {list(request.FILES.keys())}')
         
         student.save()
         

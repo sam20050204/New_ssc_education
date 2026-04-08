@@ -798,3 +798,44 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// ===================== REMOVE PHOTO FUNCTION =====================
+function removeStudentPhoto() {
+    // Get the current student ID
+    const studentId = document.getElementById('studentId').value;
+    
+    if (!studentId) {
+        alert('Please select a student first');
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to remove this student\'s photo?')) {
+        return;
+    }
+    
+    // Clear the photo input
+    const photoInput = document.getElementById('photoInput');
+    photoInput.value = '';
+    
+    // Set a flag to indicate photo should be removed
+    let removePhotoFlag = document.getElementById('removePhotoFlag');
+    if (!removePhotoFlag) {
+        removePhotoFlag = document.createElement('input');
+        removePhotoFlag.type = 'hidden';
+        removePhotoFlag.id = 'removePhotoFlag';
+        removePhotoFlag.name = 'remove_photo';
+        removePhotoFlag.value = 'true';
+        document.getElementById('studentForm').appendChild(removePhotoFlag);
+    } else {
+        removePhotoFlag.value = 'true';
+    }
+    
+    // Show a placeholder in the modal
+    const modalPhoto = document.getElementById('modalPhoto');
+    const studentName = document.getElementById('studentName').value;
+    const firstLetter = (studentName || 'S').charAt(0).toUpperCase();
+    modalPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="%23667eea"/><text x="50%" y="50%" font-size="60" fill="white" text-anchor="middle" dy=".3em">${firstLetter}</text></svg>`;
+    
+    // Show success notification
+    showNotification('✅ Photo marked for removal - Click Save to confirm', 'success');
+}
