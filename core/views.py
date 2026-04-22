@@ -2016,8 +2016,12 @@ def backup_page(request):
 
 @login_required
 def export_database(request):
-    """Export database as SQLite file"""
+    """Export database as SQLite file with photos"""
     try:
+        import zipfile
+        import tempfile
+        from io import BytesIO
+        
         db_path = settings.DATABASES['default']['NAME']
         
         # Convert Path object to string
@@ -2028,11 +2032,30 @@ def export_database(request):
             return JsonResponse({'success': False, 'error': 'Database file not found'}, status=500)
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_name = f'database_backup_{timestamp}.db'
+        backup_name = f'ssc_education_backup_{timestamp}.zip'
         
-        with open(db_path, 'rb') as f:
-            response = HttpResponse(f.read(), content_type='application/x-sqlite3')
-            response['Content-Disposition'] = f'attachment; filename="{backup_name}"'
+        # Create a ZIP file in memory
+        zip_buffer = BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # Add database file to ZIP
+            db_filename = os.path.basename(db_path)
+            zip_file.write(db_path, arcname=f'database/{db_filename}')
+            
+            # Add student photos if they exist
+            media_path = os.path.join(settings.BASE_DIR, 'media', 'student_photos')
+            if os.path.exists(media_path):
+                for root, dirs, files in os.walk(media_path):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        # Calculate relative path for ZIP
+                        relative_path = os.path.relpath(file_path, settings.BASE_DIR)
+                        zip_file.write(file_path, arcname=relative_path)
+        
+        # Prepare response
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{backup_name}"'
         
         return response
     
@@ -2045,7 +2068,7 @@ def export_database(request):
 
 @login_required
 def import_database(request):
-    """Import database from uploaded file (merge/update instead of overwrite)"""
+    """Import database and photos from backup ZIP file (merge/update instead of overwrite)"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
     
@@ -2054,20 +2077,21 @@ def import_database(request):
     
     uploaded_file = request.FILES['database_file']
     
-    # Validate file
-    valid_extensions = ['db', 'sqlite', 'sqlite3']
+    # Validate file - now accepts ZIP or raw database files
+    valid_extensions = ['db', 'sqlite', 'sqlite3', 'zip']
     file_extension = uploaded_file.name.split('.')[-1].lower()
     
     if file_extension not in valid_extensions:
-        return JsonResponse({'success': False, 'error': 'Invalid file type. Only .db, .sqlite, or .sqlite3 files are allowed.'}, status=400)
+        return JsonResponse({'success': False, 'error': 'Invalid file type. Only .db, .sqlite, .sqlite3, or .zip files are allowed.'}, status=400)
     
-    max_size = 100 * 1024 * 1024  # 100 MB
+    max_size = 500 * 1024 * 1024  # 500 MB for ZIP files with photos
     if uploaded_file.size > max_size:
-        return JsonResponse({'success': False, 'error': 'File too large. Maximum size is 100 MB.'}, status=400)
+        return JsonResponse({'success': False, 'error': 'File too large. Maximum size is 500 MB.'}, status=400)
     
     try:
         import sqlite3
         import tempfile
+        import zipfile
         
         db_path = settings.DATABASES['default']['NAME']
         
@@ -2077,12 +2101,60 @@ def import_database(request):
         backup_path = os.path.join(settings.BASE_DIR, backup_name)
         shutil.copy2(db_path, backup_path)
         
-        # Save uploaded file to temporary location
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp_file:
-            tmp_file.write(uploaded_file.read())
-            temp_db_path = tmp_file.name
+        # Create backup of current photos before importing
+        photos_backup_path = None
+        media_path = os.path.join(settings.BASE_DIR, 'media', 'student_photos')
+        if os.path.exists(media_path):
+            photos_backup_dir = os.path.join(settings.BASE_DIR, f'student_photos_backup_{timestamp}')
+            shutil.copytree(media_path, photos_backup_dir)
+            photos_backup_path = photos_backup_dir
+        
+        temp_db_path = None
+        temp_dir = None
         
         try:
+            # Check if uploaded file is a ZIP file
+            if file_extension == 'zip':
+                # Extract ZIP file
+                temp_dir = tempfile.mkdtemp()
+                with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+                    zip_ref.extractall(temp_dir)
+                
+                # Find database file in extracted ZIP
+                temp_db_path = None
+                for root, dirs, files in os.walk(temp_dir):
+                    for file in files:
+                        if file.endswith(('.db', '.sqlite', '.sqlite3')):
+                            temp_db_path = os.path.join(root, file)
+                            break
+                    if temp_db_path:
+                        break
+                
+                if not temp_db_path:
+                    return JsonResponse({'success': False, 'error': 'No database file found in backup ZIP'}, status=400)
+                
+                # Extract and restore student photos if they exist in ZIP
+                photos_count = 0
+                for root, dirs, files in os.walk(temp_dir):
+                    for file in files:
+                        if 'student_photos' in root:
+                            src_file = os.path.join(root, file)
+                            # Calculate destination path
+                            rel_path = os.path.relpath(src_file, temp_dir)
+                            dst_file = os.path.join(settings.BASE_DIR, rel_path)
+                            
+                            # Create directory if needed
+                            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+                            
+                            # Copy file
+                            shutil.copy2(src_file, dst_file)
+                            photos_count += 1
+            else:
+                # Handle raw database file upload
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp_file:
+                    tmp_file.write(uploaded_file.read())
+                    temp_db_path = tmp_file.name
+            
             # Merge data from imported database into current database
             current_conn = sqlite3.connect(db_path)
             imported_conn = sqlite3.connect(temp_db_path)
@@ -2161,15 +2233,22 @@ def import_database(request):
             current_conn.close()
             imported_conn.close()
             
+            # Prepare success message
+            message = f'Database updated successfully! {merged_count} records merged/updated. Backup saved as {backup_name}'
+            if file_extension == 'zip':
+                message += f'. Student photos restored.'
+            
             return JsonResponse({
                 'success': True,
-                'message': f'Database updated successfully! {merged_count} records merged/updated. Backup saved as {backup_name}'
+                'message': message
             })
         
         finally:
-            # Clean up temporary file
-            if os.path.exists(temp_db_path):
+            # Clean up temporary files
+            if temp_db_path and os.path.exists(temp_db_path):
                 os.remove(temp_db_path)
+            if temp_dir and os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
     
     except Exception as e:
         print(f"Import error: {str(e)}")

@@ -14,7 +14,7 @@ function exportDatabase() {
     
     // Show loading status
     exportStatus.classList.add('show', 'loading');
-    exportStatus.textContent = '⏳ Exporting database...';
+    exportStatus.textContent = '⏳ Exporting database and photos...';
     
     fetch(EXPORT_URL, {
         method: 'GET',
@@ -46,7 +46,7 @@ function exportDatabase() {
         
         // Get filename from headers if available
         const contentDisposition = response.headers.get('content-disposition');
-        let filename = 'database_backup.db';
+        let filename = 'ssc_education_backup.zip';
         if (contentDisposition) {
             const match = contentDisposition.match(/filename="(.+)"/);
             if (match) filename = match[1];
@@ -70,7 +70,7 @@ function exportDatabase() {
         // Show success message
         exportStatus.classList.remove('loading');
         exportStatus.classList.add('success');
-        exportStatus.textContent = '✅ Database exported successfully! Download started.';
+        exportStatus.textContent = '✅ Database and photos exported successfully! Download started.';
         
         // Reset button after 3 seconds
         setTimeout(() => {
@@ -135,19 +135,19 @@ function handleFileSelect(event) {
     const file = files[0];
     
     // Validate file type
-    const validTypes = ['application/x-sqlite3', 'application/octet-stream'];
-    const validExtensions = ['db', 'sqlite', 'sqlite3'];
+    const validTypes = ['application/x-sqlite3', 'application/octet-stream', 'application/zip'];
+    const validExtensions = ['db', 'sqlite', 'sqlite3', 'zip'];
     const fileExtension = file.name.split('.').pop().toLowerCase();
     
     if (!validExtensions.includes(fileExtension) && !validTypes.includes(file.type)) {
-        showError('Invalid file type. Please select a .db, .sqlite, or .sqlite3 file.');
+        showError('Invalid file type. Please select a .db, .sqlite, .sqlite3, or .zip file.');
         return;
     }
     
-    // Validate file size (max 100 MB)
-    const maxSize = 100 * 1024 * 1024; // 100 MB
+    // Validate file size (max 500 MB for ZIP files with photos)
+    const maxSize = 500 * 1024 * 1024; // 500 MB
     if (file.size > maxSize) {
-        showError('File too large. Maximum size is 100 MB.');
+        showError('File too large. Maximum size is 500 MB.');
         return;
     }
     

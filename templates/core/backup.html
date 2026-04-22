@@ -45,6 +45,7 @@
                             <li>Student finance details</li>
                             <li>Enquiries data</li>
                             <li>Course information</li>
+                            <li><strong>📸 All student photos</strong></li>
                             <li>All other database records</li>
                         </ul>
                     </div>
@@ -54,8 +55,8 @@
                     <span class="info-icon">📋</span>
                     <div class="info-text">
                         <strong>File Format:</strong>
-                        <p>SQLite Database File (.db)</p>
-                        <p class="text-muted">Can be opened with SQLite tools or imported back into this system</p>
+                        <p>Compressed ZIP Archive (.zip)</p>
+                        <p class="text-muted">Contains database file and all student photos. Can be imported back into this system to restore everything.</p>
                     </div>
                 </div>
             </div>
@@ -91,7 +92,7 @@
                     <span class="info-icon">⚠️</span>
                     <div class="info-text">
                         <strong>Important Warning:</strong>
-                        <p>Importing a database will <span class="highlight">replace all current data</span>. Make sure you have a backup of your current database before proceeding.</p>
+                        <p>Importing a backup will <span class="highlight">merge and update your existing data</span>. Current data is automatically backed up before importing.</p>
                     </div>
                 </div>
 
@@ -99,7 +100,8 @@
                     <span class="info-icon">✓</span>
                     <div class="info-text">
                         <strong>Supported Files:</strong>
-                        <p>SQLite Database files (.db, .sqlite, .sqlite3)</p>
+                        <p>ZIP backups (.zip) or raw database files (.db, .sqlite, .sqlite3)</p>
+                        <p class="text-muted">ZIP files include database + all student photos</p>
                     </div>
                 </div>
             </div>
@@ -114,11 +116,11 @@
                 <input 
                     type="file" 
                     id="fileInput" 
-                    accept=".db,.sqlite,.sqlite3" 
+                    accept=".db,.sqlite,.sqlite3,.zip" 
                     style="display: none;"
                     onchange="handleFileSelect(event)"
                 >
-                <p class="upload-subtext file-size">Maximum file size: 100 MB</p>
+                <p class="upload-subtext file-size">Maximum file size: 500 MB</p>
             </div>
 
             <div id="selectedFile" class="selected-file hidden">
