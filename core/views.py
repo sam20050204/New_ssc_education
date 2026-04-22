@@ -2201,13 +2201,14 @@ def import_database(request):
                     imported_cursor.execute(f"SELECT * FROM {table_name}")
                     rows = imported_cursor.fetchall()
                     
-                    # Insert or update records in current database
-                    for row in rows:
-                        row_dict = dict(zip(columns, row))
-                        
-                        # Check if record exists (for tables with primary keys)
-                        if primary_keys:
-                            pk_column = primary_keys[0]
+                    # Special handling for FeePayment (receipts) table
+                    if table_name == 'core_feepayment':
+                        print(f"Processing {len(rows)} receipt records from FeePayment table")
+                        for row in rows:
+                            row_dict = dict(zip(columns, row))
+                            pk_column = primary_keys[0] if primary_keys else 'id'
+                            
+                            # Check if payment with same ID exists
                             current_cursor.execute(
                                 f"SELECT 1 FROM {table_name} WHERE {pk_column} = ?",
                                 (row_dict[pk_column],)
@@ -2215,40 +2216,98 @@ def import_database(request):
                             record_exists = current_cursor.fetchone() is not None
                             
                             if record_exists:
-                                # Update existing record
+                                # Update existing payment record
                                 set_clause = ', '.join([f"{col} = ?" for col in columns if col != pk_column])
                                 values = [row_dict[col] for col in columns if col != pk_column]
                                 values.append(row_dict[pk_column])
                                 
-                                current_cursor.execute(
-                                    f"UPDATE {table_name} SET {set_clause} WHERE {pk_column} = ?",
-                                    values
-                                )
-                                merged_count += 1
+                                try:
+                                    current_cursor.execute(
+                                        f"UPDATE {table_name} SET {set_clause} WHERE {pk_column} = ?",
+                                        values
+                                    )
+                                    merged_count += 1
+                                    print(f"Updated receipt ID {row_dict[pk_column]}: {row_dict.get('receipt_no', 'N/A')}")
+                                except sqlite3.IntegrityError as ie:
+                                    # Handle unique constraint violation on receipt_no
+                                    if 'receipt_no' in str(ie):
+                                        print(f"Receipt number conflict for {row_dict.get('receipt_no', 'N/A')}, skipping")
+                                        skipped_count += 1
+                                    else:
+                                        raise
                             else:
-                                # Insert new record
+                                # Insert new payment record
+                                placeholders = ', '.join(['?' for _ in columns])
+                                try:
+                                    current_cursor.execute(
+                                        f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})",
+                                        tuple(row)
+                                    )
+                                    merged_count += 1
+                                    print(f"Inserted new receipt: {row_dict.get('receipt_no', 'N/A')}")
+                                except sqlite3.IntegrityError as ie:
+                                    # Handle unique constraint violation
+                                    if 'receipt_no' in str(ie):
+                                        print(f"Receipt number already exists: {row_dict.get('receipt_no', 'N/A')}, skipping")
+                                        skipped_count += 1
+                                    else:
+                                        raise
+                    else:
+                        # Standard processing for other tables
+                        # Insert or update records in current database
+                        for row in rows:
+                            row_dict = dict(zip(columns, row))
+                            
+                            # Check if record exists (for tables with primary keys)
+                            if primary_keys:
+                                pk_column = primary_keys[0]
+                                current_cursor.execute(
+                                    f"SELECT 1 FROM {table_name} WHERE {pk_column} = ?",
+                                    (row_dict[pk_column],)
+                                )
+                                record_exists = current_cursor.fetchone() is not None
+                                
+                                if record_exists:
+                                    # Update existing record
+                                    set_clause = ', '.join([f"{col} = ?" for col in columns if col != pk_column])
+                                    values = [row_dict[col] for col in columns if col != pk_column]
+                                    values.append(row_dict[pk_column])
+                                    
+                                    current_cursor.execute(
+                                        f"UPDATE {table_name} SET {set_clause} WHERE {pk_column} = ?",
+                                        values
+                                    )
+                                    merged_count += 1
+                                else:
+                                    # Insert new record
+                                    placeholders = ', '.join(['?' for _ in columns])
+                                    current_cursor.execute(
+                                        f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})",
+                                        tuple(row)
+                                    )
+                                    merged_count += 1
+                            else:
+                                # If no primary key, just insert
                                 placeholders = ', '.join(['?' for _ in columns])
                                 current_cursor.execute(
                                     f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})",
                                     tuple(row)
                                 )
                                 merged_count += 1
-                        else:
-                            # If no primary key, just insert
-                            placeholders = ', '.join(['?' for _ in columns])
-                            current_cursor.execute(
-                                f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})",
-                                tuple(row)
-                            )
-                            merged_count += 1
                 
                 except Exception as table_error:
                     print(f"Error merging table {table_name}: {str(table_error)}")
+                    import traceback
+                    traceback.print_exc()
                     skipped_count += 1
                     continue
             
             # Re-enable foreign key constraints before committing
             current_cursor.execute('PRAGMA foreign_keys = ON')
+            
+            # Get count of receipts in the database
+            current_cursor.execute("SELECT COUNT(*) FROM core_feepayment")
+            total_receipts = current_cursor.fetchone()[0]
             
             # Commit changes and close connections
             current_conn.commit()
@@ -2256,9 +2315,11 @@ def import_database(request):
             imported_conn.close()
             
             # Prepare success message
-            message = f'Database updated successfully! {merged_count} records merged/updated. Backup saved as {backup_name}'
+            message = f'Database updated successfully! {merged_count} records merged/updated. Total receipts in database: {total_receipts}. Backup saved as {backup_name}'
             if file_extension == 'zip':
                 message += f'. Student photos restored.'
+            
+            print(f"Import completed: {message}")
             
             return JsonResponse({
                 'success': True,
