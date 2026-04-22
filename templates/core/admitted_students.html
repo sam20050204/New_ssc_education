@@ -560,22 +560,6 @@
 <script>
 // ===================== SELECTION AND DELETION FUNCTIONS =====================
 
-// Update selected count
-function updateSelectedCount() {
-    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
-    const count = checkboxes.length;
-    const deleteBtn = document.getElementById('deleteSelectedBtn');
-    const countSpan = document.getElementById('selectedCount');
-    
-    countSpan.textContent = count;
-    
-    if (count > 0) {
-        deleteBtn.style.display = 'inline-flex';
-    } else {
-        deleteBtn.style.display = 'none';
-    }
-}
-
 // Delete selected students
 function deleteSelectedStudents() {
     const checkboxes = document.querySelectorAll('.student-checkbox:checked');
