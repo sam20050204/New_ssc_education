@@ -18,6 +18,12 @@
             </div>
         </div>
         <div class="page-actions">
+            <button id="selectAllBtn" class="action-btn info" style="display: none;" onclick="selectAllStudents()">
+                <span>✅</span> Select All
+            </button>
+            <button id="deselectAllBtn" class="action-btn info" style="display: none;" onclick="deselectAllStudents()">
+                <span>⬜</span> Deselect All
+            </button>
             <button id="deleteSelectedBtn" class="action-btn danger" style="display: none;" onclick="deleteSelectedStudents()">
                 <span>🗑️</span> Delete Selected (<span id="selectedCount">0</span>)
             </button>

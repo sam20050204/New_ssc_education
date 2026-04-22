@@ -1156,6 +1156,24 @@
     transform: none;
 }
 
+.action-btn.info {
+    background: #3b82f6;
+    color: white;
+    animation: fadeIn 0.3s ease;
+}
+
+.action-btn.info:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+}
+
+.action-btn.info:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;

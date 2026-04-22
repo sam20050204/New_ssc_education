@@ -2139,9 +2139,19 @@ def import_database(request):
                     for file in files:
                         if 'student_photos' in root:
                             src_file = os.path.join(root, file)
-                            # Calculate destination path
-                            rel_path = os.path.relpath(src_file, temp_dir)
-                            dst_file = os.path.join(settings.BASE_DIR, rel_path)
+                            
+                            # Extract only the filename from the original path structure
+                            # Get relative path after 'student_photos' folder
+                            parts = src_file.split(os.sep)
+                            try:
+                                student_photos_idx = [i for i, p in enumerate(parts) if 'student_photos' in p][-1]
+                                # Get path relative to student_photos folder
+                                relative_filename = os.sep.join(parts[student_photos_idx + 1:])
+                                # Destination in the project's media folder
+                                dst_file = os.path.join(settings.BASE_DIR, 'media', 'student_photos', relative_filename)
+                            except (IndexError, ValueError):
+                                # Fallback: just use the filename
+                                dst_file = os.path.join(settings.BASE_DIR, 'media', 'student_photos', file)
                             
                             # Create directory if needed
                             os.makedirs(os.path.dirname(dst_file), exist_ok=True)
@@ -2149,8 +2159,10 @@ def import_database(request):
                             # Copy file
                             shutil.copy2(src_file, dst_file)
                             photos_count += 1
+                            print(f"Imported photo: {dst_file}")
             else:
-                # Handle raw database file upload
+                # Handle raw database file upload (no photos)
+                photos_count = 0
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp_file:
                     tmp_file.write(uploaded_file.read())
                     temp_db_path = tmp_file.name
@@ -2339,8 +2351,10 @@ def import_database(request):
             
             # Prepare success message
             message = f'Database updated successfully! {merged_count} records merged/updated. Total receipts in database: {total_receipts}. Backup saved as {backup_name}'
-            if file_extension == 'zip':
-                message += f'. Student photos restored.'
+            if file_extension == 'zip' and photos_count > 0:
+                message += f'. {photos_count} student photos imported to media/student_photos folder.'
+            elif file_extension == 'zip':
+                message += f'. No student photos found in backup.'
             
             print(f"Import completed: {message}")
             

@@ -616,12 +616,16 @@ document.head.appendChild(style);
 // ✅ SELECTION AND DELETION FUNCTIONS
 function updateSelectedCount() {
     const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+    const totalCheckboxes = document.querySelectorAll('.student-checkbox');
     const count = checkboxes.length;
     const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const deselectAllBtn = document.getElementById('deselectAllBtn');
     const countSpan = document.getElementById('selectedCount');
     
     if (countSpan) countSpan.textContent = count;
     
+    // Show/hide delete button when any student is selected
     if (deleteBtn) {
         if (count > 0) {
             deleteBtn.style.display = 'inline-flex';
@@ -629,6 +633,40 @@ function updateSelectedCount() {
             deleteBtn.style.display = 'none';
         }
     }
+    
+    // Show/hide select all and deselect all buttons based on selection
+    if (count > 0) {
+        // At least one student is selected
+        if (count === totalCheckboxes.length) {
+            // All students are selected - show deselect all
+            if (selectAllBtn) selectAllBtn.style.display = 'none';
+            if (deselectAllBtn) deselectAllBtn.style.display = 'inline-flex';
+        } else {
+            // Some but not all students selected - show select all
+            if (selectAllBtn) selectAllBtn.style.display = 'inline-flex';
+            if (deselectAllBtn) deselectAllBtn.style.display = 'none';
+        }
+    } else {
+        // No students selected - hide both buttons
+        if (selectAllBtn) selectAllBtn.style.display = 'none';
+        if (deselectAllBtn) deselectAllBtn.style.display = 'none';
+    }
+}
+
+function selectAllStudents() {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateSelectedCount();
+}
+
+function deselectAllStudents() {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelectedCount();
 }
 
 function deleteSelectedStudents() {
@@ -999,4 +1037,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (districtSelect && districtSelect.value) {
         updateTehsilOptions();
     }
+    
+    // Initialize button visibility on page load
+    updateSelectedCount();
 });

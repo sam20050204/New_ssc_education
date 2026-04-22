@@ -19,5 +19,4 @@ class CoreConfig(AppConfig):
             if connection.settings_dict['ENGINE'] == 'django.db.backends.sqlite3':
                 cursor = connection.cursor()
                 cursor.execute('PRAGMA foreign_keys = ON;')
-                print("SQLite FOREIGN_KEYS pragma enabled")
 
