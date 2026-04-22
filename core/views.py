@@ -1486,7 +1486,7 @@ def receipts_view(request):
 def get_receipts(request):
     """API endpoint to get receipts with filters"""
     try:
-        receipts = FeePayment.objects.select_related('student').all().order_by('-payment_date')
+        receipts = FeePayment.objects.select_related('student').all().order_by('-id')
         
         # Prepare receipt data
         receipt_list = []
@@ -2207,6 +2207,7 @@ def import_database(request):
                         for row in rows:
                             row_dict = dict(zip(columns, row))
                             pk_column = primary_keys[0] if primary_keys else 'id'
+                            original_receipt_no = row_dict.get('receipt_no', '')
                             
                             # Check if payment with same ID exists
                             current_cursor.execute(
@@ -2227,15 +2228,41 @@ def import_database(request):
                                         values
                                     )
                                     merged_count += 1
-                                    print(f"Updated receipt ID {row_dict[pk_column]}: {row_dict.get('receipt_no', 'N/A')}")
+                                    print(f"Updated receipt ID {row_dict[pk_column]}: {original_receipt_no}")
                                 except sqlite3.IntegrityError as ie:
                                     # Handle unique constraint violation on receipt_no
                                     if 'receipt_no' in str(ie):
-                                        print(f"Receipt number conflict for {row_dict.get('receipt_no', 'N/A')}, skipping")
+                                        print(f"Receipt number conflict for {original_receipt_no}, skipping")
                                         skipped_count += 1
                                     else:
                                         raise
                             else:
+                                # Insert new payment record - check if receipt_no already exists
+                                current_cursor.execute(
+                                    f"SELECT receipt_no FROM {table_name} WHERE receipt_no = ?",
+                                    (original_receipt_no,)
+                                )
+                                receipt_exists = current_cursor.fetchone() is not None
+                                
+                                new_receipt_no = original_receipt_no
+                                if receipt_exists:
+                                    # Receipt number already exists, rename with suffix (1), (2), etc.
+                                    counter = 1
+                                    while True:
+                                        new_receipt_no = f"{original_receipt_no} ({counter})"
+                                        current_cursor.execute(
+                                            f"SELECT receipt_no FROM {table_name} WHERE receipt_no = ?",
+                                            (new_receipt_no,)
+                                        )
+                                        if not current_cursor.fetchone():
+                                            break
+                                        counter += 1
+                                    print(f"Duplicate receipt found: {original_receipt_no} renamed to {new_receipt_no} to avoid data loss")
+                                    # Update the receipt_no in the row
+                                    row_dict['receipt_no'] = new_receipt_no
+                                    # Reconstruct row tuple with updated receipt_no
+                                    row = tuple(row_dict[col] for col in columns)
+                                
                                 # Insert new payment record
                                 placeholders = ', '.join(['?' for _ in columns])
                                 try:
@@ -2244,14 +2271,10 @@ def import_database(request):
                                         tuple(row)
                                     )
                                     merged_count += 1
-                                    print(f"Inserted new receipt: {row_dict.get('receipt_no', 'N/A')}")
+                                    print(f"Inserted new receipt: {new_receipt_no}")
                                 except sqlite3.IntegrityError as ie:
-                                    # Handle unique constraint violation
-                                    if 'receipt_no' in str(ie):
-                                        print(f"Receipt number already exists: {row_dict.get('receipt_no', 'N/A')}, skipping")
-                                        skipped_count += 1
-                                    else:
-                                        raise
+                                    print(f"Error inserting receipt {new_receipt_no}: {str(ie)}")
+                                    skipped_count += 1
                     else:
                         # Standard processing for other tables
                         # Insert or update records in current database
