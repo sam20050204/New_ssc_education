@@ -2045,7 +2045,7 @@ def export_database(request):
 
 @login_required
 def import_database(request):
-    """Import database from uploaded file"""
+    """Import database from uploaded file (merge/update instead of overwrite)"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
     
@@ -2066,6 +2066,9 @@ def import_database(request):
         return JsonResponse({'success': False, 'error': 'File too large. Maximum size is 100 MB.'}, status=400)
     
     try:
+        import sqlite3
+        import tempfile
+        
         db_path = settings.DATABASES['default']['NAME']
         
         # Create backup of current database before importing
@@ -2074,24 +2077,104 @@ def import_database(request):
         backup_path = os.path.join(settings.BASE_DIR, backup_name)
         shutil.copy2(db_path, backup_path)
         
-        # Read the uploaded file and write to database location
-        db_data = uploaded_file.read()
+        # Save uploaded file to temporary location
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp_file:
+            tmp_file.write(uploaded_file.read())
+            temp_db_path = tmp_file.name
         
-        # Close all database connections
-        from django.db import connections
-        connections.close_all()
+        try:
+            # Merge data from imported database into current database
+            current_conn = sqlite3.connect(db_path)
+            imported_conn = sqlite3.connect(temp_db_path)
+            
+            imported_cursor = imported_conn.cursor()
+            current_cursor = current_conn.cursor()
+            
+            # Get all table names from imported database
+            imported_cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+            tables = imported_cursor.fetchall()
+            
+            merged_count = 0
+            skipped_count = 0
+            
+            # Merge each table's data
+            for (table_name,) in tables:
+                try:
+                    # Get columns for the table
+                    imported_cursor.execute(f"PRAGMA table_info({table_name})")
+                    columns_info = imported_cursor.fetchall()
+                    columns = [col[1] for col in columns_info]
+                    primary_keys = [col[1] for col in columns_info if col[5]]  # col[5] is pk flag
+                    
+                    # Get all records from imported table
+                    imported_cursor.execute(f"SELECT * FROM {table_name}")
+                    rows = imported_cursor.fetchall()
+                    
+                    # Insert or update records in current database
+                    for row in rows:
+                        row_dict = dict(zip(columns, row))
+                        
+                        # Check if record exists (for tables with primary keys)
+                        if primary_keys:
+                            pk_column = primary_keys[0]
+                            current_cursor.execute(
+                                f"SELECT 1 FROM {table_name} WHERE {pk_column} = ?",
+                                (row_dict[pk_column],)
+                            )
+                            record_exists = current_cursor.fetchone() is not None
+                            
+                            if record_exists:
+                                # Update existing record
+                                set_clause = ', '.join([f"{col} = ?" for col in columns if col != pk_column])
+                                values = [row_dict[col] for col in columns if col != pk_column]
+                                values.append(row_dict[pk_column])
+                                
+                                current_cursor.execute(
+                                    f"UPDATE {table_name} SET {set_clause} WHERE {pk_column} = ?",
+                                    values
+                                )
+                                merged_count += 1
+                            else:
+                                # Insert new record
+                                placeholders = ', '.join(['?' for _ in columns])
+                                current_cursor.execute(
+                                    f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})",
+                                    tuple(row)
+                                )
+                                merged_count += 1
+                        else:
+                            # If no primary key, just insert
+                            placeholders = ', '.join(['?' for _ in columns])
+                            current_cursor.execute(
+                                f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})",
+                                tuple(row)
+                            )
+                            merged_count += 1
+                
+                except Exception as table_error:
+                    print(f"Error merging table {table_name}: {str(table_error)}")
+                    skipped_count += 1
+                    continue
+            
+            # Commit changes and close connections
+            current_conn.commit()
+            current_conn.close()
+            imported_conn.close()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Database updated successfully! {merged_count} records merged/updated. Backup saved as {backup_name}'
+            })
         
-        # Write the new database
-        with open(db_path, 'wb') as f:
-            f.write(db_data)
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Database imported successfully! Backup saved as {backup_name}'
-        })
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_db_path):
+                os.remove(temp_db_path)
     
     except Exception as e:
         print(f"Import error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'success': False, 'error': f'Error importing database: {str(e)}'}, status=500)
     
 

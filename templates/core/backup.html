@@ -142,13 +142,15 @@
 
             <div id="confirmDialog" class="confirm-dialog hidden">
                 <div class="dialog-content">
-                    <div class="dialog-icon">⚠️</div>
+                    <div class="dialog-icon">ℹ️</div>
                     <h3>Confirm Database Import</h3>
-                    <p>This will <strong>replace all existing data</strong> with the data from the selected backup file.</p>
-                    <p class="highlight">This action cannot be undone!</p>
+                    <p>This will <strong>merge and update</strong> your existing data with the data from the selected backup file.</p>
+                    <p><strong>✓ Existing records will be updated</strong></p>
+                    <p><strong>✓ New records will be added</strong></p>
+                    <p><strong>✓ Your data is backed up automatically</strong></p>
                     <div class="dialog-actions">
                         <button class="btn btn-secondary" onclick="cancelImport()">Cancel</button>
-                        <button class="btn btn-danger" onclick="proceedImport()">Yes, Import Database</button>
+                        <button class="btn btn-success" onclick="proceedImport()">Yes, Import & Merge Database</button>
                     </div>
                 </div>
             </div>
