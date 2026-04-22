@@ -919,7 +919,7 @@ def admitted_students(request):
     students = AdmittedStudent.objects.only(
         'id', 'full_name', 'student_name', 'father_name', 'surname', 'mobile_own', 'course', 
         'admission_date', 'city', 'total_fees', 'paid_fees', 'photo', 'batch_month', 'batch_year'
-    ).order_by('surname', 'student_name')
+    )
     
     if search:
         students = students.filter(
@@ -943,6 +943,32 @@ def admitted_students(request):
     
     if batch_year:
         students = students.filter(batch_year=batch_year)
+    
+    # Handle sorting
+    sort = request.GET.get('sort', '')
+    if sort == 'name_asc':
+        # Sort A-Z: Surname → Student Name → Father Name
+        students = students.order_by('surname', 'student_name', 'father_name')
+    elif sort == 'name_desc':
+        # Sort Z-A: Surname → Student Name → Father Name (descending)
+        students = students.order_by('-surname', '-student_name', '-father_name')
+    elif sort == 'course':
+        students = students.order_by('course')
+    elif sort == 'batch':
+        students = students.order_by('batch_year', 'batch_month')
+    elif sort == 'remaining_asc':
+        # Sort by remaining fees (total_fees - paid_fees) in ascending order
+        students = students.annotate(
+            remaining=F('total_fees') - F('paid_fees')
+        ).order_by('remaining')
+    elif sort == 'remaining_desc':
+        # Sort by remaining fees (total_fees - paid_fees) in descending order
+        students = students.annotate(
+            remaining=F('total_fees') - F('paid_fees')
+        ).order_by('-remaining')
+    else:
+        # Default sorting by surname and student name
+        students = students.order_by('surname', 'student_name')
     
     # Optimized: Use values_list instead of full objects for dropdown data
     available_years = (
@@ -983,6 +1009,7 @@ def admitted_students(request):
         'course': course,
         'batch_month': batch_month,  # NEW
         'batch_year': batch_year,    # NEW
+        'sort': sort,                # NEW - Sorting parameter
         'available_years': available_years,
         'available_batch_months': available_batch_months,  # NEW
         'available_batch_years': available_batch_years,    # NEW
@@ -2218,64 +2245,34 @@ def import_database(request):
                         print(f"Processing {len(rows)} receipt records from FeePayment table")
                         for row in rows:
                             row_dict = dict(zip(columns, row))
-                            pk_column = primary_keys[0] if primary_keys else 'id'
-                            original_receipt_no = row_dict.get('receipt_no', '')
+                            receipt_no = row_dict.get('receipt_no', '')
                             
-                            # Check if payment with same ID exists
+                            # Check if receipt with same receipt_no already exists
                             current_cursor.execute(
-                                f"SELECT 1 FROM {table_name} WHERE {pk_column} = ?",
-                                (row_dict[pk_column],)
+                                f"SELECT id FROM {table_name} WHERE receipt_no = ?",
+                                (receipt_no,)
                             )
-                            record_exists = current_cursor.fetchone() is not None
+                            existing_receipt = current_cursor.fetchone()
                             
-                            if record_exists:
-                                # Update existing payment record
-                                set_clause = ', '.join([f"{col} = ?" for col in columns if col != pk_column])
-                                values = [row_dict[col] for col in columns if col != pk_column]
-                                values.append(row_dict[pk_column])
+                            if existing_receipt:
+                                # Receipt number already exists - UPDATE the record with new data
+                                receipt_id = existing_receipt[0]
+                                set_clause = ', '.join([f"{col} = ?" for col in columns if col != 'id'])
+                                values = [row_dict[col] for col in columns if col != 'id']
+                                values.append(receipt_id)
                                 
                                 try:
                                     current_cursor.execute(
-                                        f"UPDATE {table_name} SET {set_clause} WHERE {pk_column} = ?",
+                                        f"UPDATE {table_name} SET {set_clause} WHERE id = ?",
                                         values
                                     )
                                     merged_count += 1
-                                    print(f"Updated receipt ID {row_dict[pk_column]}: {original_receipt_no}")
+                                    print(f"Updated receipt: {receipt_no} (ID: {receipt_id})")
                                 except sqlite3.IntegrityError as ie:
-                                    # Handle unique constraint violation on receipt_no
-                                    if 'receipt_no' in str(ie):
-                                        print(f"Receipt number conflict for {original_receipt_no}, skipping")
-                                        skipped_count += 1
-                                    else:
-                                        raise
+                                    print(f"Error updating receipt {receipt_no}: {str(ie)}")
+                                    skipped_count += 1
                             else:
-                                # Insert new payment record - check if receipt_no already exists
-                                current_cursor.execute(
-                                    f"SELECT receipt_no FROM {table_name} WHERE receipt_no = ?",
-                                    (original_receipt_no,)
-                                )
-                                receipt_exists = current_cursor.fetchone() is not None
-                                
-                                new_receipt_no = original_receipt_no
-                                if receipt_exists:
-                                    # Receipt number already exists, rename with suffix (1), (2), etc.
-                                    counter = 1
-                                    while True:
-                                        new_receipt_no = f"{original_receipt_no} ({counter})"
-                                        current_cursor.execute(
-                                            f"SELECT receipt_no FROM {table_name} WHERE receipt_no = ?",
-                                            (new_receipt_no,)
-                                        )
-                                        if not current_cursor.fetchone():
-                                            break
-                                        counter += 1
-                                    print(f"Duplicate receipt found: {original_receipt_no} renamed to {new_receipt_no} to avoid data loss")
-                                    # Update the receipt_no in the row
-                                    row_dict['receipt_no'] = new_receipt_no
-                                    # Reconstruct row tuple with updated receipt_no
-                                    row = tuple(row_dict[col] for col in columns)
-                                
-                                # Insert new payment record
+                                # Receipt number doesn't exist - INSERT as new record with same receipt number
                                 placeholders = ', '.join(['?' for _ in columns])
                                 try:
                                     current_cursor.execute(
@@ -2283,9 +2280,9 @@ def import_database(request):
                                         tuple(row)
                                     )
                                     merged_count += 1
-                                    print(f"Inserted new receipt: {new_receipt_no}")
+                                    print(f"Inserted new receipt: {receipt_no}")
                                 except sqlite3.IntegrityError as ie:
-                                    print(f"Error inserting receipt {new_receipt_no}: {str(ie)}")
+                                    print(f"Error inserting receipt {receipt_no}: {str(ie)}")
                                     skipped_count += 1
                     else:
                         # Standard processing for other tables

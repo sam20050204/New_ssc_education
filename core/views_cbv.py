@@ -22,7 +22,7 @@ from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.http import JsonResponse
 from django.db import transaction
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, F
 from decimal import Decimal
 import json
 from datetime import timedelta
@@ -240,7 +240,7 @@ class AdmissionListView(LoginRequiredMixin, ListView):
     
     def get_queryset(self):
         """Filter students based on search and multiple criteria."""
-        queryset = AdmittedStudent.objects.all().order_by('-admission_date')
+        queryset = AdmittedStudent.objects.all()
         
         # Search by name, mobile, course
         search = self.request.GET.get('search', '')
@@ -269,6 +269,32 @@ class AdmissionListView(LoginRequiredMixin, ListView):
         if city:
             queryset = queryset.filter(city=city)
         
+        # Handle sorting
+        sort = self.request.GET.get('sort', '')
+        if sort == 'name_asc':
+            # Sort A-Z: Surname → Student Name → Father Name
+            queryset = queryset.order_by('surname', 'student_name', 'father_name')
+        elif sort == 'name_desc':
+            # Sort Z-A: Surname → Student Name → Father Name (descending)
+            queryset = queryset.order_by('-surname', '-student_name', '-father_name')
+        elif sort == 'course':
+            queryset = queryset.order_by('course')
+        elif sort == 'batch':
+            queryset = queryset.order_by('batch_year', 'batch_month')
+        elif sort == 'remaining_asc':
+            # Sort by remaining fees (total_fees - paid_fees) in ascending order
+            queryset = queryset.annotate(
+                remaining=F('total_fees') - F('paid_fees')
+            ).order_by('remaining')
+        elif sort == 'remaining_desc':
+            # Sort by remaining fees (total_fees - paid_fees) in descending order
+            queryset = queryset.annotate(
+                remaining=F('total_fees') - F('paid_fees')
+            ).order_by('-remaining')
+        else:
+            # Default sorting by admission date (newest first)
+            queryset = queryset.order_by('-admission_date')
+        
         return queryset
     
     def get_context_data(self, **kwargs):
@@ -290,6 +316,7 @@ class AdmissionListView(LoginRequiredMixin, ListView):
         context['selected_month'] = self.request.GET.get('month', '')
         context['selected_year'] = self.request.GET.get('year', '')
         context['selected_city'] = self.request.GET.get('city', '')
+        context['sort'] = self.request.GET.get('sort', '')
         
         return context
 

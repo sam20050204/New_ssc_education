@@ -136,6 +136,19 @@
             </select>
         </div>
 
+        <div class="filter-group">
+            <label for="sort">📊 Sort By</label>
+            <select name="sort" id="sort" class="filter-select" onchange="applySorting()">
+                <option value="">Default (Admission Date)</option>
+                <option value="name_asc" {% if sort == "name_asc" %}selected{% endif %}>📝 A-Z (Name)</option>
+                <option value="name_desc" {% if sort == "name_desc" %}selected{% endif %}>📝 Z-A (Name)</option>
+                <option value="course" {% if sort == "course" %}selected{% endif %}>📚 Course</option>
+                <option value="batch" {% if sort == "batch" %}selected{% endif %}>📅 Batch (Month-Year)</option>
+                <option value="remaining_asc" {% if sort == "remaining_asc" %}selected{% endif %}>💰 Fees Remaining (Low to High)</option>
+                <option value="remaining_desc" {% if sort == "remaining_desc" %}selected{% endif %}>💰 Fees Remaining (High to Low)</option>
+            </select>
+        </div>
+
         <div class="filter-buttons">
             <button type="submit" class="filter-btn apply">
                 🔍 Apply Filters

@@ -16,6 +16,29 @@ function getCookie(name) {
     return cookieValue;
 }
 
+// ===================== SORTING FUNCTION =====================
+function applySorting() {
+    const sortValue = document.getElementById('sort').value;
+    const filterForm = document.getElementById('filterForm');
+    
+    // Remove existing sort input if it exists
+    let existingSortInput = filterForm.querySelector('input[name="sort"]');
+    if (existingSortInput) {
+        existingSortInput.remove();
+    }
+    
+    // Add new sort input
+    const sortInput = document.createElement('input');
+    sortInput.type = 'hidden';
+    sortInput.name = 'sort';
+    sortInput.value = sortValue;
+    filterForm.appendChild(sortInput);
+    
+    console.log('Sorting applied:', sortValue);
+    filterForm.submit();
+}
+
+
 // ===================== DUPLICATE DETECTION =====================
 function markDuplicateStudents() {
     const studentCards = document.querySelectorAll('.student-card');
