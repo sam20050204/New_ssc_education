@@ -2162,15 +2162,34 @@ def import_database(request):
             imported_cursor = imported_conn.cursor()
             current_cursor = current_conn.cursor()
             
+            # Disable foreign key constraints temporarily to allow merging in any order
+            current_cursor.execute('PRAGMA foreign_keys = OFF')
+            imported_cursor.execute('PRAGMA foreign_keys = OFF')
+            
             # Get all table names from imported database
             imported_cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
-            tables = imported_cursor.fetchall()
+            all_tables = imported_cursor.fetchall()
+            
+            # Sort tables to ensure dependencies are met (parent tables first)
+            # Priority order: AdmittedStudent first, then dependent tables
+            priority_tables = ['core_course', 'core_admittedstudent', 'core_feepayment', 'core_studentfinancedetail', 'core_attendance']
+            
+            # Start with priority tables, then add remaining tables
+            tables_ordered = []
+            for table in priority_tables:
+                if any(t[0] == table for t in all_tables):
+                    tables_ordered.append((table,))
+            
+            # Add remaining tables not in priority list
+            for (table_name,) in all_tables:
+                if not any(t[0] == table_name for t in tables_ordered):
+                    tables_ordered.append((table_name,))
             
             merged_count = 0
             skipped_count = 0
             
             # Merge each table's data
-            for (table_name,) in tables:
+            for (table_name,) in tables_ordered:
                 try:
                     # Get columns for the table
                     imported_cursor.execute(f"PRAGMA table_info({table_name})")
@@ -2227,6 +2246,9 @@ def import_database(request):
                     print(f"Error merging table {table_name}: {str(table_error)}")
                     skipped_count += 1
                     continue
+            
+            # Re-enable foreign key constraints before committing
+            current_cursor.execute('PRAGMA foreign_keys = ON')
             
             # Commit changes and close connections
             current_conn.commit()
