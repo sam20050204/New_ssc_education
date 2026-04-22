@@ -369,13 +369,52 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="tehsil_block">Tehsil/Block <span class="required">*</span></label>
-                    <input type="text" name="tehsil_block" id="tehsil_block" value="{{ enquiry_data.tehsil_block|default:'' }}" required>
+                    <label for="district">District <span class="required">*</span></label>
+                    <select name="district" id="district" required onchange="updateTehsilOptions()">
+                        <option value="">-- Select District --</option>
+                        <option value="Ahmednagar" {% if enquiry_data.district == "Ahmednagar" %}selected{% endif %}>Ahmednagar</option>
+                        <option value="Akola" {% if enquiry_data.district == "Akola" %}selected{% endif %}>Akola</option>
+                        <option value="Amravati" {% if enquiry_data.district == "Amravati" %}selected{% endif %}>Amravati</option>
+                        <option value="Beed" {% if enquiry_data.district == "Beed" %}selected{% endif %}>Beed</option>
+                        <option value="Bhandara" {% if enquiry_data.district == "Bhandara" %}selected{% endif %}>Bhandara</option>
+                        <option value="Buldhana" {% if enquiry_data.district == "Buldhana" %}selected{% endif %}>Buldhana</option>
+                        <option value="Chandrapur" {% if enquiry_data.district == "Chandrapur" %}selected{% endif %}>Chandrapur</option>
+                        <option value="Chhatrapati Sambhajinagar" {% if enquiry_data.district == "Chhatrapati Sambhajinagar" %}selected{% endif %}>Chhatrapati Sambhajinagar</option>
+                        <option value="Dharashiv" {% if enquiry_data.district == "Dharashiv" %}selected{% endif %}>Dharashiv</option>
+                        <option value="Dhule" {% if enquiry_data.district == "Dhule" %}selected{% endif %}>Dhule</option>
+                        <option value="Gadchiroli" {% if enquiry_data.district == "Gadchiroli" %}selected{% endif %}>Gadchiroli</option>
+                        <option value="Gondia" {% if enquiry_data.district == "Gondia" %}selected{% endif %}>Gondia</option>
+                        <option value="Hingoli" {% if enquiry_data.district == "Hingoli" %}selected{% endif %}>Hingoli</option>
+                        <option value="Jalgaon" {% if enquiry_data.district == "Jalgaon" %}selected{% endif %}>Jalgaon</option>
+                        <option value="Jalna" {% if enquiry_data.district == "Jalna" %}selected{% endif %}>Jalna</option>
+                        <option value="Kolhapur" {% if enquiry_data.district == "Kolhapur" %}selected{% endif %}>Kolhapur</option>
+                        <option value="Latur" {% if enquiry_data.district == "Latur" %}selected{% endif %}>Latur</option>
+                        <option value="Mumbai City" {% if enquiry_data.district == "Mumbai City" %}selected{% endif %}>Mumbai City</option>
+                        <option value="Mumbai Suburban" {% if enquiry_data.district == "Mumbai Suburban" %}selected{% endif %}>Mumbai Suburban</option>
+                        <option value="Nagpur" {% if enquiry_data.district == "Nagpur" %}selected{% endif %}>Nagpur</option>
+                        <option value="Nanded" {% if enquiry_data.district == "Nanded" %}selected{% endif %}>Nanded</option>
+                        <option value="Nandurbar" {% if enquiry_data.district == "Nandurbar" %}selected{% endif %}>Nandurbar</option>
+                        <option value="Nashik" {% if enquiry_data.district == "Nashik" %}selected{% endif %}>Nashik</option>
+                        <option value="Parbhani" {% if enquiry_data.district == "Parbhani" %}selected{% endif %}>Parbhani</option>
+                        <option value="Pune" {% if enquiry_data.district == "Pune" %}selected{% endif %}>Pune</option>
+                        <option value="Raigad" {% if enquiry_data.district == "Raigad" %}selected{% endif %}>Raigad</option>
+                        <option value="Ratnagiri" {% if enquiry_data.district == "Ratnagiri" %}selected{% endif %}>Ratnagiri</option>
+                        <option value="Sangli" {% if enquiry_data.district == "Sangli" %}selected{% endif %}>Sangli</option>
+                        <option value="Satara" {% if enquiry_data.district == "Satara" %}selected{% endif %}>Satara</option>
+                        <option value="Sindhudurg" {% if enquiry_data.district == "Sindhudurg" %}selected{% endif %}>Sindhudurg</option>
+                        <option value="Solapur" {% if enquiry_data.district == "Solapur" %}selected{% endif %}>Solapur</option>
+                        <option value="Thane" {% if enquiry_data.district == "Thane" %}selected{% endif %}>Thane</option>
+                        <option value="Wardha" {% if enquiry_data.district == "Wardha" %}selected{% endif %}>Wardha</option>
+                        <option value="Washim" {% if enquiry_data.district == "Washim" %}selected{% endif %}>Washim</option>
+                        <option value="Yavatmal" {% if enquiry_data.district == "Yavatmal" %}selected{% endif %}>Yavatmal</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="district">District <span class="required">*</span></label>
-                    <input type="text" name="district" id="district" value="{{ enquiry_data.district|default:'' }}" required>
+                    <label for="tehsil_block">Tehsil/Block <span class="required">*</span></label>
+                    <select name="tehsil_block" id="tehsil_block" required>
+                        <option value="">-- Select Tehsil/Block --</option>
+                    </select>
                 </div>
             </div>
             
@@ -993,6 +1032,75 @@ if (document.readyState === 'loading') {
 } else {
     setupPhotoImport();
 }
+
+// ===================== MAHARASHTRA DISTRICT & TEHSIL DATA =====================
+// Extracted from official Maharashtra Civil Service PDF
+const maharashtraData = {
+    "Ahmednagar": ["Akole", "Jamkhed", "Karjat", "Kopargaon", "Nagar", "Parner", "Pathardi", "Rahata", "Rahuri", "Sangamner", "Shevgaon", "Shrigonda", "Shrirampur"],
+    "Akola": ["Akola", "Akot", "Balapur", "Barshitakli", "Murtajapur", "Patur", "Telhara"],
+    "Amravati": ["Achalpur", "Amravati", "Anjangaon Surji", "Bhatukali", "Chandur", "Chandurbazar", "Chikhaldara", "Daryapur", "Dhamangaon", "Dharni", "Morshi", "Nandgaon Khandeshwar", "Tiosa", "Warud"],
+    "Beed": ["Ambejogai", "Ashti", "Beed", "Dharur", "Georai", "Kaij", "Manjalgaon", "Parli", "Patoda", "Shirur Kasar", "Wadwani"],
+    "Bhandara": ["Bhandara", "Lakhandur", "Lakhni", "Mohadi", "Pauni", "Sakoli", "Tumsar"],
+    "Buldhana": ["Buldhana", "Chikhli", "Deulgaon Raja", "Jalgaon Jamod", "Khamgaon", "Lonar", "Malkapur", "Mehkar", "Motala", "Nandura", "Sangrampur", "Shegaon", "Sindkhed Raja"],
+    "Chandrapur": ["Ballarpur", "Bhadravati", "Brahmapuri", "Chandrapur", "Chimur", "Gondpimpri", "Jivati", "Korpana", "Mul", "Nagbhid", "Pombhurna", "Rajura", "Saoli", "Sindewahi", "Warora"],
+    "Chhatrapati Sambhajinagar": ["Aurangabad", "Gangapur", "Kannad", "Khuldabad", "Paithan", "Phulambri", "Sillod", "Soegaon", "Vaijapur"],
+    "Dharashiv": ["Bhum", "Kalamb", "Lohara", "Dharashiv", "Paranda", "Tuljapur", "Umarga", "Washi"],
+    "Dhule": ["Dhule", "Sakri", "Shirpur", "Sindkheda"],
+    "Gadchiroli": ["Aheri", "Armori", "Bhamragad", "Chamorshi", "Desaiganj", "Dhanora", "Etapalli", "Gadchiroli", "Korchi", "Kurkheda", "Mulchera", "Sironcha"],
+    "Gondia": ["Amgaon", "Arjuni Morgaon", "Deori", "Gondia", "Goregaon", "Sadak Arjuni", "Salekasa", "Tirora"],
+    "Hingoli": ["Aundha Nagnath", "Basmath", "Hingoli", "Kalamnuri", "Sengaon"],
+    "Jalgaon": ["Amalner", "Bhadgaon", "Bhusawal", "Bodwad", "Chalisgaon", "Chopda", "Dharangaon", "Erandol", "Jalgaon", "Jamner", "Muktainagar", "Pachora", "Parola", "Raver", "Yawal"],
+    "Jalna": ["Ambad", "Badnapur", "Bhokardan", "Ghansawangi", "Jafrabad", "Jalna", "Mantha", "Partur"],
+    "Kolhapur": ["Ajra", "Bhudargad", "Chandgad", "Gadhinglaj", "Gaganbawada", "Hatkanangale", "Kagal", "Karvir", "Panhala", "Radhanagari", "Shahuwadi", "Shirol"],
+    "Latur": ["Ahmadpur", "Ausa", "Chakur", "Deoni", "Jalkot", "Latur", "Nilanga", "Renapur", "Shirur Anantpal", "Udgir"],
+    "Mumbai City": ["Andheri", "Borivali", "Kurla"],
+    "Mumbai Suburban": ["Andheri", "Borivali", "Kurla"],
+    "Nagpur": ["Bhiwapur", "Hingna", "Kalameshwar", "Kamptee", "Katol", "Kuhi", "Mouda", "Nagpur Rural", "Nagpur Urban", "Narkhed", "Parseoni", "Ramtek", "Savner", "Umred"],
+    "Nanded": ["Ardhapur", "Bhokar", "Biloli", "Deglur", "Dharmabad", "Hadgaon", "Himayatnagar", "Kandhar", "Kinwat", "Loha", "Mahur", "Mudkhed", "Mukhed", "Naigaon", "Nanded", "Umri"],
+    "Nandurbar": ["Akkalkuwa", "Akrani", "Nandurbar", "Navapur", "Shahada", "Talode"],
+    "Nashik": ["Baglan", "Chandwad", "Deola", "Dindori", "Igatpuri", "Kalwan", "Malegaon", "Nandgaon", "Nashik", "Niphad", "Peint", "Sinnar", "Surgana", "Trimbakeshwar", "Yeola"],
+    "Parbhani": ["Gangakhed", "Jintur", "Manwath", "Paalam", "Parbhani", "Pathri", "Purna", "Sailu", "Sonpeth"],
+    "Pune": ["Ambegaon", "Baramati", "Bhor", "Daund", "Haveli", "Indapur", "Junnar", "Khed", "Maval", "Mulshi", "Pune City", "Purandhar", "Shirur", "Velhe"],
+    "Raigad": ["Alibag", "Karjat", "Khalapur", "Mahad", "Mangaon", "Mhasla", "Murud", "Panvel", "Pen", "Poladpur", "Roha", "Shrivardhan", "Sudhagad", "Tala", "Uran"],
+    "Ratnagiri": ["Chiplun", "Dapoli", "Guhagar", "Khed", "Lanja", "Mandangad", "Rajapur", "Ratnagiri", "Sangameshwar"],
+    "Sangli": ["Atpadi", "Islampur", "Jat", "Kadegaon", "Kavathe-Mahankal", "Khanapur", "Miraj", "Palus", "Shirala", "Tasgaon", "Vita", "Walwa"],
+    "Satara": ["Jaoli", "Karad", "Khandala", "Khatav", "Koregaon", "Maan", "Mahabaleshwar", "Patan", "Phaltan", "Satara", "Wai"],
+    "Sindhudurg": ["Devgad", "Dodamarg", "Kankavli", "Kudal", "Malwan", "Sawantwadi", "Vaibhavwadi", "Vengurla"],
+    "Solapur": ["Akkalkot", "Barshi", "Karmala", "Madha", "Malshiras", "Mangalvedhe", "Mohol", "Pandharpur", "Sangole", "Solapur North", "Solapur South"],
+    "Thane": ["Ambarnath", "Bhiwandi", "Dahanu", "Jawhar", "Kalyan", "Mokhada", "Murbad", "Palghar", "Shahapur", "Talasari", "Thane", "Ulhasnagar", "Vada", "Vasai", "Vikramgad"],
+    "Wardha": ["Arvi", "Ashti", "Deoli", "Hinganghat", "Karanja", "Samudrapur", "Seloo", "Wardha"],
+    "Washim": ["Karanja", "Malegaon", "Mangrulpir", "Manora", "Risod", "Washim"],
+    "Yavatmal": ["Arni", "Babhulgaon", "Darwha", "Digras", "Ghatanji", "Kalamb", "Kelapur", "Mahagaon", "Maregaon", "Ner", "Pusad", "Ralegaon", "Umarkhed", "Wani", "Yavatmal", "Zari Jamani"],
+};
+
+// Function to update Tehsil/Block options based on selected District
+function updateTehsilOptions() {
+    const districtSelect = document.getElementById('district');
+    const tehsilSelect = document.getElementById('tehsil_block');
+    const selectedDistrict = districtSelect.value;
+    
+    // Clear existing options except the first placeholder
+    tehsilSelect.innerHTML = '<option value="">-- Select Tehsil/Block --</option>';
+    
+    if (selectedDistrict && maharashtraData[selectedDistrict]) {
+        // Populate with tehsil/block options for the selected district
+        const tehsils = maharashtraData[selectedDistrict];
+        tehsils.forEach(tehsil => {
+            const option = document.createElement('option');
+            option.value = tehsil;
+            option.textContent = tehsil;
+            tehsilSelect.appendChild(option);
+        });
+    }
+}
+
+// Initialize tehsil options on page load if a district is already selected
+document.addEventListener('DOMContentLoaded', function() {
+    const districtSelect = document.getElementById('district');
+    if (districtSelect && districtSelect.value) {
+        updateTehsilOptions();
+    }
+});
 </script>
 
 <!-- Photo Import Modal -->

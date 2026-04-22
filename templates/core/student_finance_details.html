@@ -69,6 +69,21 @@
                 </select>
             </div>
             
+            <!-- Batch Filter -->
+            <div class="filter-group">
+                <label for="batch-select">
+                    <span class="filter-label">Batch:</span>
+                </label>
+                <select name="batch" id="batch-select" class="filter-select">
+                    <option value="">All Batches</option>
+                    {% for batch in available_batches %}
+                        <option value="{{ batch }}" {% if batch == batch_filter %}selected{% endif %}>
+                            {{ batch }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
             <!-- Search Filter -->
             <div class="filter-group">
                 <label for="search-input">
@@ -111,8 +126,8 @@
 
     <!-- Finance Table -->
     <div class="scrollbar-wrapper">
-        <div class="finance-table-container">
-            <table class="finance-table">
+        <div class="finance-table-container" id="tableContainer">
+            <table class="finance-table" id="financeTable">
                 <thead>
                     <tr>
                         <th colspan="5" class="section-header sticky-section-header">Student Details</th>
@@ -189,6 +204,11 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+        
+        <!-- Sticky Horizontal Scrollbar at Bottom -->
+        <div class="sticky-scrollbar-container" id="stickyScrollbar">
+            <div class="sticky-scrollbar-track"></div>
         </div>
     </div>
 </div>

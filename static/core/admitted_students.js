@@ -16,6 +16,72 @@ function getCookie(name) {
     return cookieValue;
 }
 
+// ===================== DUPLICATE DETECTION =====================
+function markDuplicateStudents() {
+    const studentCards = document.querySelectorAll('.student-card');
+    const seenMobiles = {};
+    const seenEmails = {};
+    const seenFullNames = {};
+    const duplicateIds = new Set();
+    
+    // First pass: identify duplicates
+    studentCards.forEach(card => {
+        const mobile = card.getAttribute('data-mobile')?.trim();
+        const email = card.getAttribute('data-email')?.trim();
+        
+        // Create full name from surname + student_name + father_name (as displayed)
+        const surname = card.getAttribute('data-surname')?.trim() || '';
+        const studentName = card.getAttribute('data-studentname')?.trim() || '';
+        const fatherName = card.getAttribute('data-fathername')?.trim() || '';
+        const fullNameCombo = `${surname} ${studentName} ${fatherName}`.replace(/\s+/g, ' ').trim();
+        
+        // Check for mobile duplicates
+        if (mobile && mobile !== '') {
+            if (seenMobiles[mobile]) {
+                duplicateIds.add(seenMobiles[mobile]);
+                duplicateIds.add(card.getAttribute('data-student-id'));
+            } else {
+                seenMobiles[mobile] = card.getAttribute('data-student-id');
+            }
+        }
+        
+        // Check for email duplicates
+        if (email && email !== '') {
+            if (seenEmails[email]) {
+                duplicateIds.add(seenEmails[email]);
+                duplicateIds.add(card.getAttribute('data-student-id'));
+            } else {
+                seenEmails[email] = card.getAttribute('data-student-id');
+            }
+        }
+        
+        // Check for full name duplicates (surname + student_name + father_name)
+        if (fullNameCombo && fullNameCombo !== '') {
+            if (seenFullNames[fullNameCombo]) {
+                duplicateIds.add(seenFullNames[fullNameCombo]);
+                duplicateIds.add(card.getAttribute('data-student-id'));
+            } else {
+                seenFullNames[fullNameCombo] = card.getAttribute('data-student-id');
+            }
+        }
+    });
+    
+    // Second pass: apply styling to duplicates
+    studentCards.forEach(card => {
+        const studentId = card.getAttribute('data-student-id');
+        if (duplicateIds.has(studentId)) {
+            card.classList.add('duplicate-student');
+        } else {
+            card.classList.remove('duplicate-student');
+        }
+    });
+    
+    // Log duplicates for debugging
+    if (duplicateIds.size > 0) {
+        console.log('⚠️ Duplicate students detected:', Array.from(duplicateIds));
+    }
+}
+
 // ✅ FIXED: Open student modal with payment history
 function openStudentModal(studentId) {
     const modal = document.getElementById('studentModal');
@@ -101,8 +167,28 @@ function openStudentModal(studentId) {
         // Address
         document.getElementById('address').value = data.address;
         document.getElementById('city').value = data.city;
-        document.getElementById('tehsil').value = data.tehsil_block;
-        document.getElementById('district').value = data.district;
+        
+        // Set district and tehsil (handle select dropdowns)
+        const districtSelect = document.getElementById('district');
+        const tehsilSelect = document.getElementById('tehsil');
+        
+        // Set district value
+        districtSelect.value = data.district || '';
+        
+        // Populate tehsil options based on selected district
+        if (data.district && maharashtraData[data.district]) {
+            tehsilSelect.innerHTML = '<option value="">-- Select Tehsil/Block --</option>';
+            const tehsils = maharashtraData[data.district];
+            tehsils.forEach(tehsil => {
+                const option = document.createElement('option');
+                option.value = tehsil;
+                option.textContent = tehsil;
+                tehsilSelect.appendChild(option);
+            });
+            // Set tehsil value after populating
+            tehsilSelect.value = data.tehsil_block || '';
+        }
+        
         document.getElementById('pinCode').value = data.pin_code;
         
         // Financial info
@@ -470,6 +556,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 100);
         });
     }
+    
+    // Mark duplicate students on page load
+    markDuplicateStudents();
 });
 
 // Show success message on load
@@ -763,6 +852,9 @@ function refreshStudentTable() {
             // Replace the table body with the new one
             currentTableBody.innerHTML = newTableBody.innerHTML;
             showNotification('📋 Table updated instantly!', 'info');
+            
+            // Mark duplicate students after table refresh
+            markDuplicateStudents();
         }
     })
     .catch(error => {
@@ -839,3 +931,72 @@ function removeStudentPhoto() {
     // Show success notification
     showNotification('✅ Photo marked for removal - Click Save to confirm', 'success');
 }
+
+// ===================== MAHARASHTRA DISTRICT & TEHSIL DATA =====================
+// Extracted from official Maharashtra Civil Service PDF
+const maharashtraData = {
+    "Ahmednagar": ["Akole", "Jamkhed", "Karjat", "Kopargaon", "Nagar", "Parner", "Pathardi", "Rahata", "Rahuri", "Sangamner", "Shevgaon", "Shrigonda", "Shrirampur"],
+    "Akola": ["Akola", "Akot", "Balapur", "Barshitakli", "Murtajapur", "Patur", "Telhara"],
+    "Amravati": ["Achalpur", "Amravati", "Anjangaon Surji", "Bhatukali", "Chandur", "Chandurbazar", "Chikhaldara", "Daryapur", "Dhamangaon", "Dharni", "Morshi", "Nandgaon Khandeshwar", "Tiosa", "Warud"],
+    "Beed": ["Ambejogai", "Ashti", "Beed", "Dharur", "Georai", "Kaij", "Manjalgaon", "Parli", "Patoda", "Shirur Kasar", "Wadwani"],
+    "Bhandara": ["Bhandara", "Lakhandur", "Lakhni", "Mohadi", "Pauni", "Sakoli", "Tumsar"],
+    "Buldhana": ["Buldhana", "Chikhli", "Deulgaon Raja", "Jalgaon Jamod", "Khamgaon", "Lonar", "Malkapur", "Mehkar", "Motala", "Nandura", "Sangrampur", "Shegaon", "Sindkhed Raja"],
+    "Chandrapur": ["Ballarpur", "Bhadravati", "Brahmapuri", "Chandrapur", "Chimur", "Gondpimpri", "Jivati", "Korpana", "Mul", "Nagbhid", "Pombhurna", "Rajura", "Saoli", "Sindewahi", "Warora"],
+    "Chhatrapati Sambhajinagar": ["Aurangabad", "Gangapur", "Kannad", "Khuldabad", "Paithan", "Phulambri", "Sillod", "Soegaon", "Vaijapur"],
+    "Dharashiv": ["Bhum", "Kalamb", "Lohara", "Dharashiv", "Paranda", "Tuljapur", "Umarga", "Washi"],
+    "Dhule": ["Dhule", "Sakri", "Shirpur", "Sindkheda"],
+    "Gadchiroli": ["Aheri", "Armori", "Bhamragad", "Chamorshi", "Desaiganj", "Dhanora", "Etapalli", "Gadchiroli", "Korchi", "Kurkheda", "Mulchera", "Sironcha"],
+    "Gondia": ["Amgaon", "Arjuni Morgaon", "Deori", "Gondia", "Goregaon", "Sadak Arjuni", "Salekasa", "Tirora"],
+    "Hingoli": ["Aundha Nagnath", "Basmath", "Hingoli", "Kalamnuri", "Sengaon"],
+    "Jalgaon": ["Amalner", "Bhadgaon", "Bhusawal", "Bodwad", "Chalisgaon", "Chopda", "Dharangaon", "Erandol", "Jalgaon", "Jamner", "Muktainagar", "Pachora", "Parola", "Raver", "Yawal"],
+    "Jalna": ["Ambad", "Badnapur", "Bhokardan", "Ghansawangi", "Jafrabad", "Jalna", "Mantha", "Partur"],
+    "Kolhapur": ["Ajra", "Bhudargad", "Chandgad", "Gadhinglaj", "Gaganbawada", "Hatkanangale", "Kagal", "Karvir", "Panhala", "Radhanagari", "Shahuwadi", "Shirol"],
+    "Latur": ["Ahmadpur", "Ausa", "Chakur", "Deoni", "Jalkot", "Latur", "Nilanga", "Renapur", "Shirur Anantpal", "Udgir"],
+    "Mumbai City": ["Andheri", "Borivali", "Kurla"],
+    "Mumbai Suburban": ["Andheri", "Borivali", "Kurla"],
+    "Nagpur": ["Bhiwapur", "Hingna", "Kalameshwar", "Kamptee", "Katol", "Kuhi", "Mouda", "Nagpur Rural", "Nagpur Urban", "Narkhed", "Parseoni", "Ramtek", "Savner", "Umred"],
+    "Nanded": ["Ardhapur", "Bhokar", "Biloli", "Deglur", "Dharmabad", "Hadgaon", "Himayatnagar", "Kandhar", "Kinwat", "Loha", "Mahur", "Mudkhed", "Mukhed", "Naigaon", "Nanded", "Umri"],
+    "Nandurbar": ["Akkalkuwa", "Akrani", "Nandurbar", "Navapur", "Shahada", "Talode"],
+    "Nashik": ["Baglan", "Chandwad", "Deola", "Dindori", "Igatpuri", "Kalwan", "Malegaon", "Nandgaon", "Nashik", "Niphad", "Peint", "Sinnar", "Surgana", "Trimbakeshwar", "Yeola"],
+    "Parbhani": ["Gangakhed", "Jintur", "Manwath", "Paalam", "Parbhani", "Pathri", "Purna", "Sailu", "Sonpeth"],
+    "Pune": ["Ambegaon", "Baramati", "Bhor", "Daund", "Haveli", "Indapur", "Junnar", "Khed", "Maval", "Mulshi", "Pune City", "Purandhar", "Shirur", "Velhe"],
+    "Raigad": ["Alibag", "Karjat", "Khalapur", "Mahad", "Mangaon", "Mhasla", "Murud", "Panvel", "Pen", "Poladpur", "Roha", "Shrivardhan", "Sudhagad", "Tala", "Uran"],
+    "Ratnagiri": ["Chiplun", "Dapoli", "Guhagar", "Khed", "Lanja", "Mandangad", "Rajapur", "Ratnagiri", "Sangameshwar"],
+    "Sangli": ["Atpadi", "Islampur", "Jat", "Kadegaon", "Kavathe-Mahankal", "Khanapur", "Miraj", "Palus", "Shirala", "Tasgaon", "Vita", "Walwa"],
+    "Satara": ["Jaoli", "Karad", "Khandala", "Khatav", "Koregaon", "Maan", "Mahabaleshwar", "Patan", "Phaltan", "Satara", "Wai"],
+    "Sindhudurg": ["Devgad", "Dodamarg", "Kankavli", "Kudal", "Malwan", "Sawantwadi", "Vaibhavwadi", "Vengurla"],
+    "Solapur": ["Akkalkot", "Barshi", "Karmala", "Madha", "Malshiras", "Mangalvedhe", "Mohol", "Pandharpur", "Sangole", "Solapur North", "Solapur South"],
+    "Thane": ["Ambarnath", "Bhiwandi", "Dahanu", "Jawhar", "Kalyan", "Mokhada", "Murbad", "Palghar", "Shahapur", "Talasari", "Thane", "Ulhasnagar", "Vada", "Vasai", "Vikramgad"],
+    "Wardha": ["Arvi", "Ashti", "Deoli", "Hinganghat", "Karanja", "Samudrapur", "Seloo", "Wardha"],
+    "Washim": ["Karanja", "Malegaon", "Mangrulpir", "Manora", "Risod", "Washim"],
+    "Yavatmal": ["Arni", "Babhulgaon", "Darwha", "Digras", "Ghatanji", "Kalamb", "Kelapur", "Mahagaon", "Maregaon", "Ner", "Pusad", "Ralegaon", "Umarkhed", "Wani", "Yavatmal", "Zari Jamani"],
+};
+
+// Update tehsil options based on selected district
+function updateTehsilOptions() {
+    const districtSelect = document.getElementById('district');
+    const tehsilSelect = document.getElementById('tehsil');
+    const selectedDistrict = districtSelect.value;
+    
+    // Clear existing options
+    tehsilSelect.innerHTML = '<option value="">-- Select Tehsil/Block --</option>';
+    
+    // Populate with tehsils for selected district
+    if (selectedDistrict && maharashtraData[selectedDistrict]) {
+        const tehsils = maharashtraData[selectedDistrict];
+        tehsils.forEach(tehsil => {
+            const option = document.createElement('option');
+            option.value = tehsil;
+            option.textContent = tehsil;
+            tehsilSelect.appendChild(option);
+        });
+    }
+}
+
+// Initialize district/tehsil selects when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const districtSelect = document.getElementById('district');
+    if (districtSelect && districtSelect.value) {
+        updateTehsilOptions();
+    }
+});

@@ -105,6 +105,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_VERSION = '1.1'  # Increment for cache busting
 
 # ==================== MEDIA FILES ====================
 MEDIA_URL = '/media/'

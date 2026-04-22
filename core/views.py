@@ -100,9 +100,10 @@ def home(request):
 def dashboard(request):
     selected_year = request.GET.get('year', '')
     
+    # Get available admission years (from admission_date, not entry date)
     available_years = (
         AdmittedStudent.objects
-        .annotate(year=ExtractYear('admission_date'))
+        .annotate(year=ExtractYear('admission_date'))  # Using admission_date for year selection
         .values_list('year', flat=True)
         .distinct()
         .order_by('-year')
@@ -110,6 +111,7 @@ def dashboard(request):
     
     students = AdmittedStudent.objects.all()
     
+    # Filter students by admission year if selected
     if selected_year:
         students = students.filter(admission_date__year=selected_year)
     
@@ -126,9 +128,10 @@ def dashboard(request):
         course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
         course_distribution[course_name] = course_distribution.get(course_name, 0) + 1
     
-    # Prepare data for clustered bar chart: admissions by course for each month
+    # Prepare data for clustered bar chart: admissions by course for each month (based on admission_date)
     if selected_year:
-        year_students = AdmittedStudent.objects.filter(admission_date__year=selected_year)
+        # Filter by admission year (not entry year)
+        year_students = AdmittedStudent.objects.filter(admission_date__year=int(selected_year))
     else:
         current_year = datetime.now().year
         year_students = AdmittedStudent.objects.filter(admission_date__year=current_year)
@@ -140,15 +143,16 @@ def dashboard(request):
         unique_courses.add(course_name)
     unique_courses = sorted(list(unique_courses))
     
-    # Create monthly data by course
+    # Create monthly data by course (based on admission_date)
     monthly_by_course = {}
     for course in unique_courses:
         monthly_by_course[course] = {str(i): 0 for i in range(1, 13)}
     
-    # Populate with actual data
+    # Populate with actual data using admission_date month
     for student in year_students:
         if student.admission_date:
             course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+            # Get month from admission_date, not entry date
             month = str(student.admission_date.month)
             if course_name in monthly_by_course:
                 monthly_by_course[course_name][month] += 1
@@ -1853,7 +1857,7 @@ def export_admitted_students_excel(request):
         ws.cell(row=row_num, column=19).value = student.district
         ws.cell(row=row_num, column=20).value = student.pin_code
         ws.cell(row=row_num, column=21).value = float(student.total_fees)
-        ws.cell(row=row_num, column=22).value = float(student.first_installment) if student.first_installment else 0
+        ws.cell(row=row_num, column=22).value = float(student.paid_fees) if student.paid_fees else 0
         ws.cell(row=row_num, column=23).value = student.admission_date.strftime('%d-%m-%Y')
     
     for column in ws.columns:
@@ -2195,6 +2199,7 @@ def student_finance_details(request):
     search_query = request.GET.get('search', '')
     sort_by = request.GET.get('sort', 'name')  # default sort by name
     course_filter = request.GET.get('course', '')
+    batch_filter = request.GET.get('batch', '')
     
     # Get available years from AdmittedStudent
     available_years = (
@@ -2213,6 +2218,19 @@ def student_finance_details(request):
         .order_by('course')
     )
     
+    # Get all available batches
+    available_batches = (
+        AdmittedStudent.objects
+        .values_list('batch_month', 'batch_year')
+        .distinct()
+        .order_by('-batch_year', '-batch_month')
+    )
+    # Format batches as "Month Year"
+    formatted_batches = []
+    for month, year in available_batches:
+        if month and year:
+            formatted_batches.append(f"{month} {year}")
+    
     # Get all admitted students with filters
     students = AdmittedStudent.objects.all()
     
@@ -2223,6 +2241,14 @@ def student_finance_details(request):
     # Apply course filter
     if course_filter:
         students = students.filter(course=course_filter)
+    
+    # Apply batch filter
+    if batch_filter:
+        batch_parts = batch_filter.split()
+        if len(batch_parts) >= 2:
+            month = ' '.join(batch_parts[:-1])  # All but last part
+            year = batch_parts[-1]  # Last part
+            students = students.filter(batch_month=month, batch_year=year)
     
     # Apply search filter (search by name or mobile)
     if search_query:
@@ -2348,8 +2374,10 @@ def student_finance_details(request):
         'selected_year': selected_year,
         'available_years': available_years,
         'available_courses': available_courses,
+        'available_batches': formatted_batches,
         'search_query': search_query,
         'course_filter': course_filter,
+        'batch_filter': batch_filter,
         'sort_by': sort_by,
         'active_page': 'student_finance_details',
     }

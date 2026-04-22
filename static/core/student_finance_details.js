@@ -304,3 +304,63 @@ document.addEventListener('keydown', function(e) {
         exportToExcel();
     }
 });
+
+// ===================== SETUP STICKY SCROLLBAR =====================
+function setupStickyScrollbar() {
+    const tableContainer = document.getElementById('tableContainer');
+    const stickyScrollbar = document.getElementById('stickyScrollbar');
+    const stickyScrollbarTrack = document.querySelector('.sticky-scrollbar-track');
+    
+    if (!tableContainer || !stickyScrollbar || !stickyScrollbarTrack) {
+        return;
+    }
+    
+    let isScrollingSynced = false;
+    let scrollAnimationFrame = null;
+    
+    // Set initial width
+    stickyScrollbarTrack.style.width = tableContainer.scrollWidth + 'px';
+    
+    // Sync table scroll to sticky scrollbar using requestAnimationFrame for smooth updates
+    tableContainer.addEventListener('scroll', function() {
+        if (isScrollingSynced) return;
+        
+        if (scrollAnimationFrame) {
+            cancelAnimationFrame(scrollAnimationFrame);
+        }
+        
+        scrollAnimationFrame = requestAnimationFrame(() => {
+            isScrollingSynced = true;
+            stickyScrollbar.scrollLeft = tableContainer.scrollLeft;
+            isScrollingSynced = false;
+        });
+    }, { passive: true });
+    
+    // Sync sticky scrollbar to table using requestAnimationFrame for smooth updates
+    stickyScrollbar.addEventListener('scroll', function() {
+        if (isScrollingSynced) return;
+        
+        if (scrollAnimationFrame) {
+            cancelAnimationFrame(scrollAnimationFrame);
+        }
+        
+        scrollAnimationFrame = requestAnimationFrame(() => {
+            isScrollingSynced = true;
+            tableContainer.scrollLeft = stickyScrollbar.scrollLeft;
+            isScrollingSynced = false;
+        });
+    }, { passive: true });
+    
+    // Update width when content changes
+    const observer = new ResizeObserver(function() {
+        stickyScrollbarTrack.style.width = tableContainer.scrollWidth + 'px';
+    });
+    observer.observe(tableContainer);
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupStickyScrollbar);
+} else {
+    setupStickyScrollbar();
+}

@@ -73,7 +73,59 @@
 {% block extra_js %}{% endblock %}
 
 <script>
-// Theme Switcher - Detects system preference and allows manual toggle
+// ===================== SIDEBAR TOGGLE FUNCTIONALITY =====================
+(function() {
+    const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+    const layout = document.querySelector('.layout');
+    const storageKey = 'sidebar-visibility';
+    
+    // Function to hide sidebar
+    function hideSidebar() {
+        layout.classList.add('sidebar-hidden');
+        localStorage.setItem(storageKey, 'hidden');
+    }
+    
+    // Function to show sidebar
+    function showSidebar() {
+        layout.classList.remove('sidebar-hidden');
+        localStorage.setItem(storageKey, 'visible');
+    }
+    
+    // Initialize sidebar state from localStorage
+    function initializeSidebar() {
+        const savedState = localStorage.getItem(storageKey);
+        
+        // Default to visible on dashboard, hidden on other pages
+        const isDashboard = window.location.pathname.includes('/dashboard/') || window.location.pathname === '/';
+        const defaultState = isDashboard ? 'visible' : 'visible'; // Show by default
+        
+        const state = savedState || defaultState;
+        
+        if (state === 'hidden') {
+            hideSidebar();
+        } else {
+            showSidebar();
+        }
+    }
+    
+    // Handle sidebar toggle button click
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', function() {
+            if (layout.classList.contains('sidebar-hidden')) {
+                showSidebar();
+            } else {
+                hideSidebar();
+            }
+        });
+    }
+    
+    // Initialize on page load
+    initializeSidebar();
+})();
+</script>
+
+<!-- Theme Switcher Script -->
+<script>
 (function() {
     const themeToggleBtn = document.getElementById('theme-toggle');
     const themeIcon = document.querySelector('.theme-icon');

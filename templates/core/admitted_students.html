@@ -164,7 +164,7 @@
     <div class="students-grid">
         {% if students %}
             {% for student in students %}
-            <div class="student-card" data-student-id="{{ student.id }}">
+            <div class="student-card" data-student-id="{{ student.id }}" data-mobile="{{ student.mobile_own }}" data-email="{{ student.email_own }}" data-fullname="{{ student.full_name|lower }}" data-surname="{{ student.surname|lower }}" data-studentname="{{ student.student_name|lower }}" data-fathername="{{ student.father_name|lower }}">
                 <!-- Selection Checkbox -->
                 <div class="student-select">
                     <input type="checkbox" class="student-checkbox" value="{{ student.id }}" onclick="event.stopPropagation(); updateSelectedCount();">
@@ -447,14 +447,53 @@
                         </div>
                         <div class="form-group">
                             <label>Tehsil/Block <span class="required">*</span></label>
-                            <input type="text" id="tehsil" name="tehsil_block" required>
+                            <select id="tehsil" name="tehsil_block" required>
+                                <option value="">-- Select Tehsil/Block --</option>
+                            </select>
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label>District <span class="required">*</span></label>
-                            <input type="text" id="district" name="district" required>
+                            <select id="district" name="district" required onchange="updateTehsilOptions()">
+                                <option value="">-- Select District --</option>
+                                <option value="Ahmednagar">Ahmednagar</option>
+                                <option value="Akola">Akola</option>
+                                <option value="Amravati">Amravati</option>
+                                <option value="Beed">Beed</option>
+                                <option value="Bhandara">Bhandara</option>
+                                <option value="Buldhana">Buldhana</option>
+                                <option value="Chandrapur">Chandrapur</option>
+                                <option value="Chhatrapati Sambhajinagar">Chhatrapati Sambhajinagar</option>
+                                <option value="Dharashiv">Dharashiv</option>
+                                <option value="Dhule">Dhule</option>
+                                <option value="Gadchiroli">Gadchiroli</option>
+                                <option value="Gondia">Gondia</option>
+                                <option value="Hingoli">Hingoli</option>
+                                <option value="Jalgaon">Jalgaon</option>
+                                <option value="Jalna">Jalna</option>
+                                <option value="Kolhapur">Kolhapur</option>
+                                <option value="Latur">Latur</option>
+                                <option value="Mumbai City">Mumbai City</option>
+                                <option value="Mumbai Suburban">Mumbai Suburban</option>
+                                <option value="Nagpur">Nagpur</option>
+                                <option value="Nanded">Nanded</option>
+                                <option value="Nandurbar">Nandurbar</option>
+                                <option value="Nashik">Nashik</option>
+                                <option value="Parbhani">Parbhani</option>
+                                <option value="Pune">Pune</option>
+                                <option value="Raigad">Raigad</option>
+                                <option value="Ratnagiri">Ratnagiri</option>
+                                <option value="Sangli">Sangli</option>
+                                <option value="Satara">Satara</option>
+                                <option value="Sindhudurg">Sindhudurg</option>
+                                <option value="Solapur">Solapur</option>
+                                <option value="Thane">Thane</option>
+                                <option value="Wardha">Wardha</option>
+                                <option value="Washim">Washim</option>
+                                <option value="Yavatmal">Yavatmal</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Pin Code <span class="required">*</span></label>

@@ -1,4 +1,10 @@
 <nav class="sidebar">
+    <div class="sidebar-header">
+        <button id="sidebar-toggle" class="sidebar-toggle-btn" title="Toggle sidebar visibility">
+            <span class="sidebar-icon">☰</span>
+        </button>
+    </div>
+
     <a href="{% url 'dashboard' %}"
        class="menu-item {% if active_page == 'dashboard' %}active{% endif %}">
         🖥️ Dashboard

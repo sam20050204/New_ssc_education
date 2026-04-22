@@ -10,16 +10,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameIndex(
-            model_name='attendance',
-            new_name='core_attend_student_931c39_idx',
-            old_name='core_attend_student_date_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='attendance',
-            new_name='core_attend_date_801bf5_idx',
-            old_name='core_attend_date_idx',
-        ),
+        # Skip index renaming if they don't exist in old schema
         migrations.AddField(
             model_name='attendance',
             name='updated_at',
