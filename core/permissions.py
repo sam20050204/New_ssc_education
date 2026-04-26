@@ -4,11 +4,9 @@ Restrict views based on user roles/permissions
 """
 
 from django.contrib.auth.mixins import UserPassesTestMixin
-from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.contrib import messages
 from functools import wraps
-from django.http import HttpResponseForbidden
 
 
 # ==================== ROLE DEFINITIONS ====================

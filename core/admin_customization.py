@@ -5,7 +5,7 @@ Improves admin interface styling and functionality
 
 from django.contrib import admin
 from django.utils.html import format_html
-from django.db.models import Count, Sum
+from django.db.models import Sum
 from decimal import Decimal
 from .models import (
     Enquiry, AdmittedStudent, Student, Course,

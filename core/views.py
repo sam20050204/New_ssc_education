@@ -23,14 +23,65 @@ from decimal import Decimal, InvalidOperation
 import json
 import shutil
 import os
+import re
 import zipfile
 from PIL import Image
-from django.db.models import Sum, Count, Q, F
-from .models import Student, FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem, Attendance, Batch
-from .forms import EnquiryForm, AdmittedStudentForm, FeePaymentForm, CourseForm, BatchManagementForm, AttendanceForm
-from .utils import number_to_words, get_time_slot_display, get_course_display, get_available_years_from_field, is_valid_mobile, is_valid_pincode, get_cached_courses
-from .constants import TIME_SLOT_CHOICES, TIME_SLOT_DISPLAY_MAP, DEFAULT_PAGE_SIZE
+from django.db.models import Sum, Q, F
+from django.utils.http import url_has_allowed_host_and_scheme
+from .models import FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem, Attendance, Batch
+from .forms import EnquiryForm, AdmittedStudentForm, FeePaymentForm, CourseForm
+from .utils import number_to_words, is_valid_mobile, is_valid_pincode, get_cached_courses, calculate_total_profit
+import logging
+
+logger = logging.getLogger(__name__)
 from django.contrib.auth import authenticate, login as auth_login
+
+
+SQLITE_IDENTIFIER_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+IMPORT_ALLOWED_TABLES = {
+    'core_course',
+    'core_enquiry',
+    'core_student',
+    'core_admittedstudent',
+    'core_feepayment',
+    'core_studentfinancedetail',
+    'core_attendance',
+    'core_salesitem',
+    'core_batch',
+}
+IMPORT_PRIORITY_TABLES = [
+    'core_course',
+    'core_student',
+    'core_admittedstudent',
+    'core_feepayment',
+    'core_studentfinancedetail',
+    'core_attendance',
+    'core_salesitem',
+    'core_batch',
+    'core_enquiry',
+]
+
+
+def is_safe_sqlite_identifier(identifier):
+    """Allow only normal SQLite table/column identifiers."""
+    return bool(SQLITE_IDENTIFIER_RE.match(identifier or ''))
+
+
+def safe_extract_zip(zip_ref, destination, max_uncompressed_size=750 * 1024 * 1024):
+    """Extract a ZIP after blocking path traversal and oversized archives."""
+    destination = os.path.abspath(destination)
+    total_size = 0
+
+    for member in zip_ref.infolist():
+        total_size += member.file_size
+        if total_size > max_uncompressed_size:
+            raise ValueError('Backup archive is too large after extraction.')
+
+        member_path = os.path.abspath(os.path.join(destination, member.filename))
+        if not member_path.startswith(destination + os.sep) and member_path != destination:
+            raise ValueError('Backup archive contains an unsafe file path.')
+
+    zip_ref.extractall(destination)
 
 # ================= CUSTOM LOGIN =================
 def custom_login(request):
@@ -47,6 +98,12 @@ def custom_login(request):
             auth_login(request, user)
             messages.success(request, f"Welcome back, {user.username}!")
             next_url = request.GET.get('next', 'dashboard')
+            if not url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure()
+            ):
+                next_url = 'dashboard'
             return redirect(next_url)
         else:
             messages.error(request, "Invalid username or password. Please try again.")
@@ -212,7 +269,7 @@ def enquiry_list(request):
             return redirect("enquiry_list")
         
         # CREATE ENQUIRY
-        enquiry = Enquiry.objects.create(
+        Enquiry.objects.create(
             name=name,
             mobile=mobile,
             education=education,
@@ -224,7 +281,7 @@ def enquiry_list(request):
             district=district
         )
         
-        messages.success(request, f"✅ Enquiry submitted successfully!")
+        messages.success(request, "Enquiry submitted successfully!")
         return redirect("enquiry_list")
     
     # GET REQUEST - Display enquiries
@@ -880,6 +937,11 @@ def add_course_ajax(request):
         
         if form.is_valid():
             course = form.save()
+            
+            # ✅ IMPORTANT: Clear the course cache so new course appears everywhere immediately
+            from django.core.cache import cache
+            cache.delete('courses_list')
+            
             return JsonResponse({
                 'success': True,
                 'message': f'Course "{course_name}" added successfully!',
@@ -1154,7 +1216,7 @@ def update_student_admitted(request, student_id):
         
         # Handle photo removal flag
         if data.get('remove_photo') == 'true':
-            print(f'[PHOTO DEBUG] Remove photo flag detected')
+            print('[PHOTO DEBUG] Remove photo flag detected')
             if student.photo:
                 try:
                     print(f'[PHOTO DEBUG] Deleting photo: {student.photo}')
@@ -1175,7 +1237,7 @@ def update_student_admitted(request, student_id):
                     print(f'[PHOTO DEBUG] Error deleting old photo: {e}')
             # Save new photo
             student.photo = photo_file
-            print(f'[PHOTO DEBUG] Photo assigned to student')
+            print('[PHOTO DEBUG] Photo assigned to student')
         else:
             print(f'[PHOTO DEBUG] No photo action. Remove flag: {data.get("remove_photo")}, Files: {list(request.FILES.keys())}')
         
@@ -1388,9 +1450,7 @@ def submit_fee_payment(request):
                 })
                 
         except Exception as e:
-            print(f"Error in submit_fee_payment: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            logger.exception("Error in submit_fee_payment")
             return JsonResponse({
                 'success': False,
                 'error': f'Server error: {str(e)}'
@@ -1400,69 +1460,6 @@ def submit_fee_payment(request):
         'success': False,
         'error': 'Invalid request method. Use POST.'
     }, status=405)
-
-# ================= NUMBER TO WORDS CONVERTER =================
-def number_to_words(num):
-    """Convert number to words for Indian currency"""
-    ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
-    tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
-    teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 
-             'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
-    
-    if num == 0:
-        return 'Zero Rupees Only'
-    
-    def convert_less_than_thousand(n):
-        if n == 0:
-            return ''
-        
-        result = ''
-        
-        if n >= 100:
-            result += ones[n // 100] + ' Hundred '
-            n %= 100
-        
-        if n >= 20:
-            result += tens[n // 10] + ' '
-            n %= 10
-        elif n >= 10:
-            result += teens[n - 10] + ' '
-            return result
-        
-        if n > 0:
-            result += ones[n] + ' '
-        
-        return result
-    
-    rupees = int(num)
-    paise = int(round((num - rupees) * 100))
-    
-    result = ''
-    
-    if rupees >= 10000000:
-        result += convert_less_than_thousand(rupees // 10000000) + 'Crore '
-        rupees %= 10000000
-    
-    if rupees >= 100000:
-        result += convert_less_than_thousand(rupees // 100000) + 'Lakh '
-        rupees %= 100000
-    
-    if rupees >= 1000:
-        result += convert_less_than_thousand(rupees // 1000) + 'Thousand '
-        rupees %= 1000
-    
-    if rupees > 0:
-        result += convert_less_than_thousand(rupees)
-    
-    result += 'Rupees'
-    
-    if paise > 0:
-        result += ' and ' + convert_less_than_thousand(paise) + 'Paise'
-    
-    result += ' Only'
-    
-    return result.strip()
-
 
 # ================= EXPORT STUDENTS TO EXCEL =================
 @login_required
@@ -1513,7 +1510,7 @@ def receipts_view(request):
 def get_receipts(request):
     """API endpoint to get receipts with filters"""
     try:
-        receipts = FeePayment.objects.select_related('student').all().order_by('-id')
+        receipts = FeePayment.objects.select_related('student').all().order_by('-payment_date')
         
         # Prepare receipt data
         receipt_list = []
@@ -1535,7 +1532,9 @@ def get_receipts(request):
             receipt_list.append({
                 'id': receipt.id,
                 'receipt_no': receipt.receipt_no,
-                'student_name': student.full_name,
+                'student_name': student.student_name,
+                'surname': student.surname or '',
+                'father_name': student.father_name or '',
                 'course': course_name,
                 'batch': batch_display,  # ✅ ADDED BATCH
                 'batch_display': batch_display,  # ✅ Fallback
@@ -1554,9 +1553,7 @@ def get_receipts(request):
             'receipts': receipt_list
         })
     except Exception as e:
-        print(f"Error in get_receipts: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Error in get_receipts")
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -1564,7 +1561,9 @@ def get_receipts(request):
 
 # ================= UPDATE RECEIPT API =================
 @login_required
+@staff_member_required
 @require_http_methods(["POST"])
+@csrf_protect
 def update_receipt(request, receipt_id):
     """API endpoint to update a receipt"""
     try:
@@ -1626,7 +1625,7 @@ def update_receipt(request, receipt_id):
             if new_paid_fees > student.total_fees:
                 return JsonResponse({
                     'success': False,
-                    'error': f'Cannot update: would exceed total fees'
+                    'error': 'Cannot update: would exceed total fees'
                 }, status=400)
             
             with transaction.atomic():
@@ -2033,6 +2032,7 @@ def delete_admitted_students(request):
 
 # ================= DATABASE BACKUP =================
 @login_required
+@staff_member_required
 def backup_page(request):
     """Display the backup and restore page"""
     context = {
@@ -2042,11 +2042,12 @@ def backup_page(request):
 
 
 @login_required
+@staff_member_required
+@require_http_methods(["GET"])
 def export_database(request):
     """Export database as SQLite file with photos"""
     try:
         import zipfile
-        import tempfile
         from io import BytesIO
         
         db_path = settings.DATABASES['default']['NAME']
@@ -2087,18 +2088,16 @@ def export_database(request):
         return response
     
     except Exception as e:
-        print(f"Export database error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Export database error")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @login_required
+@staff_member_required
+@require_http_methods(["POST"])
+@csrf_protect
 def import_database(request):
     """Import database and photos from backup ZIP file (merge/update instead of overwrite)"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
-    
     if 'database_file' not in request.FILES:
         return JsonResponse({'success': False, 'error': 'No file provided'}, status=400)
     
@@ -2129,12 +2128,10 @@ def import_database(request):
         shutil.copy2(db_path, backup_path)
         
         # Create backup of current photos before importing
-        photos_backup_path = None
         media_path = os.path.join(settings.BASE_DIR, 'media', 'student_photos')
         if os.path.exists(media_path):
             photos_backup_dir = os.path.join(settings.BASE_DIR, f'student_photos_backup_{timestamp}')
             shutil.copytree(media_path, photos_backup_dir)
-            photos_backup_path = photos_backup_dir
         
         temp_db_path = None
         temp_dir = None
@@ -2145,7 +2142,7 @@ def import_database(request):
                 # Extract ZIP file
                 temp_dir = tempfile.mkdtemp()
                 with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-                    zip_ref.extractall(temp_dir)
+                    safe_extract_zip(zip_ref, temp_dir)
                 
                 # Find database file in extracted ZIP
                 temp_db_path = None
@@ -2207,11 +2204,15 @@ def import_database(request):
             
             # Get all table names from imported database
             imported_cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
-            all_tables = imported_cursor.fetchall()
+            all_tables = [
+                (table_name,)
+                for (table_name,) in imported_cursor.fetchall()
+                if table_name in IMPORT_ALLOWED_TABLES and is_safe_sqlite_identifier(table_name)
+            ]
             
             # Sort tables to ensure dependencies are met (parent tables first)
             # Priority order: AdmittedStudent first, then dependent tables
-            priority_tables = ['core_course', 'core_admittedstudent', 'core_feepayment', 'core_studentfinancedetail', 'core_attendance']
+            priority_tables = IMPORT_PRIORITY_TABLES
             
             # Start with priority tables, then add remaining tables
             tables_ordered = []
@@ -2234,6 +2235,9 @@ def import_database(request):
                     imported_cursor.execute(f"PRAGMA table_info({table_name})")
                     columns_info = imported_cursor.fetchall()
                     columns = [col[1] for col in columns_info]
+                    if not columns or not all(is_safe_sqlite_identifier(col) for col in columns):
+                        skipped_count += 1
+                        continue
                     primary_keys = [col[1] for col in columns_info if col[5]]  # col[5] is pk flag
                     
                     # Get all records from imported table
@@ -2351,7 +2355,7 @@ def import_database(request):
             if file_extension == 'zip' and photos_count > 0:
                 message += f'. {photos_count} student photos imported to media/student_photos folder.'
             elif file_extension == 'zip':
-                message += f'. No student photos found in backup.'
+                message += '. No student photos found in backup.'
             
             print(f"Import completed: {message}")
             
@@ -2368,9 +2372,7 @@ def import_database(request):
                 shutil.rmtree(temp_dir)
     
     except Exception as e:
-        print(f"Import error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Import database error")
         return JsonResponse({'success': False, 'error': f'Error importing database: {str(e)}'}, status=500)
     
 
@@ -2392,58 +2394,6 @@ def statistics_view(request):
     students = AdmittedStudent.objects.all()
     if selected_year:
         students = students.filter(admission_date__year=selected_year)
-    
-    # Helper function to calculate total profit
-    def calculate_total_profit(student_queryset):
-        total = Decimal('0.00')
-        for student in student_queryset:
-            # Get or create finance detail record
-            finance_detail, created = StudentFinanceDetail.objects.get_or_create(
-                student=student,
-                defaults={
-                    'first_installment': Decimal('0.00'),
-                    'second_installment': Decimal('0.00'),
-                    'third_installment': Decimal('0.00'),
-                    'fourth_installment': Decimal('0.00'),
-                    'fifth_installment': Decimal('0.00'),
-                    'fees_paid_to_mkcl_1': Decimal('0.00'),
-                    'fees_paid_to_mkcl_2': Decimal('0.00'),
-                }
-            )
-            
-            # Calculate fees paid to MKCL - default to 0
-            mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
-            mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
-            
-            mkcl_total = mkcl_1 + mkcl_2
-            
-            # Get fee payments for this student - ordered by payment_date (oldest first)
-            fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
-            
-            # Extract installment amounts from FeePayment records (5 installments)
-            first_inst = Decimal('0.00')
-            second_inst = Decimal('0.00')
-            third_inst = Decimal('0.00')
-            fourth_inst = Decimal('0.00')
-            fifth_inst = Decimal('0.00')
-            
-            if len(fee_payments) >= 1:
-                first_inst = fee_payments[0].amount
-            if len(fee_payments) >= 2:
-                second_inst = fee_payments[1].amount
-            if len(fee_payments) >= 3:
-                third_inst = fee_payments[2].amount
-            if len(fee_payments) >= 4:
-                fourth_inst = fee_payments[3].amount
-            if len(fee_payments) >= 5:
-                fifth_inst = fee_payments[4].amount
-            
-            # Calculate profit as (Total Fees Paid By Learner) - (Total Fees Paid to MKCL)
-            learner_total_paid = first_inst + second_inst + third_inst + fourth_inst + fifth_inst
-            profit = learner_total_paid - mkcl_total
-            total += profit
-        
-        return total
     
     # Calculate total profit for selected year (or current year if no selection)
     total_profit = calculate_total_profit(students)
@@ -2470,7 +2420,6 @@ def statistics_view(request):
     return render(request, 'core/statistics.html', context)
 
 
-@login_required
 @login_required
 def student_finance_details(request):
     """Student Finance Details section with filtering and sorting"""
@@ -2664,50 +2613,59 @@ def student_finance_details(request):
     return render(request, 'core/student_finance_details.html', context)
 
 @login_required
+@staff_member_required
+@require_http_methods(["POST"])
+@csrf_protect
 def update_finance_detail(request):
     """AJAX endpoint to update finance details"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            student_id = data.get('student_id')
-            field = data.get('field')
-            value = data.get('value', '0')
-            
-            # Convert value to Decimal
-            try:
-                value = Decimal(value) if value else Decimal('0.00')
-            except:
-                value = Decimal('0.00')
-            
-            student = AdmittedStudent.objects.get(id=student_id)
-            finance_detail, created = StudentFinanceDetail.objects.get_or_create(student=student)
-            
-            # Only allow updates to MKCL fees (learner fees are read-only based on FeePayment records)
-            if field == 'mkcl_1':
-                finance_detail.fees_paid_to_mkcl_1 = value
-            elif field == 'mkcl_2':
-                finance_detail.fees_paid_to_mkcl_2 = value
-            else:
-                # Reject attempts to update learner fees (first_inst, second_inst, third_inst)
-                return JsonResponse({'success': False, 'error': 'Cannot update learner fees. These are based on actual payment records.'})
-            
-            finance_detail.save()
-            
-            # Recalculate totals
-            total_paid = student.paid_fees or Decimal('0.00')
-            mkcl_total = (finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')) + \
-                        (finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00'))
-            profit = total_paid - mkcl_total
-            
-            return JsonResponse({
-                'success': True,
-                'mkcl_total': float(mkcl_total),
-                'profit': float(profit)
-            })
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    student_id = data.get('student_id')
+    field = data.get('field')
+    raw_value = data.get('value', '0')
+
+    try:
+        value = Decimal(str(raw_value)) if raw_value not in ('', None) else Decimal('0.00')
+    except (InvalidOperation, TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid amount'}, status=400)
+
+    if value < 0:
+        return JsonResponse({'success': False, 'error': 'Amount cannot be negative'}, status=400)
+
+    try:
+        student = AdmittedStudent.objects.get(id=student_id)
+    except AdmittedStudent.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
+
+    finance_detail, _ = StudentFinanceDetail.objects.get_or_create(student=student)
+
+    # Only allow updates to MKCL fees; learner fees come from actual payments.
+    if field == 'mkcl_1':
+        finance_detail.fees_paid_to_mkcl_1 = value
+    elif field == 'mkcl_2':
+        finance_detail.fees_paid_to_mkcl_2 = value
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': 'Cannot update learner fees. These are based on actual payment records.'
+        }, status=400)
+
+    finance_detail.save()
+
+    total_paid = student.paid_fees or Decimal('0.00')
+    mkcl_total = (finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')) + (
+        finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+    )
+    profit = total_paid - mkcl_total
+
+    return JsonResponse({
+        'success': True,
+        'mkcl_total': float(mkcl_total),
+        'profit': float(profit)
+    })
 
 
 @login_required
@@ -2717,6 +2675,11 @@ def month_wise_admission(request):
     
     current_year = datetime.now().year
     selected_year = request.GET.get('year', str(current_year))  # Default to current year
+    try:
+        selected_year_int = int(selected_year)
+    except (TypeError, ValueError):
+        selected_year_int = current_year
+        selected_year = str(current_year)
     
     # Get all years for filter
     years = AdmittedStudent.objects.dates('admission_date', 'year', order='DESC')
@@ -2725,7 +2688,7 @@ def month_wise_admission(request):
     # Get admitted students
     students = AdmittedStudent.objects.all()
     if selected_year:
-        students = students.filter(admission_date__year=int(selected_year))
+        students = students.filter(admission_date__year=selected_year_int)
     
     # Get all unique courses dynamically from AdmittedStudent records
     courses_qs = students.values_list('course', flat=True).distinct()
@@ -2785,7 +2748,7 @@ def month_wise_admission(request):
             # Get all students for this course admitted in this month
             course_students = students.filter(
                 admission_date__month=month_num,
-                admission_date__year=int(selected_year) if selected_year else datetime.now().year
+                admission_date__year=selected_year_int
             ).filter(
                 Q(course=course) | Q(custom_course=course)
             )
@@ -2831,7 +2794,7 @@ def month_wise_admission(request):
         'monthly_profit_data': monthly_profit_data,
         'monthly_profit_totals': monthly_profit_totals_formatted,
         'profit_grand_total': f"₹ {profit_grand_total:.2f}" if profit_grand_total > 0 else '₹ 0.00',
-        'selected_year': selected_year or str(datetime.now().year),
+        'selected_year': selected_year or str(current_year),
         'available_years': available_years,
         'active_page': 'month_wise_admission',
     }
@@ -2865,23 +2828,30 @@ def sales_items(request):
 def add_sales_item(request):
     """Add new sales item"""
     if request.method == 'POST':
-        item_name = request.POST.get('item_name')
+        item_name = request.POST.get('item_name', '').strip()
         quantity = request.POST.get('quantity')
         purchase_rate = request.POST.get('purchase_rate')
-        purchased_from = request.POST.get('purchased_from')
+        purchased_from = request.POST.get('purchased_from', '').strip()
         total_amount = request.POST.get('total_amount')
-        
-        
+
         try:
+            quantity_value = int(quantity)
+            purchase_rate_value = Decimal(str(purchase_rate))
+            total_amount_value = Decimal(str(total_amount))
+            if not item_name or not purchased_from:
+                raise ValueError('Item name and vendor are required.')
+            if quantity_value < 0 or purchase_rate_value < 0 or total_amount_value < 0:
+                raise ValueError('Quantity and amounts cannot be negative.')
+
             SalesItem.objects.create(
                 item_name=item_name,
-                quantity=int(quantity),
-                purchase_rate=Decimal(purchase_rate),
+                quantity=quantity_value,
+                purchase_rate=purchase_rate_value,
                 purchased_from=purchased_from,
-                total_amount=Decimal(total_amount)
+                total_amount=total_amount_value
             )
             messages.success(request, f"Item '{item_name}' added successfully!")
-        except Exception as e:
+        except (InvalidOperation, TypeError, ValueError) as e:
             messages.error(request, f"Error adding item: {str(e)}")
         
         return redirect('sales_items')
@@ -3266,8 +3236,6 @@ def edit_student_batch(request, student_id):
 @staff_member_required
 def batch_overview_dashboard(request):
     """Dashboard showing batch-wise student distribution"""
-    from django.db.models import Count
-    
     time_slots = [
         ('08:00-09:00', '8:00 AM - 9:00 AM'),
         ('09:00-10:00', '9:00 AM - 10:00 AM'),
@@ -3328,7 +3296,7 @@ def batch_overview_dashboard(request):
 @staff_member_required
 def mark_attendance_page(request):
     """Page to mark attendance for a specific batch and date"""
-    from datetime import datetime, date as date_class
+    from datetime import date as date_class
     
     if request.method == 'POST':
         attendance_date = request.POST.get('attendance_date')
@@ -3462,7 +3430,7 @@ def save_attendance(request, date, batch_time, batch_type):
 @staff_member_required
 def attendance_reports(request):
     """Comprehensive attendance reports"""
-    from datetime import datetime, date as date_class, timedelta
+    from datetime import date as date_class
     
     report_type = request.GET.get('report_type', 'student')
     
@@ -4142,6 +4110,8 @@ def get_batch_students(request):
 
 @login_required
 @staff_member_required
+@require_http_methods(["POST"])
+@csrf_protect
 def update_batch_students(request):
     """Update student batch assignments"""
     try:
@@ -4200,6 +4170,8 @@ def get_all_students(request):
         }, status=500)
 
 
+@login_required
+@staff_member_required
 def get_student_detail_batch(request, student_id):
     """Get student details for batch modal display"""
     try:
@@ -4212,7 +4184,7 @@ def get_student_detail_batch(request, student_id):
                 'full_name': student.full_name,
                 'gender': student.gender,
                 'mobile_own': student.mobile_own,
-                'email': student.email or '',
+                'email': getattr(student, 'email', '') or '',
                 'course': student.course or '',
                 'theory_batch_time': student.theory_batch_time or '',
                 'practical_batch_time': student.practical_batch_time or '',
@@ -4243,11 +4215,11 @@ def get_student_detail_batch(request, student_id):
 
 # ================= UPDATE BATCH CAPACITY =================
 @login_required
+@staff_member_required
+@require_http_methods(["POST"])
+@csrf_protect
 def update_batch_capacity(request):
     """Update batch capacity"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
-    
     try:
         data = json.loads(request.body)
         batch_id = data.get('batch_id')

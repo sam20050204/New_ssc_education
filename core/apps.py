@@ -9,9 +9,6 @@ class CoreConfig(AppConfig):
     
     def ready(self):
         """Enable FOREIGN_KEYS for SQLite when Django is ready"""
-        # Import the signal handler
-        from django.db import connection
-        
         # Enable FOREIGN_KEYS for SQLite
         @receiver(connection_created)
         def enable_sqlite_foreign_keys(sender, connection, **kwargs):

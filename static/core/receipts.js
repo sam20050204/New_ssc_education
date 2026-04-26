@@ -38,7 +38,12 @@ function setupEventListeners() {
     document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
     
     // Apply filter button
-    document.getElementById('applyFilterBtn').addEventListener('click', applyFilters);
+    document.getElementById('applyFilterBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        applyFilters();
+        closeFilterDrawer();
+        displayActiveFilters();
+    });
     
     // Clear filter button
     document.getElementById('clearFilterBtn').addEventListener('click', clearFilters);
@@ -48,6 +53,20 @@ function setupEventListeners() {
     
     // Edit form submit
     document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
+    
+    // FILTER DRAWER CONTROLS
+    document.getElementById('filterToggleBtn').addEventListener('click', openFilterDrawer);
+    document.getElementById('drawerCloseBtn').addEventListener('click', closeFilterDrawer);
+    document.getElementById('filterOverlay').addEventListener('click', closeFilterDrawer);
+    
+    // FILTER TYPE TOGGLE (Regular/Batch)
+    document.getElementById('filterTypeSelect').addEventListener('change', toggleBatchFields);
+    
+    // SORT BY CHANGE - Apply sorting immediately
+    document.getElementById('sortBySelect').addEventListener('change', function() {
+        applySorting();
+        renderReceipts(filteredReceipts);
+    });
 }
 
 // Populate course filter dropdown
@@ -133,13 +152,36 @@ function applyFilters() {
     const courseFilter = document.getElementById('courseFilter').value;
     const batchMonthFilter = document.getElementById('batchMonthFilter').value;
     const batchYearFilter = document.getElementById('batchYearFilter').value;
+    const dateFromFilter = document.getElementById('dateFromFilter').value;
+    const dateToFilter = document.getElementById('dateToFilter').value;
     
-    console.log('Applying filters:', { searchTerm, monthFilter, yearFilter, courseFilter, batchMonthFilter, batchYearFilter }); // Debug log
+    console.log('Applying filters:', { searchTerm, monthFilter, yearFilter, courseFilter, batchMonthFilter, batchYearFilter, dateFromFilter, dateToFilter }); // Debug log
     
     filteredReceipts = allReceipts.filter(receipt => {
         // Search filter
         if (searchTerm && !receipt.student_name.toLowerCase().includes(searchTerm) && !receipt.receipt_no.toLowerCase().includes(searchTerm)) {
             return false;
+        }
+        
+        // Date range filter
+        if (dateFromFilter || dateToFilter) {
+            const receiptDate = new Date(receipt.payment_date);
+            
+            if (dateFromFilter) {
+                const fromDate = new Date(dateFromFilter);
+                if (receiptDate < fromDate) {
+                    return false;
+                }
+            }
+            
+            if (dateToFilter) {
+                const toDate = new Date(dateToFilter);
+                // Set time to end of day to include the entire day
+                toDate.setHours(23, 59, 59, 999);
+                if (receiptDate > toDate) {
+                    return false;
+                }
+            }
         }
         
         // Month and Year filter (payment date)
@@ -181,6 +223,10 @@ function applyFilters() {
     });
     
     console.log('Filtered receipts:', filteredReceipts.length); // Debug log
+    
+    // Apply sorting
+    applySorting();
+    
     renderReceipts(filteredReceipts);
     updateSummary(filteredReceipts);
 }
@@ -193,10 +239,65 @@ function clearFilters() {
     document.getElementById('courseFilter').value = '';
     document.getElementById('batchMonthFilter').value = '';
     document.getElementById('batchYearFilter').value = '';
+    document.getElementById('dateFromFilter').value = '';
+    document.getElementById('dateToFilter').value = '';
+    document.getElementById('filterTypeSelect').value = 'regular';
+    document.getElementById('sortBySelect').value = 'date-desc';
+    
+    // Hide batch fields
+    document.getElementById('batchFields').style.display = 'none';
+    
+    // Hide active filter chips
+    document.getElementById('activeFiltersContainer').style.display = 'none';
     
     filteredReceipts = [...allReceipts];
+    applySorting();
     renderReceipts(filteredReceipts);
     updateSummary(filteredReceipts);
+}
+
+// Apply sorting
+function applySorting() {
+    const sortBy = document.getElementById('sortBySelect').value || 'date-desc';
+    
+    filteredReceipts.sort((a, b) => {
+        switch(sortBy) {
+            case 'date-asc':
+                // Oldest first
+                return new Date(a.payment_date) - new Date(b.payment_date);
+            
+            case 'date-desc':
+                // Newest first (default)
+                return new Date(b.payment_date) - new Date(a.payment_date);
+            
+            case 'name-asc':
+                // A-Z: Surname, First Name, Middle Name
+                return compareNames(a, b);
+            
+            case 'name-desc':
+                // Z-A: Surname, First Name, Middle Name
+                return compareNames(b, a);
+            
+            case 'amount-asc':
+                // Low to high
+                return parseFloat(a.paid_fees) - parseFloat(b.paid_fees);
+            
+            case 'amount-desc':
+                // High to low
+                return parseFloat(b.paid_fees) - parseFloat(a.paid_fees);
+            
+            default:
+                return 0;
+        }
+    });
+}
+
+// Compare names in format: Surname, First Name, Middle Name
+function compareNames(receipt1, receipt2) {
+    const name1 = (receipt1.surname || '') + ' ' + (receipt1.student_name || '') + ' ' + (receipt1.father_name || '');
+    const name2 = (receipt2.surname || '') + ' ' + (receipt2.student_name || '') + ' ' + (receipt2.father_name || '');
+    
+    return name1.toLowerCase().localeCompare(name2.toLowerCase());
 }
 
 // Render receipts in table
@@ -215,11 +316,16 @@ function renderReceipts(receipts) {
     
     receipts.forEach(receipt => {
         const row = document.createElement('tr');
+        // Format name as: Surname Student Name Father Name
+        const formattedName = [receipt.surname, receipt.student_name, receipt.father_name]
+            .filter(n => n && n.trim())
+            .join(' ');
+        
         row.innerHTML = `
             <td><strong>#${receipt.receipt_no}</strong></td>
             <td>
                 <a href="#" class="student-name" onclick="showPrintModal(${receipt.id}); return false;">
-                    ${receipt.student_name}
+                    ${formattedName}
                 </a>
             </td>
             <td>${formatDate(receipt.payment_date)}</td>
@@ -277,6 +383,9 @@ function openEditModal(receiptId) {
     document.getElementById('editPaidFees').value = receipt.paid_fees || '';
     document.getElementById('editRemainingFees').value = receipt.remaining_fees || '';
     
+    // Store original total fees for calculation
+    document.getElementById('editPaidFees').dataset.totalFees = receipt.paid_fees + receipt.remaining_fees;
+    
     console.log('Form populated'); // Debug log
     
     // Show modal
@@ -284,8 +393,24 @@ function openEditModal(receiptId) {
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
     
+    // Add event listener for auto-calculating remaining fees
+    const paidFeesInput = document.getElementById('editPaidFees');
+    paidFeesInput.removeEventListener('input', calculateRemainingFees);
+    paidFeesInput.addEventListener('input', calculateRemainingFees);
+    
     // Focus on first input
     document.getElementById('editPaymentDate').focus();
+}
+
+// Auto-calculate remaining fees when paid fees change
+function calculateRemainingFees() {
+    const paidFeesInput = document.getElementById('editPaidFees');
+    const remainingFeesInput = document.getElementById('editRemainingFees');
+    const totalFees = parseFloat(paidFeesInput.dataset.totalFees) || 0;
+    const paidFees = parseFloat(paidFeesInput.value) || 0;
+    
+    const remainingFees = Math.max(0, totalFees - paidFees);
+    remainingFeesInput.value = remainingFees.toFixed(2);
 }
 
 
@@ -899,4 +1024,145 @@ function printReceipt() {
     
     printWindow.document.write(printHTML);
     printWindow.document.close();
+}
+
+// ===================== FILTER DRAWER FUNCTIONS =====================
+
+// Open filter drawer
+function openFilterDrawer() {
+    const drawer = document.getElementById('filterDrawer');
+    const overlay = document.getElementById('filterOverlay');
+    drawer.classList.add('active');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent scrolling
+}
+
+// Close filter drawer
+function closeFilterDrawer() {
+    const drawer = document.getElementById('filterDrawer');
+    const overlay = document.getElementById('filterOverlay');
+    drawer.classList.remove('active');
+    overlay.classList.remove('active');
+    document.body.style.overflow = 'auto'; // Allow scrolling
+}
+
+// Toggle batch fields based on filter type
+function toggleBatchFields() {
+    const filterType = document.getElementById('filterTypeSelect').value;
+    const batchFields = document.getElementById('batchFields');
+    
+    if (filterType === 'batch') {
+        batchFields.style.display = 'block';
+    } else {
+        batchFields.style.display = 'none';
+        // Clear batch fields when hiding
+        document.getElementById('batchMonthFilter').value = '';
+        document.getElementById('batchYearFilter').value = '';
+    }
+}
+
+// Display active filters as chips
+function displayActiveFilters() {
+    const searchTerm = document.getElementById('searchInput').value;
+    const monthFilter = document.getElementById('monthFilter').value;
+    const yearFilter = document.getElementById('yearFilter').value;
+    const courseFilter = document.getElementById('courseFilter').value;
+    const filterType = document.getElementById('filterTypeSelect').value;
+    const batchMonthFilter = document.getElementById('batchMonthFilter').value;
+    const batchYearFilter = document.getElementById('batchYearFilter').value;
+    const dateFromFilter = document.getElementById('dateFromFilter').value;
+    const dateToFilter = document.getElementById('dateToFilter').value;
+    
+    const activeFilters = [];
+    
+    if (searchTerm) {
+        activeFilters.push({ label: 'Search', value: searchTerm });
+    }
+    if (monthFilter) {
+        const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        activeFilters.push({ label: 'Month', value: monthNames[parseInt(monthFilter)] });
+    }
+    if (yearFilter) {
+        activeFilters.push({ label: 'Year', value: yearFilter });
+    }
+    if (courseFilter) {
+        activeFilters.push({ label: 'Course', value: courseFilter });
+    }
+    if (filterType === 'batch') {
+        if (batchMonthFilter) {
+            const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            activeFilters.push({ label: 'Batch Month', value: monthNames[parseInt(batchMonthFilter)] });
+        }
+        if (batchYearFilter) {
+            activeFilters.push({ label: 'Batch Year', value: batchYearFilter });
+        }
+    }
+    if (dateFromFilter) {
+        activeFilters.push({ label: 'From Date', value: dateFromFilter });
+    }
+    if (dateToFilter) {
+        activeFilters.push({ label: 'To Date', value: dateToFilter });
+    }
+    
+    const container = document.getElementById('activeFiltersContainer');
+    const chipsContainer = document.getElementById('activeFilterChips');
+    
+    if (activeFilters.length > 0) {
+        chipsContainer.innerHTML = '';
+        activeFilters.forEach((filter, index) => {
+            const chip = document.createElement('div');
+            chip.className = 'filter-chip';
+            chip.innerHTML = `
+                <span>${filter.label}: ${filter.value}</span>
+                <button class="chip-remove" data-index="${index}" type="button">✕</button>
+            `;
+            
+            chip.querySelector('.chip-remove').addEventListener('click', function() {
+                removeFilter(filter.label);
+            });
+            
+            chipsContainer.appendChild(chip);
+        });
+        container.style.display = 'flex';
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+// Remove specific filter
+function removeFilter(filterLabel) {
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    switch(filterLabel) {
+        case 'Search':
+            document.getElementById('searchInput').value = '';
+            break;
+        case 'Month':
+            document.getElementById('monthFilter').value = '';
+            break;
+        case 'Year':
+            document.getElementById('yearFilter').value = '';
+            break;
+        case 'Course':
+            document.getElementById('courseFilter').value = '';
+            break;
+        case 'Batch Month':
+            document.getElementById('batchMonthFilter').value = '';
+            break;
+        case 'Batch Year':
+            document.getElementById('batchYearFilter').value = '';
+            break;
+        case 'From Date':
+            document.getElementById('dateFromFilter').value = '';
+            break;
+        case 'To Date':
+            document.getElementById('dateToFilter').value = '';
+            break;
+    }
+    
+    applyFilters();
+    displayActiveFilters();
 }

@@ -1,3 +1,1 @@
-from django.test import TestCase
-
-# Create your tests here.
+"""Core application tests live in project-level test modules."""

@@ -3,10 +3,10 @@ Utility Functions for Core Application
 Centralized helper functions used across views, forms, and templates
 """
 
-from django.db.models import Q, Sum
+from django.db.models import Q
 from decimal import Decimal
 from datetime import datetime, timedelta, date
-from .constants import TIME_SLOT_DISPLAY_MAP, MONTHS_LIST
+from .constants import TIME_SLOT_DISPLAY_MAP
 
 
 # ==================== TIME SLOT UTILITIES ====================
@@ -99,6 +99,65 @@ def calculate_fees_percentage(paid_fees, total_fees):
     if total > 0:
         return (paid / total) * Decimal('100')
     return Decimal('0')
+
+
+def calculate_student_profit(student):
+    """
+    Calculate profit for a single student.
+    Profit = (Total Fees Paid By Learner) - (Total Fees Paid to MKCL)
+    
+    Args:
+        student: AdmittedStudent instance
+    
+    Returns:
+        Decimal profit amount
+    """
+    from .models import StudentFinanceDetail, FeePayment
+    
+    # Get or create finance detail record
+    finance_detail, _ = StudentFinanceDetail.objects.get_or_create(
+        student=student,
+        defaults={
+            'first_installment': Decimal('0.00'),
+            'second_installment': Decimal('0.00'),
+            'third_installment': Decimal('0.00'),
+            'fourth_installment': Decimal('0.00'),
+            'fifth_installment': Decimal('0.00'),
+            'fees_paid_to_mkcl_1': Decimal('0.00'),
+            'fees_paid_to_mkcl_2': Decimal('0.00'),
+        }
+    )
+    
+    # Calculate MKCL fees
+    mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
+    mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+    mkcl_total = mkcl_1 + mkcl_2
+    
+    # Get fee payments ordered by date
+    fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
+    
+    # Sum up to 5 installments
+    learner_total_paid = Decimal('0.00')
+    for idx in range(min(5, fee_payments.count())):
+        learner_total_paid += fee_payments[idx].amount
+    
+    return learner_total_paid - mkcl_total
+
+
+def calculate_total_profit(student_queryset):
+    """
+    Calculate total profit for a queryset of students.
+    
+    Args:
+        student_queryset: QuerySet of AdmittedStudent instances
+    
+    Returns:
+        Decimal total profit
+    """
+    total = Decimal('0.00')
+    for student in student_queryset:
+        total += calculate_student_profit(student)
+    return total
 
 
 def number_to_words(num):
@@ -348,14 +407,14 @@ def get_cached_courses(cache_timeout=3600):
         cache_timeout: Cache duration in seconds (default: 1 hour)
     
     Returns:
-        List of (id, name) tuples
+        QuerySet of Course objects ordered by name
     """
     cache_key = 'courses_list'
     courses = cache.get(cache_key)
     
     if courses is None:
         from .models import Course
-        courses = list(Course.objects.values_list('id', 'name').order_by('name'))
+        courses = list(Course.objects.all().order_by('name'))
         cache.set(cache_key, courses, cache_timeout)
     
     return courses

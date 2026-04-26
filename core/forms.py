@@ -15,6 +15,30 @@ import re
 class EnquiryForm(forms.ModelForm):
     """Form for handling new enquiries from prospects"""
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Dynamically load course choices from database
+        # Include both hardcoded courses and database courses
+        hardcoded_courses = [
+            ('MS-CIT', 'MS-CIT'),
+            ('Tally', 'Tally'),
+            ('Advance Excel', 'Advance Excel'),
+            ('IOT', 'IOT'),
+            ('Scratch', 'Scratch'),
+        ]
+        
+        # Get courses from database
+        db_courses = list(Course.objects.values_list('name', 'name').order_by('name'))
+        
+        # Combine and deduplicate
+        all_courses = list(set(hardcoded_courses + db_courses))
+        all_courses.sort(key=lambda x: x[0])
+        
+        # Add "Other" at the end
+        all_courses.append(('Other', 'Other'))
+        
+        self.fields['course'].choices = all_courses
+    
     class Meta:
         model = Enquiry
         fields = ['name', 'mobile', 'education', 'course', 'custom_course', 
@@ -91,6 +115,24 @@ class EnquiryForm(forms.ModelForm):
         
         return name
     
+    def clean_course(self):
+        """Validate course - allow any course that exists in database or is a hardcoded course"""
+        course = self.cleaned_data.get('course')
+        
+        if not course:
+            raise ValidationError("Course is required.")
+        
+        # Hardcoded courses that are always valid
+        hardcoded_courses = ['MS-CIT', 'Tally', 'Advance Excel', 'IOT', 'Scratch', 'Other']
+        
+        # Check if it's a hardcoded course or exists in database
+        if course not in hardcoded_courses:
+            # Check if it exists in the database
+            if not Course.objects.filter(name__iexact=course).exists():
+                raise ValidationError(f"Course '{course}' is not valid. Please add it first or select from available courses.")
+        
+        return course
+    
     def clean(self):
         """Validate form data"""
         cleaned_data = super().clean()
@@ -106,6 +148,30 @@ class EnquiryForm(forms.ModelForm):
 
 class AdmittedStudentForm(forms.ModelForm):
     """Form for admitting new students"""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Dynamically load course choices from database
+        # Include both hardcoded courses and database courses
+        hardcoded_courses = [
+            ('MS-CIT', 'MS-CIT'),
+            ('Tally', 'Tally'),
+            ('Advance Excel', 'Advance Excel'),
+            ('IOT', 'IOT'),
+            ('Scratch', 'Scratch'),
+        ]
+        
+        # Get courses from database
+        db_courses = list(Course.objects.values_list('name', 'name').order_by('name'))
+        
+        # Combine and deduplicate
+        all_courses = list(set(hardcoded_courses + db_courses))
+        all_courses.sort(key=lambda x: x[0])
+        
+        # Add "Other" at the end
+        all_courses.append(('Other', 'Other'))
+        
+        self.fields['course'].choices = all_courses
     
     class Meta:
         model = AdmittedStudent
@@ -234,6 +300,24 @@ class AdmittedStudentForm(forms.ModelForm):
             raise ValidationError("Paid fees cannot be negative.")
         
         return paid_fees
+    
+    def clean_course(self):
+        """Validate course - allow any course that exists in database or is a hardcoded course"""
+        course = self.cleaned_data.get('course')
+        
+        if not course:
+            raise ValidationError("Course is required.")
+        
+        # Hardcoded courses that are always valid
+        hardcoded_courses = ['MS-CIT', 'Tally', 'Advance Excel', 'IOT', 'Scratch', 'Other']
+        
+        # Check if it's a hardcoded course or exists in database
+        if course not in hardcoded_courses:
+            # Check if it exists in the database
+            if not Course.objects.filter(name__iexact=course).exists():
+                raise ValidationError(f"Course '{course}' is not valid. Please add it first or select from available courses.")
+        
+        return course
     
     def clean(self):
         """Validate form data"""

@@ -4,7 +4,6 @@ Local development environment settings
 """
 
 from .base import *
-from decouple import config
 
 # ==================== DEBUG MODE ====================
 DEBUG = True
@@ -64,5 +63,3 @@ CACHES = {
 REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'] = [
     'rest_framework.permissions.AllowAny',  # Dev only
 ]
-
-print("[OK] Django Development Settings Loaded")

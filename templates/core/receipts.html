@@ -28,88 +28,172 @@
 
 {% block content %}
 
-<!-- FILTERS SECTION -->
-<div class="filters-container">
-    <form class="filters-form">
-        
-        <div class="filter-group search-group">
-            <label for="searchInput">🔍 Search Student</label>
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Search by name or mobile..."
-                class="filter-input"
-            >
-        </div>
+<!-- TOP BAR WITH SEARCH AND FILTER BUTTON -->
+<div class="receipts-top-bar">
+    <div class="search-container">
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="🔍 Search by name or mobile..."
+            class="search-input"
+        >
+    </div>
+    <button id="filterToggleBtn" class="filter-toggle-btn">
+        <span class="filter-icon">⚙️</span>
+        <span class="filter-text">Filters</span>
+    </button>
+</div>
 
-        <div class="filter-group">
-            <label for="monthFilter">📆 Month</label>
-            <select id="monthFilter" class="filter-select">
-                <option value="">All Months</option>
-                <option value="01">January</option>
-                <option value="02">February</option>
-                <option value="03">March</option>
-                <option value="04">April</option>
-                <option value="05">May</option>
-                <option value="06">June</option>
-                <option value="07">July</option>
-                <option value="08">August</option>
-                <option value="09">September</option>
-                <option value="10">October</option>
-                <option value="11">November</option>
-                <option value="12">December</option>
-            </select>
-        </div>
+<!-- FILTER DRAWER (SLIDE-IN PANEL) -->
+<div id="filterDrawer" class="filter-drawer">
+    <div class="drawer-header">
+        <h3>Receipt Filters</h3>
+        <button id="drawerCloseBtn" class="drawer-close">✕</button>
+    </div>
+    
+    <div class="drawer-body">
+        <form id="filterForm" class="filter-form">
+            
+            <!-- SECTION 1: BASIC FILTERS -->
+            <div class="filter-section">
+                <h4 class="section-title">Payment Period</h4>
+                
+                <div class="filter-group">
+                    <label for="monthFilter">Month</label>
+                    <select id="monthFilter" class="filter-input">
+                        <option value="">All Months</option>
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
 
-        <div class="filter-group">
-            <label for="yearFilter">📅 Year</label>
-            <select id="yearFilter" class="filter-select">
-                <option value="">All Years</option>
-            </select>
-        </div>
+                <div class="filter-group">
+                    <label for="yearFilter">Year</label>
+                    <select id="yearFilter" class="filter-input">
+                        <option value="">All Years</option>
+                    </select>
+                </div>
+            </div>
 
-        <div class="filter-group">
-            <label for="courseFilter">🎓 Course</label>
-            <select id="courseFilter" class="filter-select">
-                <option value="">All Courses</option>
-            </select>
-        </div>
+            <!-- SECTION 2: COURSE FILTER -->
+            <div class="filter-section">
+                <h4 class="section-title">Course</h4>
+                
+                <div class="filter-group">
+                    <label for="courseFilter">Select Course</label>
+                    <select id="courseFilter" class="filter-input">
+                        <option value="">All Courses</option>
+                    </select>
+                </div>
+            </div>
 
-        <div class="filter-group">
-            <label for="batchMonthFilter">� Batch Month</label>
-            <select id="batchMonthFilter" class="filter-select">
-                <option value="">All Batch Months</option>
-                <option value="01">January</option>
-                <option value="02">February</option>
-                <option value="03">March</option>
-                <option value="04">April</option>
-                <option value="05">May</option>
-                <option value="06">June</option>
-                <option value="07">July</option>
-                <option value="08">August</option>
-                <option value="09">September</option>
-                <option value="10">October</option>
-                <option value="11">November</option>
-                <option value="12">December</option>
-            </select>
-        </div>
+            <!-- SECTION 3: FILTER TYPE (Regular/Batch) -->
+            <div class="filter-section">
+                <h4 class="section-title">Filter Type</h4>
+                
+                <div class="filter-group">
+                    <label for="filterTypeSelect">Type</label>
+                    <select id="filterTypeSelect" class="filter-input">
+                        <option value="regular">Regular</option>
+                        <option value="batch">Batch</option>
+                    </select>
+                </div>
 
-        <div class="filter-group">
-            <label for="batchYearFilter">📅 Batch Year</label>
-            <select id="batchYearFilter" class="filter-select">
-                <option value="">All Batch Years</option>
-            </select>
-        </div>
+                <!-- BATCH-SPECIFIC FIELDS (Hidden by default) -->
+                <div id="batchFields" class="batch-fields" style="display: none;">
+                    <div class="filter-group">
+                        <label for="batchMonthFilter">Batch Month</label>
+                        <select id="batchMonthFilter" class="filter-input">
+                            <option value="">All Batch Months</option>
+                            <option value="01">January</option>
+                            <option value="02">February</option>
+                            <option value="03">March</option>
+                            <option value="04">April</option>
+                            <option value="05">May</option>
+                            <option value="06">June</option>
+                            <option value="07">July</option>
+                            <option value="08">August</option>
+                            <option value="09">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
 
-        <div class="filter-buttons">
-            <button type="button" id="applyFilterBtn" class="filter-btn apply">
-                🔍 Apply Filters
-            </button>
-            <button type="button" id="clearFilterBtn" class="filter-btn reset">
-                🔄 Reset
-            </button>
-        </div>
-    </form>
+                    <div class="filter-group">
+                        <label for="batchYearFilter">Batch Year</label>
+                        <select id="batchYearFilter" class="filter-input">
+                            <option value="">All Batch Years</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: DATE RANGE FILTER -->
+            <div class="filter-section">
+                <h4 class="section-title">Payment Date Range</h4>
+                
+                <div class="date-range-group">
+                    <div class="filter-group">
+                        <label for="dateFromFilter">From Date</label>
+                        <input type="date" id="dateFromFilter" class="filter-input">
+                    </div>
+                    <div class="filter-group">
+                        <label for="dateToFilter">To Date</label>
+                        <input type="date" id="dateToFilter" class="filter-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 5: SORTING -->
+            <div class="filter-section">
+                <h4 class="section-title">Sort By</h4>
+                
+                <div class="filter-group">
+                    <label for="sortBySelect">Sort Field</label>
+                    <select id="sortBySelect" class="filter-input">
+                        <option value="date-desc">Date (Newest First)</option>
+                        <option value="date-asc">Date (Oldest First)</option>
+                        <option value="name-asc">Student Name (A-Z)</option>
+                        <option value="name-desc">Student Name (Z-A)</option>
+                        <option value="amount-asc">Paid Amount (Low to High)</option>
+                        <option value="amount-desc">Paid Amount (High to Low)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="drawer-actions">
+                <button type="button" id="applyFilterBtn" class="btn btn-primary">
+                    Apply Filters
+                </button>
+                <button type="button" id="clearFilterBtn" class="btn btn-secondary">
+                    Reset All
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- FILTER OVERLAY (Behind drawer) -->
+<div id="filterOverlay" class="filter-overlay"></div>
+
+<!-- ACTIVE FILTER CHIPS -->
+<div id="activeFiltersContainer" class="active-filters-container" style="display: none;">
+    <div class="filters-label">Active Filters:</div>
+    <div id="activeFilterChips" class="filter-chips">
+        <!-- Chips will be added dynamically -->
+    </div>
 </div>
 
 <!-- SUMMARY CARDS -->

@@ -3,7 +3,6 @@ Django Settings - Base Configuration
 Shared settings for all environments
 """
 
-import os
 from pathlib import Path
 from decouple import config
 
@@ -219,11 +218,15 @@ SESSION_COOKIE_AGE = 1209600  # 2 weeks
 
 # ==================== SECURITY HEADERS ====================
 SECURE_BROWSER_XSS_FILTER = True
+SECURE_REFERRER_POLICY = 'same-origin'
 SECURE_CONTENT_SECURITY_POLICY = {
     'default-src': ("'self'",),
-    'style-src': ("'self'", 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'),
-    'script-src': ("'self'", 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'),
+    # Existing templates still use inline scripts/styles; keep them allowed until
+    # those pages are moved to external static files.
+    'style-src': ("'self'", "'unsafe-inline'", 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'),
+    'script-src': ("'self'", "'unsafe-inline'", 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'),
     'font-src': ("'self'", 'cdnjs.cloudflare.com'),
+    'img-src': ("'self'", 'data:', 'blob:'),
 }
 
 # ==================== FILE UPLOAD ====================

@@ -9,6 +9,10 @@ from decouple import config
 # ==================== DEBUG MODE ====================
 DEBUG = False
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='yourdomain.com').split(',')
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='https://yourdomain.com'
+).split(',')
 
 # ==================== DATABASE - PostgreSQL for Production ====================
 DATABASES = {
@@ -49,6 +53,13 @@ EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+
+# ==================== ADMIN NOTIFICATIONS ====================
+ADMINS = [
+    tuple(item.split(':', 1))
+    for item in config('ADMINS', default='').split(',')
+    if ':' in item
+]
 
 # ==================== LOGGING - ERROR FOCUSED ====================
 LOGGING['loggers']['django']['level'] = 'WARNING'
@@ -98,5 +109,3 @@ sentry_sdk.init(
     traces_sample_rate=0.1,
     send_default_pii=False
 )
-
-print("[OK] Django Production Settings Loaded")

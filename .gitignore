@@ -84,11 +84,16 @@ virtualenv/
 # Static files and media
 staticfiles/
 media/
+media/student_photos/
 student_photos/
 uploads/
 *.log
 log.txt
 django.log
+
+# Backup files from database import/export
+database_backup_before_import_*.db
+student_photos_backup_*/
 
 # Django migrations (keep in repo, but maybe not __pycache__)
 # migrations/__pycache__/

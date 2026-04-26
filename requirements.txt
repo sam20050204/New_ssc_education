@@ -11,27 +11,23 @@ Pillow==12.0.0
 openpyxl==3.1.5
 
 # Database
-psycopg2-binary==2.9.9  # PostgreSQL adapter
-django-redis==5.4.0      # Redis cache backend
+psycopg[binary]==3.3.3
+django-redis==5.4.0
 
 # REST API
-djangorestframework==3.14.0  # DRF for API
-django-filter==24.1          # Filtering for API
-django-cors-headers==4.3.1   # CORS support
+djangorestframework==3.14.0
+django-filter==24.1
+django-cors-headers==4.3.1
 
 # Production Server
-gunicorn==21.2.0  # WSGI HTTP server
+gunicorn==21.2.0
 
 # Configuration
-python-decouple==3.8  # Environment variables
+python-decouple==3.8
 
 # Development Tools
-django-debug-toolbar==4.2.0  # Debug toolbar
-django-extensions==3.2.3     # Additional commands
-
-# Monitoring & Logging
-sentry-sdk==1.40.1  # Error tracking
-python-logging-loki==0.3.2  # Loki logs
+django-debug-toolbar==4.2.0
+django-extensions==3.2.3
 
 # Testing
 pytest==7.4.3
@@ -45,5 +41,4 @@ isort==5.13.2
 pylint==3.0.3
 
 # Security
-django-cors-headers==4.3.1
 cryptography==41.0.7

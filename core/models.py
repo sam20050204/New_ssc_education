@@ -50,7 +50,9 @@ class AdmittedStudent(models.Model):
     GENDER_CHOICES = GENDER_CHOICES
     MARITAL_STATUS_CHOICES = MARITAL_STATUS_CHOICES
     
-    course = models.CharField(max_length=50, choices=COURSE_CHOICES)
+    # Note: course field has NO choices constraint here to allow dynamic courses from database
+    # Validation is handled in AdmittedStudentForm.__init__
+    course = models.CharField(max_length=50)
     custom_course = models.CharField(max_length=100, blank=True, null=True, help_text="If 'Other' is selected")
     
     student_name = models.CharField(max_length=100)
@@ -294,13 +296,32 @@ class FeePayment(models.Model):
         return f"{self.receipt_no} - {self.student.full_name} - Rs. {self.amount}"
     
     def save(self, *args, **kwargs):
+        # Prevent modification of receipt number after creation
+        if self.pk:
+            # This is an update - fetch the original receipt_no and restore it
+            original = FeePayment.objects.get(pk=self.pk)
+            if self.receipt_no != original.receipt_no:
+                self.receipt_no = original.receipt_no
+        
         if not self.receipt_no:
+            # This is a new record - generate sequential receipt number
             with transaction.atomic():
-                last_payment = FeePayment.objects.select_for_update().order_by('-id').first()
+                # Get the last receipt and extract the number
+                # Find the last receipt with proper RCP prefix (ignore TEMP prefixes)
+                last_payment = FeePayment.objects.select_for_update().filter(
+                    receipt_no__startswith='RCP-'
+                ).order_by('-created_at').first()
+                
                 if last_payment and last_payment.receipt_no:
-                    last_number = int(last_payment.receipt_no.split('-')[1])
-                    new_number = last_number + 1
+                    try:
+                        # Extract number from receipt_no (e.g., "RCP-000091" -> 91)
+                        last_number = int(last_payment.receipt_no.split('-')[-1])
+                        new_number = last_number + 1
+                    except (ValueError, IndexError):
+                        # Fallback if parsing fails
+                        new_number = int(FeePayment.objects.filter(receipt_no__startswith='RCP-').count()) + 1
                 else:
+                    # If no RCP- receipts exist, start from 1
                     new_number = 1
                 self.receipt_no = f"RCP-{new_number:06d}"
         super().save(*args, **kwargs)
@@ -547,13 +568,13 @@ class Batch(models.Model):
     def current_strength(self):
         """Get current number of students in this batch"""
         if self.batch_type == 'Theory':
-            return AdmittedStudent.objects.filter(
-                theory_batch_time=self.time_slot,
-                course=self.course
-            ).count()
+            filters = {'theory_batch_time': self.time_slot}
         else:
-            return AdmittedStudent.objects.filter(
-                practical_batch_time=self.time_slot,
-                course=self.course
-            ).count()
+            filters = {'practical_batch_time': self.time_slot}
+        
+        # Only filter by course if this batch is course-specific
+        if self.course is not None:
+            filters['course'] = self.course
+        
+        return AdmittedStudent.objects.filter(**filters).count()
 
