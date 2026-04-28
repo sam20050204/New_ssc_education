@@ -228,6 +228,33 @@ class StudentFinanceDetailAdmin(admin.ModelAdmin):
     list_display = ('student_link', 'total_installments', 'total_mkcl_fees', 'profit_formatted')
     readonly_fields = ('created_at', 'updated_at', 'total_mkcl_fees', 'profit')
     
+    fieldsets = (
+        ('Student Information', {
+            'fields': ('student',)
+        }),
+        ('Fees Paid By Learner', {
+            'fields': (
+                'first_installment', 'second_installment', 'third_installment',
+                'fourth_installment', 'fifth_installment'
+            ),
+            'description': 'Automatically populated from FeePayment records'
+        }),
+        ('Fees Paid to MKCL', {
+            'fields': (
+                'fees_paid_to_mkcl_1', 'fees_paid_to_mkcl_2', 'fees_paid_to_mkcl_3'
+            ),
+            'description': 'Enter the MKCL fees paid in each installment. Default is 0.'
+        }),
+        ('Summary', {
+            'fields': ('total_mkcl_fees', 'profit'),
+            'description': 'Auto-calculated based on the installments above'
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
     def student_link(self, obj):
         url = f"/admin/core/admittedstudent/{obj.student.id}/change/"
         return format_html('<a href="{}">{}</a>', url, obj.student.full_name)

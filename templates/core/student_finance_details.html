@@ -4,7 +4,7 @@
 {% block title %}Student Finance Details - SSC Education{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'core/student_finance_details.css' %}">
+<link rel="stylesheet" href="{% static 'core/student_finance_details_new.css' %}">
 {% endblock %}
 
 {% block sidebar %}
@@ -25,9 +25,9 @@
         <!-- Right Side: Total Profit and Export CSV -->
         <div class="header-right-section">
             <!-- Total Profit Display -->
-            <div class="total-profit-box">
+            <div class="total-profit-box" id="totalProfitBox">
                 <h3>Total Profit</h3>
-                <p class="amount">₹ {{ total_profit|floatformat:2 }}</p>
+                <p class="amount" id="totalProfitAmount">₹ {{ total_profit|floatformat:2 }}</p>
             </div>
             
             <button class="export-button" onclick="exportToExcel()" title="Export to CSV (Ctrl+E)">
@@ -36,183 +36,204 @@
         </div>
     </div>
     
-    <!-- Filters Section Below -->
-    <div class="filters-section">
-        <form method="get" class="filter-form">
-            <!-- Year Filter -->
-            <div class="filter-group">
-                <label for="year-select">
-                    <span class="filter-label">Year:</span>
-                </label>
-                <select name="year" id="year-select" class="filter-select">
-                    <option value="">All Years</option>
-                    {% for year in available_years %}
-                        <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>
-                            {{ year }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <!-- Course Filter -->
-            <div class="filter-group">
-                <label for="course-select">
-                    <span class="filter-label">Course:</span>
-                </label>
-                <select name="course" id="course-select" class="filter-select">
-                    <option value="">All Courses</option>
-                    {% for course in available_courses %}
-                        <option value="{{ course }}" {% if course == course_filter %}selected{% endif %}>
-                            {{ course }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <!-- Batch Filter -->
-            <div class="filter-group">
-                <label for="batch-select">
-                    <span class="filter-label">Batch:</span>
-                </label>
-                <select name="batch" id="batch-select" class="filter-select">
-                    <option value="">All Batches</option>
-                    {% for batch in available_batches %}
-                        <option value="{{ batch }}" {% if batch == batch_filter %}selected{% endif %}>
-                            {{ batch }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <!-- Search Filter -->
-            <div class="filter-group">
-                <label for="search-input">
-                    <span class="filter-label">Search:</span>
-                </label>
-                <input type="text" name="search" id="search-input" class="filter-input" 
-                       placeholder="Name or Mobile" value="{{ search_query }}">
-            </div>
-            
-            <!-- Sort By Filter -->
-            <div class="filter-group">
-                <label for="sort-select">
-                    <span class="filter-label">Sort By:</span>
-                </label>
-                <select name="sort" id="sort-select" class="filter-select">
-                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
-                    <option value="mobile" {% if sort_by == 'mobile' %}selected{% endif %}>Mobile</option>
-                    <option value="course" {% if sort_by == 'course' %}selected{% endif %}>Course</option>
-                    <option value="batch" {% if sort_by == 'batch' %}selected{% endif %}>Batch</option>
-                    <option value="total_paid" {% if sort_by == 'total_paid' %}selected{% endif %}>Total Paid (Highest)</option>
-                    <option value="balance" {% if sort_by == 'balance' %}selected{% endif %}>Balance (Highest)</option>
-                    <option value="profit" {% if sort_by == 'profit' %}selected{% endif %}>Profit (Highest)</option>
-                </select>
-            </div>
-            
-            <!-- Apply Filters Button -->
-            <button type="submit" class="apply-filters-btn">🔍 Apply Filters</button>
-            
-            <!-- Reset Filters Button -->
-            <a href="{% url 'student_finance_details' %}" class="reset-filters-btn">⟲ Reset</a>
-        </form>
+    <!-- TOP BAR WITH SEARCH AND FILTER BUTTON (Receipts-style) -->
+    <div class="receipts-top-bar">
+        <div class="search-container">
+            <input
+                type="text"
+                id="searchInput"
+                name="search"
+                placeholder="🔍 Search by name or mobile..."
+                class="search-input"
+                value="{{ search_query }}"
+            >
+        </div>
+        <button id="filterToggleBtn" class="filter-toggle-btn">
+            <span class="filter-icon">⚙️</span>
+            <span class="filter-text">Filters</span>
+        </button>
     </div>
+
+    <!-- FILTER DRAWER (SLIDE-IN PANEL) -->
+    <div id="filterDrawer" class="filter-drawer" aria-hidden="true">
+        <div class="drawer-header">
+            <h3>Filters</h3>
+            <button id="drawerCloseBtn" class="drawer-close">✕</button>
+        </div>
+
+        <div class="drawer-body">
+            <form id="financeFilterForm" class="filter-form">
+                <div class="filter-section">
+                    <h4 class="section-title">Basic Filters</h4>
+                    <div class="filter-group">
+                        <label for="drawerYearFilter">Year</label>
+                        <select id="drawerYearFilter" name="year" class="filter-input">
+                            <option value="">All Years</option>
+                            {% for year in available_years %}
+                                <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="drawerCourseFilter">Course</label>
+                        <select id="drawerCourseFilter" name="course" class="filter-input">
+                            <option value="">All Courses</option>
+                            {% for course in available_courses %}
+                                <option value="{{ course }}" {% if course == course_filter %}selected{% endif %}>{{ course }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="drawerBatchFilter">Batch</label>
+                        <select id="drawerBatchFilter" name="batch" class="filter-input">
+                            <option value="">All Batches</option>
+                            {% for batch in available_batches %}
+                                <option value="{{ batch }}" {% if batch == batch_filter %}selected{% endif %}>{{ batch }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="drawerSortSelect">Sort By</label>
+                        <select id="drawerSortSelect" name="sort" class="filter-input">
+                            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                            <option value="mobile" {% if sort_by == 'mobile' %}selected{% endif %}>Mobile</option>
+                            <option value="course" {% if sort_by == 'course' %}selected{% endif %}>Course</option>
+                            <option value="batch" {% if sort_by == 'batch' %}selected{% endif %}>Batch</option>
+                            <option value="total_paid" {% if sort_by == 'total_paid' %}selected{% endif %}>Total Paid (Highest)</option>
+                            <option value="balance" {% if sort_by == 'balance' %}selected{% endif %}>Balance (Highest)</option>
+                            <option value="profit" {% if sort_by == 'profit' %}selected{% endif %}>Profit (Highest)</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="drawer-actions">
+            <button id="applyFilterBtn" class="btn primary">Apply Filters</button>
+            <button id="clearFilterBtn" class="btn">Clear Filters</button>
+        </div>
+    </div>
+
+    <!-- Overlay for drawer (optional) -->
+    <div id="filterOverlay" class="filter-overlay" style="display:none;"></div>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="finance-section">
     <!-- Save Indicator -->
-    <div class="save-indicator" id="saveIndicator">✓ Saved successfully!</div>
+    <div class="save-indicator" id="saveIndicator">
+        <span class="save-indicator-icon">✓</span>
+        <span class="save-indicator-text">Saved successfully!</span>
+    </div>
 
-    <!-- Finance Table -->
-    <div class="scrollbar-wrapper">
-        <div class="finance-table-container" id="tableContainer">
-            <table class="finance-table" id="financeTable">
-                <thead>
-                    <tr>
-                        <th colspan="5" class="section-header sticky-section-header">Student Details</th>
-                        <th colspan="8" class="section-header">Fees Paid By Learner</th>
-                        <th colspan="3" class="section-header">Fees Paid to MKCL</th>
-                        <th rowspan="2">Profit</th>
-                    </tr>
-                    <tr>
-                        <th class="sticky-col sticky-col-1">Sr.No.</th>
-                        <th class="sticky-col sticky-col-2 w-n">Learner Name</th>
-                        <th class="sticky-col sticky-col-3">Course</th>
-                        <th class="sticky-col sticky-col-4">Mobile No.</th>
-                        <th class="sticky-col sticky-col-5">Batch</th>
-                        <th>I Installment</th>
-                        <th>II Installment</th>
-                        <th>III Installment</th>
-                        <th>IV Installment</th>
-                        <th>V Installment</th>
-                        <th>Total Paid</th>
-                        <th>Total Fees</th>
-                        <th>Balance Fees</th>
-                        <th>I Inst</th>
-                        <th>II Inst</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for data in finance_data %}
-                    <tr data-student-id="{{ data.id }}">
-                        <td class="sticky-col sticky-col-1">{{ forloop.counter }}</td>
-                        <td class="sticky-col sticky-col-2 w-n"><strong>{{ data.learner_name }}</strong></td>
-                        <td class="sticky-col sticky-col-3">{{ data.course }}</td>
-                        <td class="sticky-col sticky-col-4">{{ data.mobile_no }}</td>
-                        <td class="sticky-col sticky-col-5">{{ data.batch }}</td>
-                        
-                        <!-- Fees Paid By Learner - Read Only -->
-                        <td class="readonly-cell">{{ data.first_inst|floatformat:2 }}</td>
-                        <td class="readonly-cell">{{ data.second_inst|floatformat:2 }}</td>
-                        <td class="readonly-cell">{{ data.third_inst|floatformat:2 }}</td>
-                        <td class="readonly-cell">{{ data.fourth_inst|floatformat:2 }}</td>
-                        <td class="readonly-cell">{{ data.fifth_inst|floatformat:2 }}</td>
-                        
-                        <!-- Auto-calculated fields -->
-                        <td class="readonly-cell">{{ data.total_paid|floatformat:2 }}</td>
-                        <td class="readonly-cell">{{ data.total_fees|floatformat:2 }}</td>
-                        <td class="readonly-cell">{{ data.balance_fees|floatformat:2 }}</td>
-                        
-                        <!-- Fees Paid to MKCL - Editable with Defaults -->
-                        <td class="editable-cell">
-                            <input type="number" step="0.01" value="{{ data.mkcl_1 }}" 
-                                   onchange="updateField({{ data.id }}, 'mkcl_1', this.value)"
-                                   oninput="updateFieldRealTime({{ data.id }}, 'mkcl_1', this.value)"
-                                   class="finance-input">
-                        </td>
-                        <td class="editable-cell">
-                            <input type="number" step="0.01" value="{{ data.mkcl_2 }}" 
-                                   onchange="updateField({{ data.id }}, 'mkcl_2', this.value)"
-                                   oninput="updateFieldRealTime({{ data.id }}, 'mkcl_2', this.value)"
-                                   class="finance-input">
-                        </td>
-                        
-                        <!-- MKCL Total - Calculated -->
-                        <td class="readonly-cell mkcl-total-{{ data.id }}">{{ data.mkcl_total|floatformat:2 }}</td>
-                        <td class="readonly-cell profit-cell profit-{{ data.id }} {% if data.profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
-                            ₹ {{ data.profit|floatformat:2 }}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="15" style="text-align: center; padding: 40px; color: #666;">
-                            No student records found for the selected year.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Sticky Horizontal Scrollbar at Bottom -->
-        <div class="sticky-scrollbar-container" id="stickyScrollbar">
-            <div class="sticky-scrollbar-track"></div>
+    <!-- Finance Table Wrapper -->
+    <div class="finance-wrapper">
+        <div class="scrollbar-wrapper">
+            <div class="finance-table-container" id="tableContainer">
+                <table class="finance-table" id="financeTable">
+                    <thead>
+                        <tr class="table-header-row-1">
+                            <th colspan="5" class="section-header section-header-student">Student Details</th>
+                            <th colspan="6" class="section-header section-header-learner">Fees Paid By Learner</th>
+                            <th colspan="4" class="section-header section-header-mkcl">Fees Paid to MKCL</th>
+                            <th rowspan="2" class="section-header section-header-profit">Profit</th>
+                        </tr>
+                        <tr class="table-header-row-2">
+                            <th class="sticky-col sticky-col-1">Sr.No.</th>
+                            <th class="sticky-col sticky-col-2 w-n">Learner Name</th>
+                            <th class="sticky-col sticky-col-3">Course</th>
+                            <th class="sticky-col sticky-col-4">Mobile No.</th>
+                            <th class="sticky-col sticky-col-5">Batch</th>
+                            <th class="col-learner">I Installment</th>
+                            <th class="col-learner">II Installment</th>
+                            <th class="col-learner">III Installment</th>
+                            <th class="col-learner-total">Total Paid</th>
+                            <th class="col-learner-fees">Total Fees</th>
+                            <th class="col-balance">Balance</th>
+                            <th class="col-mkcl">1st Installment</th>
+                            <th class="col-mkcl">2nd Installment</th>
+                            <th class="col-mkcl">3rd Installment</th>
+                            <th class="col-mkcl-total">Total Paid</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in finance_data %}
+                        <tr data-student-id="{{ data.id }}" class="table-data-row">
+                            <td class="sticky-col sticky-col-1 text-center">{{ forloop.counter }}</td>
+                            <td class="sticky-col sticky-col-2 w-n"><strong>{{ data.learner_name }}</strong></td>
+                            <td class="sticky-col sticky-col-3">{{ data.course }}</td>
+                            <td class="sticky-col sticky-col-4">{{ data.mobile_no }}</td>
+                            <td class="sticky-col sticky-col-5">{{ data.batch }}</td>
+                            
+                            <!-- Fees Paid By Learner - Read Only (Only 3 installments) -->
+                            <td class="readonly-cell col-learner text-numeric">{{ data.first_inst|floatformat:2 }}</td>
+                            <td class="readonly-cell col-learner text-numeric">{{ data.second_inst|floatformat:2 }}</td>
+                            <td class="readonly-cell col-learner text-numeric">{{ data.third_inst|floatformat:2 }}</td>
+                            
+                            <!-- Auto-calculated fields -->
+                            <td class="readonly-cell col-learner-total text-numeric">{{ data.total_paid|floatformat:2 }}</td>
+                            <td class="readonly-cell col-learner-fees text-numeric">{{ data.total_fees|floatformat:2 }}</td>
+                            <td class="readonly-cell balance-cell col-balance text-numeric">{{ data.balance_fees|floatformat:2 }}</td>
+                            
+                            <!-- Fees Paid to MKCL - Editable (3 installments + total) -->
+                            <td class="input-cell col-mkcl">
+                                <input type="number" class="mkcl-installment mkcl-inst-1" 
+                                       data-student-id="{{ data.id }}" 
+                                       data-field="fees_paid_to_mkcl_1"
+                                       value="{{ data.mkcl_1|default:'0.00' }}" 
+                                       step="0.01" 
+                                       min="0"
+                                       placeholder="0.00">
+                            </td>
+                            <td class="input-cell col-mkcl">
+                                <input type="number" class="mkcl-installment mkcl-inst-2" 
+                                       data-student-id="{{ data.id }}" 
+                                       data-field="fees_paid_to_mkcl_2"
+                                       value="{{ data.mkcl_2|default:'0.00' }}" 
+                                       step="0.01" 
+                                       min="0"
+                                       placeholder="0.00">
+                            </td>
+                            <td class="input-cell col-mkcl">
+                                <input type="number" class="mkcl-installment mkcl-inst-3" 
+                                       data-student-id="{{ data.id }}" 
+                                       data-field="fees_paid_to_mkcl_3"
+                                       value="{{ data.mkcl_3|default:'0.00' }}" 
+                                       step="0.01" 
+                                       min="0"
+                                       placeholder="0.00">
+                            </td>
+                            
+                            <td class="readonly-cell mkcl-total-cell col-mkcl-total text-numeric" data-student-id="{{ data.id }}">{{ data.mkcl_total|floatformat:2 }}</td>
+                            
+                            <td class="readonly-cell profit-cell col-profit text-numeric profit-{{ data.id }} {% if data.profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                                <span class="profit-badge">₹ {{ data.profit|floatformat:2 }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="16" class="empty-state-cell">
+                                <div class="empty-state-content">
+                                    <p class="empty-state-text">No student records found for the selected year.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Sticky Horizontal Scrollbar at Bottom -->
+            <div class="sticky-scrollbar-container" id="stickyScrollbar">
+                <div class="sticky-scrollbar-track"></div>
+            </div>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}

@@ -2515,8 +2515,9 @@ def student_finance_details(request):
         # Calculate fees paid to MKCL - default to 0
         mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')
         mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+        mkcl_3 = finance_detail.fees_paid_to_mkcl_3 or Decimal('0.00')
         
-        mkcl_total = mkcl_1 + mkcl_2
+        mkcl_total = mkcl_1 + mkcl_2 + mkcl_3
         
         # Get fee payments for this student - ordered by payment_date (oldest first)
         fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
@@ -2540,8 +2541,8 @@ def student_finance_details(request):
             fifth_inst = fee_payments[4].amount
         
         # Calculate profit as (Total Fees Paid By Learner) - (Total Fees Paid to MKCL)
-        learner_total_paid = first_inst + second_inst + third_inst + fourth_inst + fifth_inst
-        profit = learner_total_paid - mkcl_total
+        # Use the actual total_paid from AdmittedStudent, not individual installments
+        profit = total_paid - mkcl_total
         total_profit += profit
         
         # Build payment history (ordered by payment_date, newest first for display)
@@ -2575,6 +2576,7 @@ def student_finance_details(request):
             'balance_fees': balance_fees,
             'mkcl_1': mkcl_1,
             'mkcl_2': mkcl_2,
+            'mkcl_3': mkcl_3,
             'mkcl_total': mkcl_total,
             'profit': profit,
             'payment_history': payment_history,
@@ -2647,6 +2649,8 @@ def update_finance_detail(request):
         finance_detail.fees_paid_to_mkcl_1 = value
     elif field == 'mkcl_2':
         finance_detail.fees_paid_to_mkcl_2 = value
+    elif field == 'mkcl_3':
+        finance_detail.fees_paid_to_mkcl_3 = value
     else:
         return JsonResponse({
             'success': False,
@@ -2658,6 +2662,8 @@ def update_finance_detail(request):
     total_paid = student.paid_fees or Decimal('0.00')
     mkcl_total = (finance_detail.fees_paid_to_mkcl_1 or Decimal('0.00')) + (
         finance_detail.fees_paid_to_mkcl_2 or Decimal('0.00')
+    ) + (
+        finance_detail.fees_paid_to_mkcl_3 or Decimal('0.00')
     )
     profit = total_paid - mkcl_total
 

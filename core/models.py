@@ -384,6 +384,13 @@ class StudentFinanceDetail(models.Model):
         blank=True,
         null=True
     )
+    fees_paid_to_mkcl_3 = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        blank=True,
+        null=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -399,7 +406,8 @@ class StudentFinanceDetail(models.Model):
         """Calculate total fees paid to MKCL"""
         mkcl_1 = self.fees_paid_to_mkcl_1 or 0
         mkcl_2 = self.fees_paid_to_mkcl_2 or 0
-        return mkcl_1 + mkcl_2
+        mkcl_3 = self.fees_paid_to_mkcl_3 or 0
+        return mkcl_1 + mkcl_2 + mkcl_3
     
     @property
     def profit(self):

@@ -1,5 +1,28 @@
 // Finance Details JavaScript
 
+// ============================================================
+// SCROLLBAR SYNCHRONIZATION - Keep horizontal scrollbars in sync
+// ============================================================
+
+function syncScrollbars() {
+    const tableContainer = document.getElementById('tableContainer');
+    const stickyScrollbar = document.getElementById('stickyScrollbar');
+    
+    if (!tableContainer || !stickyScrollbar) return;
+    
+    // When table container is scrolled, sync the sticky scrollbar
+    tableContainer.addEventListener('scroll', function() {
+        stickyScrollbar.scrollLeft = tableContainer.scrollLeft;
+    });
+    
+    // When sticky scrollbar is scrolled, sync the table container
+    stickyScrollbar.addEventListener('scroll', function() {
+        tableContainer.scrollLeft = stickyScrollbar.scrollLeft;
+    });
+    
+    console.log('Scrollbar synchronization initialized');
+}
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -147,8 +170,8 @@ function exportToExcel() {
         
         console.log('Table found');
         
-        // Create CSV content with headers
-        let csv = 'Sr.No.,Learner Name,Mobile No.,Batch,Course,I Inst,II Inst,III Inst,IV Inst,V Inst,Total Paid,Total Fees,Balance Fees,MKCL I Inst,MKCL II Inst,MKCL Total,Profit\n';
+        // Create CSV content with headers (3 learner installments + 3 MKCL installments + totals)
+        let csv = 'Sr.No.,Learner Name,Mobile No.,Batch,Course,I Inst,II Inst,III Inst,Total Paid,Total Fees,1st Inst MKCL,2nd Inst MKCL,3rd Inst MKCL,Total Paid MKCL,Profit\n';
         
         const rows = table.querySelectorAll('tbody tr');
         console.log('Total rows found:', rows.length);
@@ -157,6 +180,7 @@ function exportToExcel() {
         let totalProfitSum = 0;
         let totalMKCLSum = 0;
         let totalPaidSum = 0;
+        let totalFeesSum = 0;
         
         rows.forEach((row, index) => {
             // Skip empty rows or rows with colspan
@@ -175,7 +199,7 @@ function exportToExcel() {
             rowCount++;
             console.log('Processing row', rowCount);
             
-            // Extract data from cells (fixed indexing for 16 columns)
+            // Extract data from cells (fixed indexing for 14 columns)
             const srNo = rowCount;
             
             // Student Details (cells 0-4)
@@ -184,51 +208,46 @@ function exportToExcel() {
             const mobile = cells[3] ? cells[3].textContent.trim() : '';
             const batch = cells[4] ? cells[4].textContent.trim() : '';
             
-            // Fees Paid By Learner - 5 installments (cells 5-9)
+            // Fees Paid By Learner - 3 installments only (cells 5-7)
             let firstInst = '0';
             let secondInst = '0';
             let thirdInst = '0';
-            let fourthInst = '0';
-            let fifthInst = '0';
             
             if (cells[5]) firstInst = cells[5].textContent.replace('₹', '').trim() || '0';
             if (cells[6]) secondInst = cells[6].textContent.replace('₹', '').trim() || '0';
             if (cells[7]) thirdInst = cells[7].textContent.replace('₹', '').trim() || '0';
-            if (cells[8]) fourthInst = cells[8].textContent.replace('₹', '').trim() || '0';
-            if (cells[9]) fifthInst = cells[9].textContent.replace('₹', '').trim() || '0';
             
-            // Auto-calculated fields (cells 10-12)
-            const totalPaid = cells[10] ? parseFloat(cells[10].textContent.replace('₹', '').trim()) || 0 : 0;
-            const totalFees = cells[11] ? parseFloat(cells[11].textContent.replace('₹', '').trim()) || 0 : 0;
-            const balanceFees = cells[12] ? parseFloat(cells[12].textContent.replace('₹', '').trim()) || 0 : 0;
+            // Auto-calculated fields (cells 8-9)
+            let totalPaid = '0';
+            let totalFees = '0';
             
-            // Get MKCL values from input fields (cells 13-14)
-            let mkclFirst = '0';
-            let mkclSecond = '0';
+            if (cells[8]) totalPaid = cells[8].textContent.replace('₹', '').trim() || '0';
+            if (cells[9]) totalFees = cells[9].textContent.replace('₹', '').trim() || '0';
             
-            if (cells[13]) {
-                const mkclFirstInput = cells[13].querySelector('input');
-                mkclFirst = mkclFirstInput ? mkclFirstInput.value : cells[13].textContent.replace('₹', '').trim() || '0';
-            }
+            // MKCL Installments (cells 10-12)
+            const mkcl1 = cells[10] ? parseFloat(cells[10].querySelector('input')?.value || cells[10].textContent) || 0 : 0;
+            const mkcl2 = cells[11] ? parseFloat(cells[11].querySelector('input')?.value || cells[11].textContent) || 0 : 0;
+            const mkcl3 = cells[12] ? parseFloat(cells[12].querySelector('input')?.value || cells[12].textContent) || 0 : 0;
             
-            if (cells[14]) {
-                const mkclSecondInput = cells[14].querySelector('input');
-                mkclSecond = mkclSecondInput ? mkclSecondInput.value : cells[14].textContent.replace('₹', '').trim() || '0';
-            }
+            const mkclTotal = mkcl1 + mkcl2 + mkcl3;
             
-            // MKCL Total and Profit (cells 15-16)
-            const mkclTotal = cells[15] ? parseFloat(cells[15].textContent.replace('₹', '').trim()) || 0 : 0;
-            const profitText = cells[16] ? cells[16].textContent.replace('₹', '').trim() : '0';
+            // MKCL Total Paid (cell 13)
+            const mkclTotalPaidText = cells[13] ? cells[13].textContent.replace('₹', '').trim() : '0';
+            const mkclTotalPaid = parseFloat(mkclTotalPaidText) || 0;
+            
+            // Profit (cell 14)
+            const profitText = cells[14] ? cells[14].textContent.replace('₹', '').trim() : '0';
             const profit = parseFloat(profitText) || 0;
             
             // Add to totals
             totalProfitSum += profit;
             totalMKCLSum += mkclTotal;
-            totalPaidSum += totalPaid;
+            totalPaidSum += parseFloat(totalPaid) || 0;
+            totalFeesSum += parseFloat(totalFees) || 0;
             
-            // Build CSV row - escape quotes in names
+            // Build CSV row - escape quotes in names (15 columns)
             const escapeName = (str) => String(str).replace(/"/g, '""');
-            csv += `${srNo},"${escapeName(learnerName)}","${escapeName(mobile)}","${escapeName(batch)}","${escapeName(course)}",${firstInst},${secondInst},${thirdInst},${fourthInst},${fifthInst},${totalPaid},${totalFees},${balanceFees},${mkclFirst},${mkclSecond},${mkclTotal},${profit}\n`;
+            csv += `${srNo},"${escapeName(learnerName)}","${escapeName(mobile)}","${escapeName(batch)}","${escapeName(course)}",${firstInst},${secondInst},${thirdInst},${totalPaid},${totalFees},${mkcl1},${mkcl2},${mkcl3},${mkclTotalPaid},${profit}\n`;
         });
         
         console.log('Total rows processed:', rowCount);
@@ -297,6 +316,102 @@ function debouncedUpdate(studentId, field, value) {
     }, 500);
 }
 
+// Function to calculate and update MKCL total when installments change
+function updateMKCLTotal(studentId) {
+    // Get all MKCL installment inputs for this student
+    const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+    if (!row) return;
+    
+    const mkcl1Input = row.querySelector('.mkcl-inst-1');
+    const mkcl2Input = row.querySelector('.mkcl-inst-2');
+    const mkcl3Input = row.querySelector('.mkcl-inst-3');
+    
+    if (!mkcl1Input || !mkcl2Input || !mkcl3Input) return;
+    
+    // Get values from inputs (default to 0 if empty)
+    const mkcl1 = parseFloat(mkcl1Input.value) || 0;
+    const mkcl2 = parseFloat(mkcl2Input.value) || 0;
+    const mkcl3 = parseFloat(mkcl3Input.value) || 0;
+    
+    // Calculate total
+    const mkclTotal = mkcl1 + mkcl2 + mkcl3;
+    
+    // Update the total cell in real-time
+    const mkcl_total_cell = row.querySelector(`.mkcl-total-cell[data-student-id="${studentId}"]`);
+    if (mkcl_total_cell) {
+        mkcl_total_cell.textContent = mkclTotal.toFixed(2);
+    }
+    
+    // Calculate and update profit in real-time
+    // Get Total Paid by Learner (from readonly cells in Fees Paid By Learner section)
+    const readonlyCells = row.querySelectorAll('.readonly-cell');
+    if (readonlyCells.length >= 1) {
+        // Find the Total Paid from Fees Paid By Learner (4th readonly cell, index 3)
+        const totalPaidText = readonlyCells[3].textContent.trim();
+        const totalPaidByLearner = parseFloat(totalPaidText) || 0;
+        
+        // Calculate profit: Total Paid by Learner - Total Fees Paid to MKCL
+        const profit = totalPaidByLearner - mkclTotal;
+        const profitCell = row.querySelector(`.profit-${studentId}`);
+        if (profitCell) {
+            profitCell.textContent = '₹ ' + profit.toFixed(2);
+            profitCell.classList.remove('profit-positive', 'profit-negative');
+            profitCell.classList.add(profit >= 0 ? 'profit-positive' : 'profit-negative');
+        }
+    }
+    
+    // Update total profit on the page
+    updateTotalProfit();
+}
+
+// Function to calculate and update the total profit across all students
+function updateTotalProfit() {
+    const profitCells = document.querySelectorAll('[class^="profit-"]');
+    let totalProfit = 0;
+    
+    profitCells.forEach(cell => {
+        const profitText = cell.textContent.replace('₹', '').trim();
+        const profit = parseFloat(profitText) || 0;
+        totalProfit += profit;
+    });
+    
+    // Update the total profit box
+    const totalProfitAmount = document.getElementById('totalProfitAmount');
+    if (totalProfitAmount) {
+        totalProfitAmount.textContent = '₹ ' + totalProfit.toFixed(2);
+    }
+}
+
+// Set up event listeners for MKCL installment inputs
+function setupMKCLInstallmentListeners() {
+    const mkcl_inputs = document.querySelectorAll('.mkcl-installment');
+    
+    mkcl_inputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const studentId = this.getAttribute('data-student-id');
+            const field = this.getAttribute('data-field');
+            const value = this.value;
+            
+            // Update MKCL total and profit in real-time
+            updateMKCLTotal(studentId);
+            
+            // Save to server with debouncing
+            debouncedUpdate(studentId, field, value);
+        });
+        
+        input.addEventListener('blur', function() {
+            const value = this.value.trim();
+            if (value === '') {
+                this.value = '0.00';
+            } else if (!isNaN(value)) {
+                this.value = parseFloat(value).toFixed(2);
+            }
+            const studentId = this.getAttribute('data-student-id');
+            updateMKCLTotal(studentId);
+        });
+    });
+}
+
 // Add keyboard shortcut for export (Ctrl+E)
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.key === 'e') {
@@ -360,7 +475,157 @@ function setupStickyScrollbar() {
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupStickyScrollbar);
+    document.addEventListener('DOMContentLoaded', function() {
+        syncScrollbars();
+        setupStickyScrollbar();
+        setupMKCLInstallmentListeners();
+    });
 } else {
+    syncScrollbars();
     setupStickyScrollbar();
+    setupMKCLInstallmentListeners();
 }
+
+// ------------------------
+// FILTER DRAWER CONTROLS
+// ------------------------
+document.addEventListener('DOMContentLoaded', function() {
+    // Drawer controls - if elements exist
+    const filterToggleBtn = document.getElementById('filterToggleBtn');
+    const filterDrawer = document.getElementById('filterDrawer');
+    const drawerCloseBtn = document.getElementById('drawerCloseBtn');
+    const filterOverlay = document.getElementById('filterOverlay');
+    const applyFilterBtn = document.getElementById('applyFilterBtn');
+    const clearFilterBtn = document.getElementById('clearFilterBtn');
+
+    if (filterToggleBtn && filterDrawer) {
+        filterToggleBtn.addEventListener('click', function() {
+            openFilterDrawer();
+        });
+    }
+
+    if (drawerCloseBtn) {
+        drawerCloseBtn.addEventListener('click', closeFilterDrawer);
+    }
+
+    if (filterOverlay) {
+        filterOverlay.addEventListener('click', closeFilterDrawer);
+    }
+
+    if (applyFilterBtn) {
+        applyFilterBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            applyFiltersFromDrawer();
+            closeFilterDrawer();
+        });
+    }
+
+    if (clearFilterBtn) {
+        clearFilterBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            clearDrawerFilters();
+        });
+    }
+});
+
+function openFilterDrawer() {
+    const drawer = document.getElementById('filterDrawer');
+    const overlay = document.getElementById('filterOverlay');
+    if (!drawer) return;
+    drawer.classList.add('active');
+    if (overlay) overlay.style.display = 'block';
+    drawer.setAttribute('aria-hidden', 'false');
+}
+
+function closeFilterDrawer() {
+    const drawer = document.getElementById('filterDrawer');
+    const overlay = document.getElementById('filterOverlay');
+    if (!drawer) return;
+    drawer.classList.remove('active');
+    if (overlay) overlay.style.display = 'none';
+    drawer.setAttribute('aria-hidden', 'true');
+}
+
+function applyFiltersFromDrawer() {
+    // Read values from drawer inputs and submit via GET
+    const year = document.getElementById('drawerYearFilter') ? document.getElementById('drawerYearFilter').value : '';
+    const course = document.getElementById('drawerCourseFilter') ? document.getElementById('drawerCourseFilter').value : '';
+    const batch = document.getElementById('drawerBatchFilter') ? document.getElementById('drawerBatchFilter').value : '';
+    const sort = document.getElementById('drawerSortSelect') ? document.getElementById('drawerSortSelect').value : '';
+
+    // Build query string and navigate (server expects GET params)
+    const params = new URLSearchParams(window.location.search);
+    if (year) params.set('year', year); else params.delete('year');
+    if (course) params.set('course', course); else params.delete('course');
+    if (batch) params.set('batch', batch); else params.delete('batch');
+    if (sort) params.set('sort', sort); else params.delete('sort');
+
+    window.location.search = params.toString();
+}
+
+function clearDrawerFilters() {
+    // Clear drawer inputs and remove query params
+    if (document.getElementById('drawerYearFilter')) document.getElementById('drawerYearFilter').value = '';
+    if (document.getElementById('drawerCourseFilter')) document.getElementById('drawerCourseFilter').value = '';
+    if (document.getElementById('drawerBatchFilter')) document.getElementById('drawerBatchFilter').value = '';
+    if (document.getElementById('drawerSortSelect')) document.getElementById('drawerSortSelect').value = '';
+
+    const params = new URLSearchParams(window.location.search);
+    params.delete('year');
+    params.delete('course');
+    params.delete('batch');
+    params.delete('sort');
+    window.location.search = params.toString();
+}
+
+// Compute and apply left offsets for sticky columns dynamically
+function computeStickyOffsets() {
+    const table = document.querySelector('.finance-table');
+    const tableContainer = document.getElementById('tableContainer');
+    if (!table || !tableContainer) return;
+
+    // Number of sticky columns to compute (adjust if you add/remove sticky columns)
+    const stickyCount = 5;
+    let left = 0;
+
+    for (let i = 1; i <= stickyCount; i++) {
+        const cls = `sticky-col-${i}`;
+        // Find the first element with this class inside the table (header or first row)
+        const ref = table.querySelector(`.${cls}`);
+        if (!ref) continue;
+
+        // Use offsetWidth to get computed width including borders
+        const w = ref.offsetWidth;
+
+        // Apply left offset to all cells with this class (th and td)
+        const nodes = document.querySelectorAll(`.${cls}`);
+        nodes.forEach(n => {
+            n.style.left = left + 'px';
+        });
+
+        // Increment left by this column's width
+        left += w;
+    }
+}
+
+// Recompute sticky offsets on resize and content changes
+window.addEventListener('resize', function() {
+    computeStickyOffsets();
+});
+
+// observe table changes to recompute offsets when widths change (e.g., window fonts/load)
+document.addEventListener('DOMContentLoaded', function() {
+    computeStickyOffsets();
+    try {
+        const table = document.querySelector('.finance-table');
+        const container = document.getElementById('tableContainer');
+        if (window.ResizeObserver && (table || container)) {
+            const ro = new ResizeObserver(() => computeStickyOffsets());
+            if (table) ro.observe(table);
+            if (container) ro.observe(container);
+        }
+    } catch (e) {
+        // noop
+        console.warn('Sticky offset observer failed', e);
+    }
+});

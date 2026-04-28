@@ -1,0 +1,1865 @@
+/* ============================================================
+   PREMIUM STUDENT FINANCE DETAILS - ERP DASHBOARD DESIGN
+   ============================================================ */
+
+/* Import modern fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* Root Color Palette - Professional ERP Theme */
+:root {
+    /* Primary Colors - Modern Purple/Blue Gradient */
+    --primary-color: #6366f1;
+    --primary-light: #818cf8;
+    --primary-dark: #4f46e5;
+    --primary-darker: #4338ca;
+    --primary-darkest: #312e81;
+    
+    /* Secondary & Accent Colors */
+    --secondary-color: #8b5cf6;
+    --secondary-dark: #7c3aed;
+    --accent-color: #ec4899;
+    
+    /* Status Colors */
+    --success-color: #10b981;
+    --success-light: #d1fae5;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+
+    /* Neutral Colors */
+    --white: #ffffff;
+    --light-bg: #f8fafc;
+    --lighter-bg: #f1f5f9;
+    --border-color: #cbd5e1;
+    --border-light: #e2e8f0;
+    --border-lighter: #edf2f7;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-light: #94a3b8;
+
+    /* Shadows and Motion */
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --shadow-lg: 0 10px 24px rgba(15, 23, 42, 0.12);
+    --transition-fast: all 0.2s ease;
+}
+/* ============================================================
+   PAGE HEADER - PREMIUM GRADIENT DESIGN
+   ============================================================ */
+
+
+.page-header {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-dark) 100%);
+    border-radius: 16px;
+    padding: 14px 22px;
+    margin: 0 0 16px 0;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    position: relative;
+    min-height: unset;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.page-header::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    left: -5%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.page-header-content {
+    padding: 6px 0 6px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 220px;
+}
+
+.page-icon {
+    font-size: 32px;
+    background: rgba(255, 255, 255, 0.13);
+    padding: 8px 10px;
+    border-radius: 10px;
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.08);
+}
+
+.page-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: white;
+    margin: 0;
+    letter-spacing: -0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.page-subtitle {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 3px 0 0 0;
+    font-weight: 400;
+    letter-spacing: 0.1px;
+}
+
+.header-right-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.total-profit-box {
+    background: rgba(255, 255, 255, 0.98);
+    color: var(--primary-dark);
+    padding: 8px 14px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+    min-width: 110px;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.total-profit-box h3 {
+    margin: 0 0 2px 0;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+}
+
+.total-profit-box .amount {
+    font-size: 17px;
+    font-weight: 800;
+    margin: 0;
+    color: var(--primary-dark);
+    letter-spacing: -0.3px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============================================================
+   FILTER SECTION - PROFESSIONAL MODERN DESIGN
+   ============================================================ */
+
+.filters-section {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: var(--white);
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 1px 4px rgba(99,102,241,0.07);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.filter-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0;
+    width: 100%;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 0;
+}
+
+.filter-group label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 12px;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+}
+
+.filter-select,
+.filter-input {
+    padding: 6px 10px;
+    border: 1.2px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--white);
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: var(--transition-fast);
+    box-sizing: border-box;
+    min-height: 28px;
+}
+
+.filter-select {
+    min-width: 90px;
+}
+
+.filter-input {
+    min-width: 110px;
+    cursor: text;
+}
+
+/* Reuse receipts-style drawer in finance page */
+.filter-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 380px;
+    height: 100vh;
+    background: var(--white);
+    box-shadow: -6px 0 24px rgba(0,0,0,0.12);
+    z-index: 1001;
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.filter-drawer.active {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-lighter);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+}
+
+.drawer-close {
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+}
+
+.drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+}
+
+.drawer-actions {
+    display: flex;
+    gap: 10px;
+    padding: 14px;
+    border-top: 1px solid var(--border-lighter);
+    background: var(--white);
+}
+
+.filter-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.32);
+    z-index: 1000;
+}
+
+.btn.primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+}
+
+.btn {
+    background: var(--lighter-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    padding: 10px 14px;
+    border-radius: 8px;
+}
+
+/* Receipts-style top bar & controls to match visual design */
+.receipts-top-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: var(--white);
+    padding: 10px 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.search-container {
+    flex: 1;
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e8e8e8;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.search-input:focus {
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.08);
+}
+
+.search-input::placeholder {
+    color: #adb5bd;
+}
+
+.filter-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.filter-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.28);
+}
+
+.filter-icon {
+    font-size: 16px;
+}
+
+/* drawer header gradient updated to match receipts purple/blue */
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-lighter);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.drawer-body .filter-input,
+.drawer-body select.filter-input {
+    padding: 11px 14px;
+    border: 2px solid #e8e8e8;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    outline: none;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.drawer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    border-top: 2px solid #f0f0f0;
+    background: white;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.filter-select:hover,
+.filter-input:hover {
+    border-color: var(--primary-light);
+    background: var(--lighter-bg);
+    box-shadow: var(--shadow-xs);
+}
+
+.filter-select:focus,
+.filter-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), inset 0 0 0 1px var(--primary-light);
+    background: var(--white);
+}
+
+.apply-filters-btn {
+    padding: 9px 20px;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+    font-family: 'Inter', sans-serif;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    letter-spacing: 0.3px;
+}
+
+.apply-filters-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+}
+
+.apply-filters-btn:active {
+    transform: translateY(0);
+}
+
+.reset-filters-btn {
+    padding: 9px 20px;
+    background: var(--white);
+    color: var(--text-secondary);
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.3px;
+}
+
+.reset-filters-btn:hover {
+    background: var(--light-bg);
+    border-color: var(--primary-light);
+    color: var(--primary-color);
+}
+
+/* ============================================================
+   TABLE CONTAINER & SCROLLBARS - PREMIUM STYLING
+   ============================================================ */
+
+.scrollbar-wrapper {
+    background: var(--white);
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-light);
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    position: relative;
+}
+
+.finance-table-container {
+    flex: 1 1 auto;
+    overflow-x: auto;
+    overflow-y: visible;
+    background: var(--white);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    min-width: 0;
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.finance-table-container::-webkit-scrollbar {
+    height: 16px;
+    width: 10px;
+}
+
+.finance-table-container::-webkit-scrollbar-track {
+    background: linear-gradient(to right, var(--lighter-bg) 0%, var(--border-light) 100%);
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.finance-table-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.finance-table-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    background-clip: content-box;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.finance-table-container {
+    scrollbar-width: thick;
+    scrollbar-color: var(--primary-light) var(--lighter-bg);
+}
+
+/* ============================================================
+   STICKY HORIZONTAL SCROLLBAR - ENHANCED & VISIBLE
+   ============================================================ */
+
+.sticky-scrollbar-container {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: linear-gradient(to bottom, var(--lighter-bg) 0%, var(--light-bg) 100%);
+    border-top: 3px solid var(--primary-light);
+    z-index: 101;
+    flex-shrink: 0;
+    scroll-behavior: smooth;
+    box-shadow: inset 0 2px 8px rgba(99, 102, 241, 0.1);
+}
+
+.sticky-scrollbar-container::-webkit-scrollbar {
+    height: 16px;
+}
+
+.sticky-scrollbar-container::-webkit-scrollbar-track {
+    background: linear-gradient(to right, var(--lighter-bg) 0%, var(--border-light) 100%);
+    border-radius: 8px;
+}
+
+.sticky-scrollbar-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.sticky-scrollbar-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    background-clip: content-box;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.sticky-scrollbar-container {
+    scrollbar-width: thick;
+    scrollbar-color: var(--primary-light) var(--lighter-bg);
+}
+
+.sticky-scrollbar-track {
+    height: 100%;
+    width: 100%;
+}
+
+/* ============================================================
+   TABLE STRUCTURE & STYLING - PROFESSIONAL ERP DESIGN
+   ============================================================ */
+
+.finance-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--white);
+    table-layout: auto;
+    min-width: 100%;
+}
+
+.finance-table th,
+.finance-table td {
+    padding: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Table Headers - Premium Gradient */
+.finance-table thead {
+    background: linear-gradient(135deg, var(--primary-darkest) 0%, var(--secondary-dark) 100%);
+    color: #111111;
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.finance-table thead tr:first-child {
+    background: linear-gradient(135deg, var(--primary-darkest) 0%, var(--secondary-dark) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.table-header-row-1 th {
+    padding: 16px 10px;
+    text-align: center;
+    vertical-align: middle;
+    border-right: 1.5px solid rgba(255, 255, 255, 0.1);
+    height: 50px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
+    color: #111111;
+    text-shadow: none;
+}
+
+.table-header-row-1 th:last-child {
+    border-right: none;
+}
+
+.table-header-row-2 th {
+    padding: 13px 10px;
+    text-align: center;
+    vertical-align: middle;
+    border-right: 1.5px solid rgba(255, 255, 255, 0.1);
+    height: 46px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
+    color: #111111;
+    text-shadow: none;
+}
+
+.table-header-row-2 th:last-child {
+    border-right: none;
+}
+
+/* Section Headers - Color Coded */
+.section-header-student {
+    background: linear-gradient(135deg, var(--primary-darkest) 0%, var(--primary-dark) 100%);
+    color: #111111;
+    text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.section-header-learner {
+    background: linear-gradient(135deg, #4c3d9f 0%, #5a4bb0 100%);
+    color: #111111;
+    text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.section-header-mkcl {
+    background: linear-gradient(135deg, #5b3f8b 0%, #6b4d9a 100%);
+    color: #111111;
+    text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.section-header-profit {
+    background: linear-gradient(135deg, var(--secondary-dark) 0%, #6d28d9 100%);
+    color: #111111;
+    text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Table Body - Zebra Striping with Hover */
+.finance-table tbody tr {
+    border-bottom: 1px solid var(--border-light);
+    transition: var(--transition-fast);
+    background: var(--white);
+    height: 44px;
+}
+
+.finance-table tbody tr:nth-child(2n) {
+    background: var(--lighter-bg);
+}
+
+.finance-table tbody tr:hover {
+    background: linear-gradient(to right, #f0f4ff 0%, #e6f2ff 100%);
+    box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.15);
+    transition: var(--transition-fast);
+}
+
+.finance-table tbody tr:nth-child(2n):hover {
+    background: linear-gradient(to right, #e6f2ff 0%, #dce9ff 100%);
+}
+
+.table-data-row td {
+    padding: 10px 8px;
+    text-align: center;
+    vertical-align: middle;
+    border-right: 1px solid var(--border-light);
+    font-size: 12px;
+    height: 44px;
+    line-height: 1.4;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.table-data-row td:last-child {
+    border-right: none;
+}
+
+/* Empty State */
+.empty-state-cell {
+    padding: 80px 20px !important;
+    text-align: center !important;
+}
+
+.empty-state-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.empty-state-text {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin: 0;
+    font-weight: 500;
+}
+
+/* ============================================================
+   COLUMN STYLING & GROUPING - PROFESSIONAL WIDTHS
+   ============================================================ */
+
+/* Student Details Columns - Sticky Navigation */
+.sticky-col {
+    position: sticky;
+    background: var(--white);
+    z-index: 16;
+    font-weight: 600;
+    color: var(--text-primary);
+    box-shadow: 6px 0 12px rgba(0, 0, 0, 0.06);
+}
+
+.sticky-col-1 {
+    left: 0;
+    width: auto;
+    min-width: 55px;
+    z-index: 25;
+    text-align: center;
+    background: var(--white);
+    border-right: 2px solid var(--primary-color);
+    padding: 10px 8px;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.08);
+}
+
+.sticky-col-2 {
+    left: 55px;
+    width: auto;
+    min-width: 180px;
+    z-index: 24;
+    text-align: left;
+    padding-left: 14px;
+    background: var(--white);
+    font-weight: 700;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.07);
+}
+
+.sticky-col-3 {
+    left: 235px; /* 55 + 180 */
+    width: auto;
+    min-width: 120px;
+    z-index: 23;
+    background: var(--white);
+    padding: 10px 8px;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.06);
+}
+
+.sticky-col-4 {
+    left: 355px; /* 55 + 180 + 120 */
+    width: auto;
+    min-width: 120px;
+    z-index: 22;
+    background: var(--white);
+    padding: 10px 8px;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.sticky-col-5 {
+    left: 475px; /* 55 + 180 + 120 + 120 */
+    width: auto;
+    min-width: 100px;
+    z-index: 21;
+    background: var(--white);
+    border-right: 2.5px solid rgba(99, 102, 241, 0.2);
+    padding: 10px 8px;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.finance-table tbody tr:nth-child(2n) .sticky-col {
+    background: var(--lighter-bg);
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.finance-table tbody tr:nth-child(2n) .sticky-col-1 {
+    background: var(--lighter-bg);
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.06);
+}
+
+.finance-table tbody tr:nth-child(2n) .sticky-col-2 {
+    background: var(--lighter-bg);
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.finance-table tbody tr:nth-child(2n) .sticky-col-3 {
+    background: var(--lighter-bg);
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.finance-table tbody tr:nth-child(2n) .sticky-col-4 {
+    background: var(--lighter-bg);
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.04);
+}
+
+.finance-table tbody tr:nth-child(2n) .sticky-col-5 {
+    background: var(--lighter-bg);
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.04);
+}
+
+.finance-table tbody tr:hover .sticky-col {
+    background: linear-gradient(to right, #f0f4ff 0%, #e6f2ff 100%);
+}
+
+.finance-table tbody tr:hover .sticky-col-1 {
+    background: linear-gradient(to right, #f0f4ff 0%, #e6f2ff 100%);
+}
+
+.finance-table tbody tr:hover .sticky-col-2 {
+    background: linear-gradient(to right, #f0f4ff 0%, #e6f2ff 100%);
+}
+
+.finance-table tbody tr:hover .sticky-col-3 {
+    background: linear-gradient(to right, #f0f4ff 0%, #e6f2ff 100%);
+}
+
+.finance-table tbody tr:hover .sticky-col-4 {
+    background: linear-gradient(to right, #f0f4ff 0%, #e6f2ff 100%);
+}
+
+.finance-table tbody tr:hover .sticky-col-5 {
+    background: linear-gradient(to right, #f0f4ff 0%, #e6f2ff 100%);
+}
+
+.finance-table tbody tr:nth-child(2n):hover .sticky-col {
+    background: linear-gradient(to right, #e6f2ff 0%, #dce9ff 100%);
+}
+
+/* Ensure header sticky cells align and sit above body cells during scroll */
+.finance-table thead th.sticky-col,
+.finance-table thead td.sticky-col {
+    position: sticky;
+    top: 0;
+    /* header should be above body sticky columns */
+    z-index: 200;
+    background: linear-gradient(180deg, var(--white) 0%, var(--lighter-bg) 100%);
+    box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+}
+
+/* Per-column header stacking (leftmost highest) */
+.finance-table thead th.sticky-col-1 { z-index: 260; }
+.finance-table thead th.sticky-col-2 { z-index: 250; }
+.finance-table thead th.sticky-col-3 { z-index: 240; }
+.finance-table thead th.sticky-col-4 { z-index: 230; }
+.finance-table thead th.sticky-col-5 { z-index: 220; }
+
+/* Prevent overlapping when multiple sticky columns are present */
+.sticky-col { /* keep base sticky but ensure overlap handled */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* Ensure non-sticky columns go BEHIND sticky columns when scrolling */
+.finance-table tbody td:not(.sticky-col) {
+    z-index: 1;
+}
+
+.finance-table thead th:not(.sticky-col) {
+    z-index: 1;
+}
+
+/* Sticky columns in body must have higher z-index than regular columns */
+.finance-table tbody .sticky-col {
+    z-index: 20;
+}
+
+/* Learner Section Columns - Compact Installer */
+.col-learner {
+    width: auto;
+    min-width: 110px;
+    background: var(--white);
+    padding: 10px 6px;
+}
+
+.col-learner-total {
+    width: auto;
+    min-width: 115px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    border-right: 1.5px solid rgba(99, 102, 241, 0.15);
+    padding: 10px 6px;
+}
+
+.col-learner-fees {
+    width: auto;
+    min-width: 115px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    border-right: 1.5px solid rgba(99, 102, 241, 0.15);
+    padding: 10px 6px;
+}
+
+/* Balance Column - Highlighted Premium */
+.col-balance {
+    width: auto;
+    min-width: 115px;
+    background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
+    border-right: 2px solid rgba(6, 182, 212, 0.2);
+    padding: 10px 6px;
+}
+
+/* MKCL Section Columns - Editable */
+.col-mkcl {
+    width: auto;
+    min-width: 110px;
+    background: var(--white);
+    padding: 10px 6px;
+}
+
+.col-mkcl-total {
+    width: auto;
+    min-width: 115px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-right: 1.5px solid rgba(217, 119, 6, 0.15);
+    padding: 10px 6px;
+}
+
+.col-profit {
+    width: auto;
+    min-width: 120px;
+    font-weight: 800;
+    padding: 10px 6px;
+}
+
+/* ============================================================
+   CELL STYLING - PREMIUM DATA PRESENTATION
+   ============================================================ */
+
+.text-center {
+    text-align: center;
+}
+
+.text-numeric {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.readonly-cell {
+    background: var(--lighter-bg);
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: 10px 6px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.input-cell {
+    padding: 6px 4px;
+    background: linear-gradient(135deg, #fefce8 0%, #fffbeb 100%);
+}
+
+/* Balance Cell - Premium Highlighted */
+.balance-cell {
+    background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
+    font-weight: 800;
+    color: #0369a1;
+    box-shadow: inset 0 0 0 1px rgba(2, 132, 199, 0.15);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.finance-table tbody tr:nth-child(2n) .balance-cell {
+    background: linear-gradient(135deg, #bfdbfe 0%, #cffafe 100%);
+}
+
+.finance-table tbody tr:hover .balance-cell {
+    background: linear-gradient(135deg, #a5f3fc 0%, #7ee8f7 100%);
+    box-shadow: inset 0 0 0 1.5px rgba(2, 132, 199, 0.2);
+}
+
+/* MKCL Total Cell - Premium Highlighted */
+.mkcl-total-cell {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    font-weight: 800;
+    color: #92400e;
+    box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.15);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.finance-table tbody tr:nth-child(2n) .mkcl-total-cell {
+    background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+}
+
+.finance-table tbody tr:hover .mkcl-total-cell {
+    background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%);
+    box-shadow: inset 0 0 0 1.5px rgba(217, 119, 6, 0.2);
+}
+
+/* Profit Cell - Premium Color-Coded Badges */
+.profit-cell {
+    font-size: 12px;
+    font-weight: 800;
+    padding: 8px 4px;
+    background: var(--white);
+}
+
+.finance-table tbody tr:nth-child(2n) .profit-cell {
+    background: var(--lighter-bg);
+}
+
+.profit-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+    min-width: 75px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.3px;
+}
+
+.profit-positive .profit-badge {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    color: #166534;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.profit-negative .profit-badge {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* ============================================================
+   INPUT FIELDS STYLING - PREMIUM FORM CONTROLS
+   ============================================================ */
+
+.mkcl-installment {
+    width: 100%;
+    padding: 7px 5px;
+    border: 2px solid #e0e7ff;
+    border-radius: 7px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    transition: var(--transition-fast);
+    box-sizing: border-box;
+    background: white;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+}
+
+.mkcl-installment::placeholder {
+    color: var(--text-light);
+    font-weight: 400;
+}
+
+.mkcl-installment:hover {
+    border-color: var(--primary-light);
+    background: var(--lighter-bg);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+}
+
+.mkcl-installment:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), inset 0 0 0 1px var(--primary-color);
+}
+
+.mkcl-installment:disabled {
+    background: var(--lighter-bg);
+    border-color: var(--border-color);
+    color: var(--text-light);
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   SAVE INDICATOR - PREMIUM NOTIFICATIONS
+   ============================================================ */
+
+.save-indicator {
+    position: fixed;
+    top: 28px;
+    right: 28px;
+    background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+    color: white;
+    padding: 14px 24px;
+    border-radius: 10px;
+    display: none;
+    animation: slideInRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1000;
+    box-shadow: 0 12px 28px rgba(16, 185, 129, 0.3);
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.save-indicator-icon {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.save-indicator-text {
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.error-indicator {
+    background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%) !important;
+    box-shadow: 0 12px 28px rgba(239, 68, 68, 0.3) !important;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(120%) scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* ============================================================
+   EXPORT & ACTION BUTTONS - PREMIUM STYLING
+   ============================================================ */
+
+.export-button {
+    background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 11px 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    transition: var(--transition-fast);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.export-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(16, 185, 129, 0.4);
+}
+
+.export-button:active {
+    transform: translateY(-1px);
+}
+
+/* ============================================================
+   RESPONSIVE DESIGN - MOBILE & TABLET OPTIMIZED
+   ============================================================ */
+
+@media (max-width: 1400px) {
+    .sticky-col-2 {
+        min-width: 160px;
+    }
+
+    .sticky-col-3 {
+        min-width: 110px;
+    }
+
+    .sticky-col-4 {
+        min-width: 110px;
+    }
+
+    .sticky-col-5 {
+        min-width: 95px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .page-header {
+        padding: 20px 28px;
+    }
+
+    .sticky-col-2 {
+        min-width: 150px;
+    }
+
+    .sticky-col-3 {
+        min-width: 105px;
+    }
+
+    .sticky-col-4 {
+        min-width: 105px;
+    }
+
+    .sticky-col-5 {
+        min-width: 90px;
+    }
+
+    .col-learner,
+    .col-mkcl {
+        min-width: 100px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        border-radius: 16px;
+        padding: 16px 20px;
+        margin: 0 0 16px 0;
+    }
+
+    .page-header-content {
+        flex-direction: column;
+        gap: 12px;
+        padding: 8px 16px;
+    }
+
+    .page-title-wrapper {
+        gap: 12px;
+        min-width: auto;
+    }
+
+    .page-icon {
+        width: 52px;
+        height: 52px;
+        font-size: 32px;
+        padding: 10px;
+    }
+
+    .page-title {
+        font-size: 22px;
+    }
+
+    .page-subtitle {
+        font-size: 12px;
+    }
+
+    .header-right-section {
+        width: 100%;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .total-profit-box {
+        width: 100%;
+        padding: 12px 16px;
+    }
+
+    .export-button {
+        width: 100%;
+    }
+
+    .filters-section {
+        margin-top: 12px;
+        padding: 12px 16px;
+        border-radius: 12px;
+    }
+
+    .filter-form {
+        gap: 8px;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .filter-select,
+    .filter-input {
+        width: 100%;
+        min-width: auto;
+    }
+
+    .apply-filters-btn,
+    .reset-filters-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .finance-table {
+        min-width: 100%;
+        font-size: 11px;
+    }
+
+    .table-header-row-1 th {
+        padding: 10px 6px;
+        height: 38px;
+        font-size: 10px;
+    }
+
+    .table-header-row-2 th {
+        padding: 9px 5px;
+        height: 34px;
+        font-size: 9px;
+    }
+
+    .table-data-row td {
+        padding: 8px 5px;
+        font-size: 11px;
+        height: 38px;
+    }
+
+    .sticky-col-1 {
+        min-width: 50px;
+    }
+
+    .sticky-col-2 {
+        min-width: 140px;
+        padding-left: 10px;
+    }
+
+    .sticky-col-3 {
+        min-width: 100px;
+    }
+
+    .sticky-col-4 {
+        min-width: 100px;
+    }
+
+    .sticky-col-5 {
+        min-width: 85px;
+    }
+
+    .col-learner {
+        min-width: 90px;
+    }
+
+    .col-learner-total {
+        min-width: 95px;
+    }
+
+    .col-learner-fees {
+        min-width: 95px;
+    }
+
+    .col-mkcl {
+        min-width: 90px;
+    }
+
+    .col-mkcl-total {
+        min-width: 95px;
+    }
+
+    .col-balance {
+        min-width: 95px;
+    }
+
+    .col-profit {
+        min-width: 100px;
+    }
+
+    .mkcl-installment {
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+
+    .profit-badge {
+        padding: 5px 8px;
+        font-size: 10px;
+        min-width: 70px;
+    }
+
+    .empty-state-cell {
+        padding: 60px 16px !important;
+    }
+
+    .save-indicator {
+        top: 16px;
+        right: 16px;
+        padding: 12px 16px;
+        font-size: 12px;
+        border-radius: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .finance-wrapper {
+        padding: 12px;
+    }
+
+    .page-header {
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin: 0 0 12px 0;
+    }
+
+    .page-header::before {
+        width: 200px;
+        height: 200px;
+    }
+
+    .page-header-content {
+        padding: 6px 12px;
+    }
+
+    .page-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 28px;
+        padding: 8px;
+    }
+
+    .page-title {
+        font-size: 18px;
+    }
+
+    .page-subtitle {
+        font-size: 11px;
+    }
+
+    .filters-section {
+        margin-top: 10px;
+        padding: 10px 12px;
+    }
+
+    .filter-group label {
+        font-size: 12px;
+    }
+
+    .filter-select,
+    .filter-input {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    .apply-filters-btn,
+    .reset-filters-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    .finance-table {
+        min-width: 100%;
+        font-size: 10px;
+    }
+
+    .table-header-row-1 th {
+        padding: 8px 4px;
+        height: 36px;
+        font-size: 9px;
+    }
+
+    .table-header-row-2 th {
+        padding: 7px 4px;
+        height: 32px;
+        font-size: 8px;
+    }
+
+    .table-data-row td {
+        padding: 6px 3px;
+        font-size: 10px;
+        height: 36px;
+    }
+
+    .sticky-col-1 {
+        min-width: 45px;
+    }
+
+    .sticky-col-2 {
+        min-width: 120px;
+        padding-left: 8px;
+    }
+
+    .sticky-col-3 {
+        min-width: 85px;
+    }
+
+    .sticky-col-4 {
+        min-width: 85px;
+    }
+
+    .sticky-col-5 {
+        min-width: 75px;
+    }
+
+    .col-learner {
+        min-width: 80px;
+    }
+
+    .col-learner-total {
+        min-width: 85px;
+    }
+
+    .col-learner-fees {
+        min-width: 85px;
+    }
+
+    .col-mkcl {
+        min-width: 80px;
+    }
+
+    .col-mkcl-total {
+        min-width: 85px;
+    }
+
+    .col-balance {
+        min-width: 85px;
+    }
+
+    .col-profit {
+        min-width: 90px;
+    }
+
+    .mkcl-installment {
+        padding: 5px 3px;
+        font-size: 10px;
+    }
+
+    .profit-badge {
+        padding: 4px 6px;
+        font-size: 9px;
+        min-width: 65px;
+    }
+
+    .total-profit-box {
+        min-width: 120px;
+        padding: 10px 12px;
+    }
+
+    .total-profit-box h3 {
+        font-size: 10px;
+    }
+
+    .total-profit-box .amount {
+        font-size: 18px;
+    }
+
+    .empty-state-cell {
+        padding: 40px 12px !important;
+    }
+
+    .empty-state-text {
+        font-size: 13px;
+    }
+
+    .save-indicator {
+        top: 12px;
+        right: 12px;
+        padding: 10px 12px;
+        font-size: 11px;
+        border-radius: 6px;
+    }
+
+    .scrollbar-wrapper {
+        border-radius: 10px;
+    }
+
+    .sticky-scrollbar-container {
+        height: 16px;
+    }
+}
+
+/* ============================================================
+   PRINT STYLES
+   ============================================================ */
+
+@media print {
+    .filters-section,
+    .export-button,
+    .save-indicator,
+    .sticky-scrollbar-container {
+        display: none !important;
+    }
+
+    .finance-table {
+        font-size: 10px;
+    }
+
+    .finance-table thead {
+        background: var(--primary-darker);
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+}
+
+/* ============================================================
+   FINANCE TABLE STABILITY FIXES
+   Keeps horizontal scrolling accessible and prevents scrolled
+   columns from painting above the frozen student-detail columns.
+   ============================================================ */
+
+.finance-wrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.scrollbar-wrapper {
+    max-width: 100%;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.finance-table-container {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 260px);
+    padding-bottom: 0;
+    transform: translateZ(0);
+}
+
+.finance-table {
+    width: max-content;
+    min-width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.finance-table th,
+.finance-table td {
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.finance-table .w-n {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.finance-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+}
+
+.finance-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+}
+
+.finance-table thead .table-header-row-1 th {
+    top: 0;
+}
+
+.finance-table thead .table-header-row-2 th {
+    top: 50px;
+}
+
+.finance-table tbody td:not(.sticky-col),
+.finance-table thead th:not(.sticky-col):not(.section-header-student) {
+    position: relative;
+    z-index: 1;
+}
+
+.finance-table .sticky-col {
+    position: sticky;
+    background: var(--white);
+    background-clip: padding-box;
+    z-index: 50;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 6px 0 10px rgba(15, 23, 42, 0.08);
+}
+
+.finance-table tbody .sticky-col-1,
+.finance-table tbody .sticky-col-2,
+.finance-table tbody .sticky-col-3,
+.finance-table tbody .sticky-col-4,
+.finance-table tbody .sticky-col-5 {
+    z-index: 60;
+}
+
+.finance-table thead .sticky-col {
+    z-index: 120;
+    background: linear-gradient(135deg, var(--primary-darkest) 0%, var(--secondary-dark) 100%);
+    color: #ffffff;
+}
+
+.finance-table thead .sticky-col-1 { z-index: 125; }
+.finance-table thead .sticky-col-2 { z-index: 124; }
+.finance-table thead .sticky-col-3 { z-index: 123; }
+.finance-table thead .sticky-col-4 { z-index: 122; }
+.finance-table thead .sticky-col-5 { z-index: 121; }
+
+.section-header-student {
+    position: sticky !important;
+    left: 0;
+    z-index: 130 !important;
+    min-width: 575px;
+    box-shadow: 8px 0 12px rgba(15, 23, 42, 0.12);
+}
+
+.sticky-col-1 {
+    width: 55px;
+    min-width: 55px;
+    max-width: 55px;
+    left: 0;
+}
+
+.sticky-col-2 {
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+    left: 55px;
+}
+
+.sticky-col-3 {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    left: 235px;
+}
+
+.sticky-col-4 {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    left: 355px;
+}
+
+.sticky-col-5 {
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+    left: 475px;
+    border-right: 3px solid rgba(99, 102, 241, 0.35) !important;
+}
+
+.col-learner,
+.col-mkcl {
+    width: 112px;
+    min-width: 112px;
+}
+
+.col-learner-total,
+.col-learner-fees,
+.col-balance,
+.col-mkcl-total {
+    width: 118px;
+    min-width: 118px;
+}
+
+.col-profit {
+    width: 124px;
+    min-width: 124px;
+}
+
+.finance-table tbody tr:nth-child(2n) .sticky-col {
+    background: var(--lighter-bg);
+}
+
+.finance-table tbody tr:hover .sticky-col {
+    background: #eaf1ff;
+}
+
+.sticky-scrollbar-container {
+    position: sticky;
+    bottom: 0;
+    height: 18px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    z-index: 150;
+}
+
+.sticky-scrollbar-track {
+    height: 1px;
+}
+
+@media (max-width: 768px) {
+    .finance-table-container {
+        max-height: calc(100vh - 300px);
+    }
+
+    .section-header-student {
+        min-width: 475px;
+    }
+
+    .sticky-col-1 {
+        width: 50px;
+        min-width: 50px;
+        max-width: 50px;
+    }
+
+    .sticky-col-2 {
+        width: 140px;
+        min-width: 140px;
+        max-width: 140px;
+    }
+
+    .sticky-col-3,
+    .sticky-col-4 {
+        width: 100px;
+        min-width: 100px;
+        max-width: 100px;
+    }
+
+    .sticky-col-5 {
+        width: 85px;
+        min-width: 85px;
+        max-width: 85px;
+    }
+}
