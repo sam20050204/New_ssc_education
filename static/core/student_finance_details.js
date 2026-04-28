@@ -6,19 +6,58 @@
 
 function syncScrollbars() {
     const tableContainer = document.getElementById('tableContainer');
-    const stickyScrollbar = document.getElementById('stickyScrollbar');
+    const stickyScrollbars = document.querySelectorAll('.sticky-scrollbar-container');
+    const stickyScrollbarTracks = document.querySelectorAll('.sticky-scrollbar-track');
     
-    if (!tableContainer || !stickyScrollbar) return;
+    if (!tableContainer || stickyScrollbars.length === 0) return;
+    if (tableContainer.dataset.scrollSyncInitialized === 'true') return;
+    tableContainer.dataset.scrollSyncInitialized = 'true';
     
-    // When table container is scrolled, sync the sticky scrollbar
+    let isSyncing = false;
+
+    function updateScrollbarWidths() {
+        stickyScrollbarTracks.forEach(track => {
+            track.style.width = tableContainer.scrollWidth + 'px';
+        });
+    }
+
+    function syncToScrollLeft(scrollLeft, sourceElement) {
+        if (sourceElement !== tableContainer) {
+            tableContainer.scrollLeft = scrollLeft;
+        }
+        stickyScrollbars.forEach(scrollbar => {
+            if (scrollbar !== sourceElement) {
+                scrollbar.scrollLeft = scrollLeft;
+            }
+        });
+    }
+
+    updateScrollbarWidths();
+
     tableContainer.addEventListener('scroll', function() {
-        stickyScrollbar.scrollLeft = tableContainer.scrollLeft;
-    });
+        if (isSyncing) return;
+        isSyncing = true;
+        syncToScrollLeft(tableContainer.scrollLeft, tableContainer);
+        isSyncing = false;
+    }, { passive: true });
     
-    // When sticky scrollbar is scrolled, sync the table container
-    stickyScrollbar.addEventListener('scroll', function() {
-        tableContainer.scrollLeft = stickyScrollbar.scrollLeft;
+    stickyScrollbars.forEach(scrollbar => {
+        scrollbar.addEventListener('scroll', function() {
+            if (isSyncing) return;
+            isSyncing = true;
+            syncToScrollLeft(scrollbar.scrollLeft, scrollbar);
+            isSyncing = false;
+        }, { passive: true });
     });
+
+    window.addEventListener('resize', updateScrollbarWidths);
+
+    if (window.ResizeObserver) {
+        const observer = new ResizeObserver(updateScrollbarWidths);
+        observer.observe(tableContainer);
+        const table = document.getElementById('financeTable');
+        if (table) observer.observe(table);
+    }
     
     console.log('Scrollbar synchronization initialized');
 }
@@ -63,14 +102,14 @@ function updateField(studentId, field, value) {
     .then(data => {
         if (data.success) {
             // Update calculated fields
-            const mkclTotalCell = document.querySelector(`.mkcl-total-${studentId}`);
+            const mkclTotalCell = document.querySelector(`.mkcl-total-cell[data-student-id="${studentId}"]`);
             if (mkclTotalCell) {
                 mkclTotalCell.textContent = parseFloat(data.mkcl_total).toFixed(2);
             }
             
             const profitCell = document.querySelector(`.profit-${studentId}`);
             if (profitCell) {
-                profitCell.textContent = '₹ ' + parseFloat(data.profit).toFixed(2);
+                updateProfitCell(profitCell, parseFloat(data.profit));
                 
                 // Update profit color
                 profitCell.classList.remove('profit-positive', 'profit-negative');
@@ -100,7 +139,7 @@ function updateField(studentId, field, value) {
 // Real-time update function for Excel-like experience
 function updateFieldRealTime(studentId, field, value) {
     // Update MKCL total and profit in real-time (before saving to server)
-    if (field === 'mkcl_1' || field === 'mkcl_2') {
+    if (field === 'mkcl_1' || field === 'mkcl_2' || field === 'mkcl_3') {
         // Get the row for this student
         const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
         if (row) {
@@ -115,7 +154,7 @@ function updateFieldRealTime(studentId, field, value) {
             
             // Calculate MKCL total immediately
             const mkclTotal = mkcl1 + mkcl2;
-            const mkclTotalCell = document.querySelector(`.mkcl-total-${studentId}`);
+            const mkclTotalCell = document.querySelector(`.mkcl-total-cell[data-student-id="${studentId}"]`);
             if (mkclTotalCell) {
                 mkclTotalCell.textContent = mkclTotal.toFixed(2);
             }
@@ -134,7 +173,7 @@ function updateFieldRealTime(studentId, field, value) {
                 // Update profit cell
                 const profitCell = document.querySelector(`.profit-${studentId}`);
                 if (profitCell) {
-                    profitCell.textContent = '₹ ' + profit.toFixed(2);
+                    updateProfitCell(profitCell, profit);
                     
                     // Update profit color based on positive/negative
                     profitCell.classList.remove('profit-positive', 'profit-negative');
@@ -155,6 +194,17 @@ function showError(message) {
     setTimeout(() => {
         indicator.style.display = 'none';
     }, 3000);
+}
+
+function updateProfitCell(profitCell, profit) {
+    const profitText = '₹ ' + profit.toFixed(2);
+    const profitBadge = profitCell.querySelector('.profit-badge');
+
+    if (profitBadge) {
+        profitBadge.textContent = profitText;
+    } else {
+        profitCell.textContent = profitText;
+    }
 }
 
 function exportToExcel() {
@@ -354,7 +404,7 @@ function updateMKCLTotal(studentId) {
         const profit = totalPaidByLearner - mkclTotal;
         const profitCell = row.querySelector(`.profit-${studentId}`);
         if (profitCell) {
-            profitCell.textContent = '₹ ' + profit.toFixed(2);
+            updateProfitCell(profitCell, profit);
             profitCell.classList.remove('profit-positive', 'profit-negative');
             profitCell.classList.add(profit >= 0 ? 'profit-positive' : 'profit-negative');
         }
@@ -412,6 +462,136 @@ function setupMKCLInstallmentListeners() {
     });
 }
 
+function formatCurrency(value) {
+    const amount = parseFloat(value) || 0;
+    return '₹ ' + amount.toFixed(2);
+}
+
+function setFinanceModalText(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value || '-';
+    }
+}
+
+function openFinanceStudentModal(studentId) {
+    const modal = document.getElementById('financeStudentModal');
+    if (!modal) return;
+
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    setFinanceModalText('financeModalName', 'Loading...');
+    setFinanceModalText('financeModalCourse', '-');
+    setFinanceModalText('financeModalMobile', '-');
+    setFinanceModalText('financeModalParentMobile', '-');
+    setFinanceModalText('financeModalBatch', '-');
+    setFinanceModalText('financeModalAdmissionDate', '-');
+    setFinanceModalText('financeModalTotalFees', '-');
+    setFinanceModalText('financeModalPaidFees', '-');
+    setFinanceModalText('financeModalRemainingFees', '-');
+    setFinanceModalText('financeModalAddress', '-');
+    const paymentsContainer = document.getElementById('financeModalPayments');
+    if (paymentsContainer) paymentsContainer.innerHTML = '<p class="finance-modal-empty">Loading payments...</p>';
+
+    fetch(`/admission/${studentId}/detail/`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Unable to load student details');
+        }
+        return response.json();
+    })
+    .then(data => {
+        const fullName = data.full_name || [data.surname, data.student_name, data.father_name].filter(Boolean).join(' ');
+        const batch = data.batch_display || [data.batch_month, data.batch_year].filter(Boolean).join(' ');
+        const address = [data.address, data.city, data.tehsil_block, data.district, data.pin_code].filter(Boolean).join(', ');
+
+        setFinanceModalText('financeModalName', fullName);
+        setFinanceModalText('financeModalCourse', data.course || data.custom_course || '-');
+        setFinanceModalText('financeModalMobile', data.mobile_own);
+        setFinanceModalText('financeModalParentMobile', data.parent_mobile);
+        setFinanceModalText('financeModalBatch', batch);
+        setFinanceModalText('financeModalAdmissionDate', data.admission_date);
+        setFinanceModalText('financeModalTotalFees', formatCurrency(data.total_fees));
+        setFinanceModalText('financeModalPaidFees', formatCurrency(data.paid_fees));
+        setFinanceModalText('financeModalRemainingFees', formatCurrency(data.remaining_fees));
+        setFinanceModalText('financeModalAddress', address);
+
+        const photo = document.getElementById('financeModalPhoto');
+        if (photo) {
+            if (data.photo) {
+                photo.src = data.photo;
+            } else {
+                const firstLetter = (fullName || 'S').charAt(0).toUpperCase();
+                photo.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%236366f1"/><text x="50%" y="50%" font-size="48" fill="white" text-anchor="middle" dy=".35em">${firstLetter}</text></svg>`;
+            }
+        }
+
+        renderFinancePaymentHistory(data.payment_history || []);
+    })
+    .catch(error => {
+        setFinanceModalText('financeModalName', 'Error loading student');
+        if (paymentsContainer) {
+            paymentsContainer.innerHTML = `<p class="finance-modal-empty">${error.message}</p>`;
+        }
+    });
+}
+
+function renderFinancePaymentHistory(payments) {
+    const container = document.getElementById('financeModalPayments');
+    if (!container) return;
+
+    if (!payments.length) {
+        container.innerHTML = '<p class="finance-modal-empty">No payment history available.</p>';
+        return;
+    }
+
+    container.innerHTML = payments.map((payment, index) => `
+        <div class="finance-payment-row">
+            <div>
+                <strong>Installment ${index + 1}</strong>
+                <span>${payment.payment_date || '-'}</span>
+            </div>
+            <div>
+                <strong>${formatCurrency(payment.amount)}</strong>
+                <span>${payment.payment_mode || '-'} ${payment.receipt_no ? ' • ' + payment.receipt_no : ''}</span>
+            </div>
+            <div>
+                <strong>${formatCurrency(payment.remaining_after)}</strong>
+                <span>Remaining</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function closeFinanceStudentModal() {
+    const modal = document.getElementById('financeStudentModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('financeStudentModal');
+    if (modal && event.target === modal) {
+        closeFinanceStudentModal();
+    }
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeFinanceStudentModal();
+    }
+});
+
 // Add keyboard shortcut for export (Ctrl+E)
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.key === 'e') {
@@ -422,66 +602,16 @@ document.addEventListener('keydown', function(e) {
 
 // ===================== SETUP STICKY SCROLLBAR =====================
 function setupStickyScrollbar() {
-    const tableContainer = document.getElementById('tableContainer');
-    const stickyScrollbar = document.getElementById('stickyScrollbar');
-    const stickyScrollbarTrack = document.querySelector('.sticky-scrollbar-track');
-    
-    if (!tableContainer || !stickyScrollbar || !stickyScrollbarTrack) {
-        return;
-    }
-    
-    let isScrollingSynced = false;
-    let scrollAnimationFrame = null;
-    
-    // Set initial width
-    stickyScrollbarTrack.style.width = tableContainer.scrollWidth + 'px';
-    
-    // Sync table scroll to sticky scrollbar using requestAnimationFrame for smooth updates
-    tableContainer.addEventListener('scroll', function() {
-        if (isScrollingSynced) return;
-        
-        if (scrollAnimationFrame) {
-            cancelAnimationFrame(scrollAnimationFrame);
-        }
-        
-        scrollAnimationFrame = requestAnimationFrame(() => {
-            isScrollingSynced = true;
-            stickyScrollbar.scrollLeft = tableContainer.scrollLeft;
-            isScrollingSynced = false;
-        });
-    }, { passive: true });
-    
-    // Sync sticky scrollbar to table using requestAnimationFrame for smooth updates
-    stickyScrollbar.addEventListener('scroll', function() {
-        if (isScrollingSynced) return;
-        
-        if (scrollAnimationFrame) {
-            cancelAnimationFrame(scrollAnimationFrame);
-        }
-        
-        scrollAnimationFrame = requestAnimationFrame(() => {
-            isScrollingSynced = true;
-            tableContainer.scrollLeft = stickyScrollbar.scrollLeft;
-            isScrollingSynced = false;
-        });
-    }, { passive: true });
-    
-    // Update width when content changes
-    const observer = new ResizeObserver(function() {
-        stickyScrollbarTrack.style.width = tableContainer.scrollWidth + 'px';
-    });
-    observer.observe(tableContainer);
+    syncScrollbars();
 }
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-        syncScrollbars();
         setupStickyScrollbar();
         setupMKCLInstallmentListeners();
     });
 } else {
-    syncScrollbars();
     setupStickyScrollbar();
     setupMKCLInstallmentListeners();
 }

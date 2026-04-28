@@ -40,16 +40,39 @@
 
 {% block content %}
 
-<!-- SEARCH AND FILTERS -->
-<div class="filters-container">
+<!-- RECEIPTS-STYLE SEARCH AND FILTERS -->
+<div class="receipts-top-bar">
+    <div class="search-container">
+        <input
+            type="text"
+            name="search"
+            id="search"
+            form="filterForm"
+            placeholder="Search by name or mobile..."
+            value="{{ search }}"
+            class="search-input"
+            onkeyup="autoSearchStudents()"
+        >
+    </div>
+    <button type="button" id="filterToggleBtn" class="filter-toggle-btn">
+        <span class="filter-icon">⚙</span>
+        <span class="filter-text">Filters</span>
+    </button>
+</div>
+
+<div id="filterDrawer" class="filter-drawer" aria-hidden="true">
+    <div class="drawer-header">
+        <h3>Student Filters</h3>
+        <button type="button" id="drawerCloseBtn" class="drawer-close">×</button>
+    </div>
+    <div class="drawer-body">
     <form method="get" class="filters-form" id="filterForm">
         
         <div class="filter-group search-group">
             <label for="search">🔍 Search Student</label>
             <input
                 type="text"
-                name="search"
-                id="search"
+                data-drawer-search="true"
                 placeholder="Search by name or mobile..."
                 value="{{ search }}"
                 class="filter-input"
@@ -149,7 +172,7 @@
             </select>
         </div>
 
-        <div class="filter-buttons">
+        <div class="drawer-actions">
             <button type="submit" class="filter-btn apply">
                 🔍 Apply Filters
             </button>
@@ -158,7 +181,9 @@
             </a>
         </div>
     </form>
+    </div>
 </div>
+<div id="filterOverlay" class="filter-overlay" aria-hidden="true"></div>
 
 <!-- RESULTS SUMMARY -->
 {% if search or month or year or course %}
@@ -183,7 +208,7 @@
     <div class="students-grid">
         {% if students %}
             {% for student in students %}
-            <div class="student-card" data-student-id="{{ student.id }}" data-mobile="{{ student.mobile_own }}" data-email="{{ student.email_own }}" data-fullname="{{ student.full_name|lower }}" data-surname="{{ student.surname|lower }}" data-studentname="{{ student.student_name|lower }}" data-fathername="{{ student.father_name|lower }}">
+            <div class="student-card{% if student.remaining_fees > 0 %} has-remaining-fees{% endif %}" data-student-id="{{ student.id }}" data-mobile="{{ student.mobile_own }}" data-email="{{ student.email_own }}" data-fullname="{{ student.full_name|lower }}" data-surname="{{ student.surname|lower }}" data-studentname="{{ student.student_name|lower }}" data-fathername="{{ student.father_name|lower }}">
                 <!-- Selection Checkbox -->
                 <div class="student-select">
                     <input type="checkbox" class="student-checkbox" value="{{ student.id }}" onclick="event.stopPropagation(); updateSelectedCount();">

@@ -2,6 +2,8 @@ let selectedStudentId = null;
 let selectedStudentData = null;
 let lastSubmissionTime = 0;
 let paymentSubmitting = false;
+let currentSearchResults = [];
+let highlightedSearchIndex = -1;
 
 // Get CSRF token
 function getCookie(name) {
@@ -41,6 +43,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Search query:', query);
             
             if (query.length < 2) {
+                currentSearchResults = [];
+                highlightedSearchIndex = -1;
                 searchResults.innerHTML = '';
                 searchResults.style.display = 'none';
                 return;
@@ -84,6 +88,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 searchResults.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
             });
         });
+
+        studentSearch.addEventListener('keydown', function(event) {
+            const items = document.querySelectorAll('#searchResults .search-result-item');
+            if (items.length === 0) {
+                return;
+            }
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                highlightedSearchIndex = (highlightedSearchIndex + 1 + items.length) % items.length;
+                renderSearchHighlight(items);
+                return;
+            }
+
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                highlightedSearchIndex = highlightedSearchIndex <= 0 ? items.length - 1 : highlightedSearchIndex - 1;
+                renderSearchHighlight(items);
+                return;
+            }
+
+            if (event.key === 'Enter' && highlightedSearchIndex >= 0) {
+                event.preventDefault();
+                items[highlightedSearchIndex].click();
+                return;
+            }
+
+            if (event.key === 'Escape') {
+                document.getElementById('searchResults').style.display = 'none';
+                highlightedSearchIndex = -1;
+            }
+        });
     }
     
     // Handle payment form submission
@@ -97,6 +133,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+function renderSearchHighlight() {
+    const items = document.querySelectorAll('#searchResults .search-result-item');
+    items.forEach((item, index) => {
+        item.classList.toggle('active', index === highlightedSearchIndex);
+        if (index === highlightedSearchIndex) {
+            item.scrollIntoView({ block: 'nearest' });
+        }
+    });
+}
+
 // Select student from search results
 function selectStudent(studentId, fullName, course, mobile) {
     console.log('Selecting student:', studentId, fullName);
@@ -108,6 +154,8 @@ function selectStudent(studentId, fullName, course, mobile) {
         searchResults.innerHTML = '';
         searchResults.style.display = 'none';
     }
+    currentSearchResults = [];
+    highlightedSearchIndex = -1;
     
     const studentSearch = document.getElementById('studentSearch');
     if (studentSearch) {
@@ -675,6 +723,8 @@ function newPayment() {
         searchResults.innerHTML = '';
         searchResults.style.display = 'none';
     }
+    currentSearchResults = [];
+    highlightedSearchIndex = -1;
     
     alert('✅ Ready for new payment! Search for a student.');
 }
@@ -721,3 +771,4 @@ window.addEventListener('beforeunload', function(e) {
         e.returnValue = '';
     }
 });
+

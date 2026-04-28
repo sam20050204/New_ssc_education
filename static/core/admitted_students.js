@@ -38,6 +38,39 @@ function applySorting() {
     filterForm.submit();
 }
 
+function openFilterDrawer() {
+    const drawer = document.getElementById('filterDrawer');
+    const overlay = document.getElementById('filterOverlay');
+    if (!drawer) return;
+    drawer.classList.add('active');
+    drawer.setAttribute('aria-hidden', 'false');
+    if (overlay) {
+        overlay.classList.add('active');
+        overlay.setAttribute('aria-hidden', 'false');
+    }
+}
+
+function closeFilterDrawer() {
+    const drawer = document.getElementById('filterDrawer');
+    const overlay = document.getElementById('filterOverlay');
+    if (!drawer) return;
+    drawer.classList.remove('active');
+    drawer.setAttribute('aria-hidden', 'true');
+    if (overlay) {
+        overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function submitAdmittedFilters() {
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        filterForm.submit();
+    }
+}
+
+let currentPaymentHistory = [];
+
 
 // ===================== DUPLICATE DETECTION =====================
 function markDuplicateStudents() {
@@ -220,7 +253,8 @@ function openStudentModal(studentId) {
         calculateRemainingFees();
         
         // ✅ FIXED: Display payment history
-        displayPaymentHistory(data.payment_history || []);
+        currentPaymentHistory = Array.isArray(data.payment_history) ? data.payment_history : [];
+        displayPaymentHistory(currentPaymentHistory);
         
         modal.style.display = 'block';
     })
@@ -253,9 +287,15 @@ function displayPaymentHistory(payments) {
         return;
     }
     
+    const totalFeesInput = document.getElementById('totalFees');
+    const editedTotalFees = parseFloat(totalFeesInput ? totalFeesInput.value : 0) || 0;
+    let runningPaid = 0;
     let html = '<div class="payment-timeline">';
     
     payments.forEach((payment, index) => {
+        const paymentAmount = parseFloat(payment.amount) || 0;
+        runningPaid += paymentAmount;
+        const remainingAfter = Math.max(0, editedTotalFees - runningPaid);
         html += `
             <div class="payment-item">
                 <div class="payment-header">
@@ -297,6 +337,18 @@ function displayPaymentHistory(payments) {
     
     html += '</div>';
     paymentHistoryContainer.innerHTML = html;
+    
+    const paymentItems = paymentHistoryContainer.querySelectorAll('.payment-item');
+    let recalculatedPaid = 0;
+    paymentItems.forEach((item, index) => {
+        const payment = payments[index] || {};
+        recalculatedPaid += parseFloat(payment.amount) || 0;
+        const remainingAfter = Math.max(0, editedTotalFees - recalculatedPaid);
+        const remainingNode = item.querySelector('.detail-value.remaining');
+        if (remainingNode) {
+            remainingNode.textContent = `₹${remainingAfter.toFixed(2)}`;
+        }
+    });
 }
 
 // Close modal
@@ -304,6 +356,7 @@ function closeModal() {
     const modal = document.getElementById('studentModal');
     modal.style.display = 'none';
     document.body.style.overflow = 'auto';
+    currentPaymentHistory = [];
     
     const form = document.getElementById('studentForm');
     if (form) {
@@ -347,6 +400,15 @@ function calculateRemainingFees() {
         } else {
             remainingFeesInput.style.color = '#ef4444';
             remainingFeesInput.style.fontWeight = '700';
+        }
+    }
+}
+
+function handleFeeInputChange(event) {
+    if (event.target && event.target.id === 'totalFees') {
+        calculateRemainingFees();
+        if (currentPaymentHistory.length > 0) {
+            displayPaymentHistory(currentPaymentHistory);
         }
     }
 }
@@ -408,7 +470,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (totalFeesInput) {
         totalFeesInput.addEventListener('input', calculateRemainingFees);
+        totalFeesInput.addEventListener('change', calculateRemainingFees);
     }
+
+    document.addEventListener('input', handleFeeInputChange);
+    document.addEventListener('change', handleFeeInputChange);
     
     // Auto-generate full name
     const studentNameInput = document.getElementById('studentName');
@@ -567,6 +633,23 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 isSubmitting = false;
             }, 2000);
+        });
+    }
+
+    const filterToggleBtn = document.getElementById('filterToggleBtn');
+    const drawerCloseBtn = document.getElementById('drawerCloseBtn');
+    const filterOverlay = document.getElementById('filterOverlay');
+    const searchInput = document.getElementById('search');
+
+    if (filterToggleBtn) filterToggleBtn.addEventListener('click', openFilterDrawer);
+    if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeFilterDrawer);
+    if (filterOverlay) filterOverlay.addEventListener('click', closeFilterDrawer);
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitAdmittedFilters();
+            }
         });
     }
     
@@ -903,11 +986,13 @@ function refreshStudentTable() {
     })
     .then(response => response.text())
     .then(html => {
-        // Parse the HTML to extract just the table body
+        // Parse the HTML to extract the updated students grid.
         const parser = new DOMParser();
         const newDoc = parser.parseFromString(html, 'text/html');
-        const newTableBody = newDoc.querySelector('table tbody');
-        const currentTableBody = document.querySelector('table tbody');
+        const newStudentsContainer = newDoc.querySelector('.students-container');
+        const currentStudentsContainer = document.querySelector('.students-container');
+        const newResultsSummary = newDoc.querySelector('.results-summary');
+        const currentResultsSummary = document.querySelector('.results-summary');
         
         if (newTableBody && currentTableBody) {
             // Replace the table body with the new one
@@ -926,6 +1011,62 @@ function refreshStudentTable() {
 }
 
 // ===================== FIELD SYNC FUNCTIONS =====================
+// Override refresh to update the card grid used by this page.
+function refreshStudentTable() {
+    const filterForm = document.getElementById('filterForm');
+    if (!filterForm) return;
+    
+    const searchValue = document.getElementById('search').value || '';
+    const monthValue = document.getElementById('month').value || '';
+    const yearValue = document.getElementById('year').value || '';
+    const courseValue = document.getElementById('course').value || '';
+    
+    const params = new URLSearchParams({
+        search: searchValue,
+        month: monthValue,
+        year: yearValue,
+        course: courseValue
+    });
+    
+    fetch(`/admitted-students/?${params}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'text/html'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        const parser = new DOMParser();
+        const newDoc = parser.parseFromString(html, 'text/html');
+        const newStudentsContainer = newDoc.querySelector('.students-container');
+        const currentStudentsContainer = document.querySelector('.students-container');
+        const newResultsSummary = newDoc.querySelector('.results-summary');
+        const currentResultsSummary = document.querySelector('.results-summary');
+        
+        if (newStudentsContainer && currentStudentsContainer) {
+            currentStudentsContainer.innerHTML = newStudentsContainer.innerHTML;
+
+            if (newResultsSummary && currentResultsSummary) {
+                currentResultsSummary.innerHTML = newResultsSummary.innerHTML;
+            } else if (newResultsSummary && !currentResultsSummary) {
+                currentStudentsContainer.insertAdjacentElement('beforebegin', newResultsSummary);
+            } else if (!newResultsSummary && currentResultsSummary) {
+                currentResultsSummary.remove();
+            }
+
+            showNotification('List updated instantly!', 'info');
+            markDuplicateStudents();
+        } else {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error refreshing table:', error);
+        window.location.reload();
+    });
+}
+
 // Initialize field event listeners when document loads
 document.addEventListener('DOMContentLoaded', function() {
     const maritalStatusRight = document.getElementById('maritalStatusRight');

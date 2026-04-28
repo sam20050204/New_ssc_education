@@ -496,6 +496,21 @@
         background: #c82333;
     }
 
+    .search-suggestions .suggestion-item {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f1f1f1;
+        transition: background-color 0.2s ease;
+    }
+
+    .search-suggestions .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .search-suggestions .suggestion-item:hover,
+    .search-suggestions .suggestion-item.active {
+        background: #eaf4ff;
+    }
+
     /* Alert Message */
     .alert {
         padding: 12px 16px;
@@ -765,9 +780,50 @@
         max-width: 900px;
     }
 
+    #batchStudentsModal .modal-content.modal-lg {
+        max-height: 86vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    #batchStudentsModal .modal-header,
+    #batchStudentsModal .form-actions {
+        flex-shrink: 0;
+    }
+
+    #batchStudentsModal .modal-body {
+        min-height: 0;
+        flex: 1;
+        overflow: hidden;
+        margin-bottom: 15px;
+    }
+
     .batch-students-table-wrapper {
         overflow-x: auto;
+        overflow-y: auto;
+        max-height: calc(86vh - 210px);
         margin-bottom: 15px;
+        border: 1px solid #f0f0f0;
+        border-radius: 8px;
+        scrollbar-width: thin;
+        scrollbar-color: #667eea #f0f0f0;
+    }
+
+    .batch-students-table-wrapper::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    .batch-students-table-wrapper::-webkit-scrollbar-track {
+        background: #f0f0f0;
+        border-radius: 8px;
+    }
+
+    .batch-students-table-wrapper::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        border: 2px solid #f0f0f0;
     }
 
     .batch-students-table {
@@ -779,9 +835,13 @@
     .batch-students-table thead {
         background: #f8f9fa;
         border-bottom: 2px solid #e8e8e8;
+        position: sticky;
+        top: 0;
+        z-index: 5;
     }
 
     .batch-students-table th {
+        background: #f8f9fa;
         padding: 10px 12px;
         text-align: left;
         font-weight: 600;
@@ -1456,6 +1516,8 @@ let currentBatchData = {
     batchId: '',
     capacity: 0
 };
+let filteredAvailableStudents = [];
+let highlightedSuggestionIndex = -1;
 
 function handleBatchClick(element) {
     console.log('=== handleBatchClick called ===');
@@ -1591,7 +1653,7 @@ function loadBatchStudentsTable(students) {
                 </td>
                 <td>${student.gender || '-'}</td>
                 <td>
-                    <select class="time-slot-select" data-student-id="${student.id}" data-type="theory">
+                    <select class="time-slot-select" data-student-id="${student.id}" data-type="theory" onchange="handleBatchTimeChange(this)">
                         <option value="">-- Select --</option>
                         <option value="08:00-09:00" ${student.theory_batch_time === '08:00-09:00' ? 'selected' : ''}>8:00 AM - 9:00 AM</option>
                         <option value="09:00-10:00" ${student.theory_batch_time === '09:00-10:00' ? 'selected' : ''}>9:00 AM - 10:00 AM</option>
@@ -1605,7 +1667,7 @@ function loadBatchStudentsTable(students) {
                     </select>
                 </td>
                 <td>
-                    <select class="time-slot-select" data-student-id="${student.id}" data-type="practical">
+                    <select class="time-slot-select" data-student-id="${student.id}" data-type="practical" onchange="handleBatchTimeChange(this)">
                         <option value="">-- Select --</option>
                         <option value="08:00-09:00" ${student.practical_batch_time === '08:00-09:00' ? 'selected' : ''}>8:00 AM - 9:00 AM</option>
                         <option value="09:00-10:00" ${student.practical_batch_time === '09:00-10:00' ? 'selected' : ''}>9:00 AM - 10:00 AM</option>
@@ -1628,8 +1690,44 @@ function loadBatchStudentsTable(students) {
     tbody.innerHTML = html;
 }
 
+function handleBatchTimeChange(selectElement) {
+    const studentId = selectElement.getAttribute('data-student-id');
+    const type = selectElement.getAttribute('data-type');
+    const student = currentBatchData.students.find(s => s.id == studentId);
+
+    if (!student) {
+        return;
+    }
+
+    const originalValue = type === 'theory' ? student.theory_batch_time : student.practical_batch_time;
+    const newValue = selectElement.value;
+
+    if (!originalValue || !newValue || originalValue === newValue) {
+        return;
+    }
+
+    const currentDisplay = getTimeSlotDisplay(originalValue);
+    const newDisplay = getTimeSlotDisplay(newValue);
+    const shouldReplace = confirm(
+        `${student.full_name} is already added in the ${currentDisplay} batch.\n\nDo you want to change the student's ${type} batch to ${newDisplay}?`
+    );
+
+    if (!shouldReplace) {
+        selectElement.value = originalValue;
+    }
+}
+
 function closeBatchStudentsModal() {
-    document.getElementById('batchStudentsModal').style.display = 'none';
+    const batchModal = document.getElementById('batchStudentsModal');
+    if (batchModal) {
+        batchModal.style.display = 'none';
+    }
+
+    const tbody = document.getElementById('batch-students-tbody');
+    if (tbody) {
+        tbody.innerHTML = '';
+    }
+
     currentBatchData = { type: '', slot: '', display: '', students: [], batchId: '', capacity: 0 };
 }
 
@@ -1728,6 +1826,7 @@ async function saveEditBatchCapacity() {
 async function saveBatchStudentChanges() {
     try {
         const changes = [];
+        const saveButton = document.querySelector('#batchStudentsModal .btn.btn-primary');
         
         document.querySelectorAll('.time-slot-select').forEach(select => {
             const studentId = select.getAttribute('data-student-id');
@@ -1750,7 +1849,13 @@ async function saveBatchStudentChanges() {
             showAlert('No changes made', 'info');
             return;
         }
-        
+
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.dataset.originalText = saveButton.textContent;
+            saveButton.textContent = 'Saving...';
+        }
+
         const response = await fetch('/batch/students/update/', {
             method: 'POST',
             headers: {
@@ -1761,19 +1866,31 @@ async function saveBatchStudentChanges() {
                 changes: changes
             })
         });
-        
+
+        if (!response.ok) {
+            throw new Error(`Failed to save changes (${response.status})`);
+        }
+
         const data = await response.json();
         
         if (data.success) {
-            showAlert('Changes saved successfully!', 'success');
             closeBatchStudentsModal();
-            updateBatchList();
+            closeAddStudentToBatchModal();
+            closeEditBatchCapacityModal();
+            showAlert('Changes saved successfully!', 'success');
+            await updateBatchList();
         } else {
             showAlert(data.error || 'Error saving changes', 'error');
         }
     } catch (error) {
         console.error('Error:', error);
         showAlert('Error saving changes: ' + error.message, 'error');
+    } finally {
+        const saveButton = document.querySelector('#batchStudentsModal .btn.btn-primary');
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.textContent = saveButton.dataset.originalText || 'Save Changes';
+        }
     }
 }
 
@@ -1953,9 +2070,12 @@ async function openAddStudentToBatchModal() {
             // Filter out already added students and store for search
             const availableStudents = data.students.filter(s => !currentStudentIds.includes(s.id));
             window.allAvailableStudents = availableStudents;
+            filteredAvailableStudents = [];
+            highlightedSuggestionIndex = -1;
             
             // Clear search input
             searchInput.value = '';
+            document.getElementById('add-student-select').value = '';
             document.getElementById('student-search-suggestions').style.display = 'none';
             
             document.getElementById('addStudentToBatchModal').style.display = 'block';
@@ -1972,30 +2092,35 @@ async function openAddStudentToBatchModal() {
 }
 
 function filterStudentOptions() {
-    const searchInput = document.getElementById('student-search-input').value.toLowerCase().trim();
+    const searchInputElement = document.getElementById('student-search-input');
+    const searchInput = searchInputElement.value.toLowerCase().trim();
     const suggestionsDiv = document.getElementById('student-search-suggestions');
     
     if (!window.allAvailableStudents) return;
     
     // If search is empty, hide suggestions
     if (!searchInput) {
+        filteredAvailableStudents = [];
+        highlightedSuggestionIndex = -1;
+        document.getElementById('add-student-select').value = '';
         suggestionsDiv.style.display = 'none';
         return;
     }
     
     // Filter students based on search
-    let filteredStudents = window.allAvailableStudents.filter(student => {
+    filteredAvailableStudents = window.allAvailableStudents.filter(student => {
         const nameMatch = student.full_name.toLowerCase().includes(searchInput);
         const idMatch = student.id.toString().includes(searchInput);
         return nameMatch || idMatch;
     });
     
     // Show suggestions if there are matches
-    if (filteredStudents.length > 0) {
+    if (filteredAvailableStudents.length > 0) {
+        highlightedSuggestionIndex = 0;
         let html = '';
-        filteredStudents.forEach(student => {
+        filteredAvailableStudents.forEach((student, index) => {
             const escapedName = student.full_name.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            html += `<div class="suggestion-item" data-student-id="${student.id}" data-student-name="${escapedName}" style="cursor: pointer;">
+            html += `<div class="suggestion-item${index === highlightedSuggestionIndex ? ' active' : ''}" data-student-id="${student.id}" data-student-name="${escapedName}" style="cursor: pointer;">
                 <div style="font-weight: 500; color: #333;">${student.full_name}</div>
                 <div style="font-size: 0.85em; color: #666;">ID: ${student.id} | ${student.gender || 'N/A'}</div>
             </div>`;
@@ -2012,9 +2137,22 @@ function filterStudentOptions() {
             });
         });
     } else {
+        filteredAvailableStudents = [];
+        highlightedSuggestionIndex = -1;
+        document.getElementById('add-student-select').value = '';
         suggestionsDiv.innerHTML = '<div style="padding: 10px; color: #999; text-align: center;">No matching students found</div>';
         suggestionsDiv.style.display = 'block';
     }
+}
+
+function renderSuggestionHighlights() {
+    const suggestionItems = document.querySelectorAll('#student-search-suggestions .suggestion-item');
+    suggestionItems.forEach((item, index) => {
+        item.classList.toggle('active', index === highlightedSuggestionIndex);
+        if (index === highlightedSuggestionIndex) {
+            item.scrollIntoView({ block: 'nearest' });
+        }
+    });
 }
 
 function selectStudentFromSuggestion(studentId, studentName) {
@@ -2026,12 +2164,47 @@ function selectStudentFromSuggestion(studentId, studentName) {
     
     // Hide suggestions
     document.getElementById('student-search-suggestions').style.display = 'none';
+    highlightedSuggestionIndex = -1;
 }
 
 function handleSearchKeydown(event) {
-    // Close suggestions on Escape
+    const suggestionsDiv = document.getElementById('student-search-suggestions');
+
+    if (event.key === 'ArrowDown') {
+        if (filteredAvailableStudents.length === 0) return;
+        event.preventDefault();
+        if (suggestionsDiv.style.display === 'none') {
+            suggestionsDiv.style.display = 'block';
+        }
+        highlightedSuggestionIndex = (highlightedSuggestionIndex + 1) % filteredAvailableStudents.length;
+        renderSuggestionHighlights();
+        return;
+    }
+
+    if (event.key === 'ArrowUp') {
+        if (filteredAvailableStudents.length === 0) return;
+        event.preventDefault();
+        if (suggestionsDiv.style.display === 'none') {
+            suggestionsDiv.style.display = 'block';
+        }
+        highlightedSuggestionIndex = highlightedSuggestionIndex <= 0 ? filteredAvailableStudents.length - 1 : highlightedSuggestionIndex - 1;
+        renderSuggestionHighlights();
+        return;
+    }
+
+    if (event.key === 'Enter') {
+        if (suggestionsDiv.style.display !== 'none' && filteredAvailableStudents.length > 0 && highlightedSuggestionIndex >= 0) {
+            event.preventDefault();
+            const selectedStudent = filteredAvailableStudents[highlightedSuggestionIndex];
+            selectStudentFromSuggestion(selectedStudent.id, selectedStudent.full_name);
+            addStudentToBatch();
+        }
+        return;
+    }
+
     if (event.key === 'Escape') {
-        document.getElementById('student-search-suggestions').style.display = 'none';
+        suggestionsDiv.style.display = 'none';
+        highlightedSuggestionIndex = -1;
     }
 }
 
@@ -2047,13 +2220,15 @@ document.addEventListener('click', function(event) {
 
 function closeAddStudentToBatchModal() {
     document.getElementById('addStudentToBatchModal').style.display = 'none';
+    filteredAvailableStudents = [];
+    highlightedSuggestionIndex = -1;
 }
 
 async function addStudentToBatch() {
     const studentIdInput = document.getElementById('add-student-select');
-    const studentId = studentIdInput.value;
+    const studentId = parseInt(studentIdInput.value, 10);
     
-    if (!studentId || studentId === '') {
+    if (!studentId) {
         showAlert('Please select a student from the suggestions', 'error');
         return;
     }
@@ -2065,6 +2240,21 @@ async function addStudentToBatch() {
     
     try {
         const fieldName = currentBatchData.type === 'Theory' ? 'theory_batch_time' : 'practical_batch_time';
+        const selectedStudent = (window.allAvailableStudents || []).find(student => student.id === studentId);
+        const existingSlot = selectedStudent ? (selectedStudent[fieldName] || '').trim() : '';
+
+        if (existingSlot && existingSlot !== currentBatchData.slot) {
+            const existingDisplay = getTimeSlotDisplay(existingSlot);
+            const newDisplay = getTimeSlotDisplay(currentBatchData.slot);
+            const shouldReplace = confirm(
+                `${selectedStudent.full_name} is already added in the ${existingDisplay} batch.\n\nDo you want to change the student's ${currentBatchData.type.toLowerCase()} batch to ${newDisplay}?`
+            );
+
+            if (!shouldReplace) {
+                showAlert(`${selectedStudent.full_name} kept the current ${currentBatchData.type.toLowerCase()} batch ${existingDisplay}.`, 'info');
+                return;
+            }
+        }
         
         const request = {};
         request[fieldName] = currentBatchData.slot;
@@ -2085,11 +2275,32 @@ async function addStudentToBatch() {
         const data = await response.json();
         
         if (data.success) {
+            const addedStudent = selectedStudent;
+
             showAlert('Student added to batch successfully!', 'success');
             closeAddStudentToBatchModal();
-            // Refresh the batch students modal
-            openBatchStudentsModal(currentBatchData.type, currentBatchData.slot, currentBatchData.display);
-            updateBatchList();
+
+            if (addedStudent) {
+                const updatedStudent = {
+                    ...addedStudent,
+                    theory_batch_time: currentBatchData.type === 'Theory' ? currentBatchData.slot : (addedStudent.theory_batch_time || ''),
+                    practical_batch_time: currentBatchData.type === 'Practical' ? currentBatchData.slot : (addedStudent.practical_batch_time || '')
+                };
+
+                currentBatchData.students = [...currentBatchData.students, updatedStudent];
+                currentBatchData.students.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+                loadBatchStudentsTable(currentBatchData.students);
+            } else {
+                openBatchStudentsModal(
+                    currentBatchData.type,
+                    currentBatchData.slot,
+                    currentBatchData.display,
+                    currentBatchData.batchId,
+                    currentBatchData.capacity
+                );
+            }
+
+            await updateBatchList();
         } else {
             showAlert(data.error || 'Error adding student to batch', 'error');
         }

@@ -180,7 +180,7 @@ class AdmittedStudentForm(forms.ModelForm):
             'mother_name', 'full_name', 'date_of_birth', 'mobile_own', 'parent_mobile',
             'gender', 'marital_status', 'address', 'city', 'tehsil_block',
             'district', 'pin_code', 'educational_qualification', 'batch_month',
-            'batch_year', 'photo', 'total_fees'
+            'batch_year', 'theory_batch_time', 'practical_batch_time', 'photo', 'total_fees'
         ]
         widgets = {
             'course': forms.Select(attrs={'class': 'form-control', 'required': True}),
@@ -247,6 +247,8 @@ class AdmittedStudentForm(forms.ModelForm):
                 'pattern': '[0-9]{4}',
                 'maxlength': '4'
             }),
+            'theory_batch_time': forms.Select(attrs={'class': 'form-control'}),
+            'practical_batch_time': forms.Select(attrs={'class': 'form-control'}),
             'photo': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': 'image/jpeg,image/png,image/gif'

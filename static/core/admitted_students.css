@@ -33,6 +33,16 @@
     border-color: #667eea;
 }
 
+.student-card.has-remaining-fees {
+    border-color: #ef4444;
+    box-shadow: inset 0 0 14px rgba(239, 68, 68, 0.16), 0 0 0 1px rgba(239, 68, 68, 0.35), 0 0 14px rgba(239, 68, 68, 0.45), 0 4px 12px rgba(239, 68, 68, 0.18);
+}
+
+.student-card.has-remaining-fees:hover {
+    border-color: #dc2626;
+    box-shadow: inset 0 0 18px rgba(220, 38, 38, 0.2), 0 0 0 1px rgba(220, 38, 38, 0.45), 0 0 22px rgba(239, 68, 68, 0.55), 0 8px 18px rgba(239, 68, 68, 0.24);
+}
+
 /* ===================== STUDENT PHOTO ===================== */
 .student-photo {
     width: 1.8cm;
@@ -123,6 +133,165 @@
 }
 
 /* ===================== FILTERS CONTAINER ===================== */
+.receipts-top-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: white;
+    padding: 10px 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.search-container {
+    flex: 1;
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e8e8e8;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.search-input:focus {
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.filter-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.filter-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.filter-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100vh;
+    background: white;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    z-index: 1001;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.filter-drawer.active {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.drawer-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.drawer-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+}
+
+.drawer-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px;
+    padding-bottom: 130px;
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f0f0f0;
+}
+
+.drawer-body::-webkit-scrollbar {
+    width: 10px;
+}
+
+.drawer-body::-webkit-scrollbar-track {
+    background: #f0f0f0;
+}
+
+.drawer-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    border: 2px solid #f0f0f0;
+}
+
+.drawer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    border-top: 2px solid #f0f0f0;
+    background: white;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.filter-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.35s ease;
+}
+
+.filter-overlay.active {
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 1;
+    pointer-events: all;
+}
+
 .filters-container {
     background: white;
     padding: 12px 15px;
@@ -133,9 +302,10 @@
 
 .filters-form {
     display: flex;
-    align-items: end;
-    gap: 12px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    min-height: min-content;
 }
 
 .filter-group {
@@ -147,8 +317,7 @@
 }
 
 .filter-group.search-group {
-    flex: 2;
-    min-width: 230px;
+    display: none;
 }
 
 .filter-group label {
@@ -161,6 +330,7 @@
 
 .filter-input,
 .filter-select {
+    width: 100%;
     padding: 8px 12px;
     border: 2px solid #e8e8e8;
     border-radius: 6px;
@@ -196,6 +366,7 @@
     transition: all 0.3s ease;
     text-decoration: none;
     white-space: nowrap;
+    text-align: center;
 }
 
 .filter-btn.apply {

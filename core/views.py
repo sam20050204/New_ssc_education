@@ -61,7 +61,6 @@ IMPORT_PRIORITY_TABLES = [
     'core_enquiry',
 ]
 
-
 def is_safe_sqlite_identifier(identifier):
     """Allow only normal SQLite table/column identifiers."""
     return bool(SQLITE_IDENTIFIER_RE.match(identifier or ''))
@@ -1148,6 +1147,7 @@ def student_detail_admitted(request, student_id):
 def update_student_admitted(request, student_id):
     if request.method == 'POST':
         student = get_object_or_404(AdmittedStudent, id=student_id)
+        original_total_fees = student.total_fees
         
         # Handle both JSON and POST form data
         if request.content_type == 'application/json':
@@ -1208,11 +1208,28 @@ def update_student_admitted(request, student_id):
         if 'practical_batch_time' in data:
             student.practical_batch_time = data.get('practical_batch_time', '')
         
+        total_fees_changed = False
+
         # Update fees information
         if 'total_fees' in data:
-            total_fees = data.get('total_fees')
-            if total_fees:
-                student.total_fees = Decimal(total_fees)
+            total_fees_raw = str(data.get('total_fees', '')).strip()
+            if total_fees_raw != '':
+                try:
+                    new_total_fees = Decimal(total_fees_raw)
+                except (InvalidOperation, TypeError, ValueError):
+                    return JsonResponse({'success': False, 'error': 'Invalid total fees amount'}, status=400)
+
+                if new_total_fees < 0:
+                    return JsonResponse({'success': False, 'error': 'Total fees cannot be negative'}, status=400)
+
+                if new_total_fees < (student.paid_fees or Decimal('0')):
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Total fees cannot be less than paid fees'
+                    }, status=400)
+
+                student.total_fees = new_total_fees
+                total_fees_changed = (new_total_fees != original_total_fees)
         
         # Handle photo removal flag
         if data.get('remove_photo') == 'true':
@@ -1241,16 +1258,31 @@ def update_student_admitted(request, student_id):
         else:
             print(f'[PHOTO DEBUG] No photo action. Remove flag: {data.get("remove_photo")}, Files: {list(request.FILES.keys())}')
         
-        student.save()
-        
-        # Update StudentFinanceDetail if total_fees changed
-        if 'total_fees' in data:
-            total_fees = data.get('total_fees')
-            if total_fees:
+        with transaction.atomic():
+            student.save()
+
+            # Keep historical payment snapshots aligned with the updated course fee.
+            if total_fees_changed:
+                running_paid_total = Decimal('0')
+                payments = FeePayment.objects.filter(student=student).order_by('payment_date', 'created_at', 'id')
+                for payment in payments:
+                    payment.total_fees_at_payment = student.total_fees
+                    payment.paid_before_this = running_paid_total
+                    running_paid_total += payment.amount
+                    payment.remaining_after_this = student.total_fees - running_paid_total
+                    payment.save(update_fields=['total_fees_at_payment', 'paid_before_this', 'remaining_after_this'])
+
+            # Update StudentFinanceDetail if total_fees changed
+            if total_fees_changed:
                 finance_detail, created = StudentFinanceDetail.objects.get_or_create(student=student)
                 finance_detail.save()
         
-        return JsonResponse({'success': True})
+        return JsonResponse({
+            'success': True,
+            'total_fees': float(student.total_fees),
+            'paid_fees': float(student.paid_fees or 0),
+            'remaining_fees': float(student.remaining_fees),
+        })
     
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
@@ -4161,7 +4193,7 @@ def get_all_students(request):
     """Get all admitted students for adding to batches"""
     try:
         students = AdmittedStudent.objects.all().values(
-            'id', 'full_name', 'gender'
+            'id', 'full_name', 'gender', 'theory_batch_time', 'practical_batch_time'
         ).order_by('full_name')
         
         return JsonResponse({

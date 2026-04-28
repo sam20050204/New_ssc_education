@@ -3,16 +3,58 @@ Django Settings - Base Configuration
 Shared settings for all environments
 """
 
+import os
+import secrets
 from pathlib import Path
 from decouple import config
 
 # ==================== BASE DIRECTORY ====================
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+
+def parse_bool(value, default=False):
+    """Parse common truthy/falsy env values without crashing on loose strings."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+
+    normalized = str(value).strip().lower()
+    if normalized in {'1', 'true', 't', 'yes', 'y', 'on', 'debug', 'dev', 'development'}:
+        return True
+    if normalized in {'0', 'false', 'f', 'no', 'n', 'off', 'prod', 'production', 'release'}:
+        return False
+    return default
+
+
+def parse_csv(value):
+    return [item.strip() for item in str(value).split(',') if item.strip()]
+
+
+def get_local_secret_key():
+    """Persist a local secret key so local sessions remain valid across restarts."""
+    secret_key = config('SECRET_KEY', default='').strip()
+    if secret_key:
+        return secret_key
+
+    secret_file = BASE_DIR / '.django_secret_key'
+    if secret_file.exists():
+        return secret_file.read_text(encoding='utf-8').strip()
+
+    generated = secrets.token_urlsafe(50)
+    secret_file.write_text(generated, encoding='utf-8')
+
+    try:
+        os.chmod(secret_file, 0o600)
+    except OSError:
+        pass
+
+    return generated
+
 # ==================== SECURITY (SET IN ENV) ====================
-SECRET_KEY = config('SECRET_KEY', default='your-secret-key-here-change-in-production')
-DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+SECRET_KEY = get_local_secret_key()
+DEBUG = parse_bool(config('DEBUG', default='false'), default=False)
+ALLOWED_HOSTS = parse_csv(config('ALLOWED_HOSTS', default='localhost,127.0.0.1'))
 
 # ==================== INSTALLED APPS ====================
 INSTALLED_APPS = [
@@ -199,7 +241,7 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:3000,http://127.0.0.1:3000',
-    cast=lambda v: [s.strip() for s in v.split(',')]
+    cast=parse_csv
 )
 
 # ==================== CACHE CONFIGURATION ====================
@@ -215,6 +257,10 @@ SESSION_COOKIE_SECURE = False  # Override in prod
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
 
 # ==================== SECURITY HEADERS ====================
 SECURE_BROWSER_XSS_FILTER = True

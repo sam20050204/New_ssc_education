@@ -4,19 +4,18 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block page_heading %}
-<div class="page-header">
+<div class="page-header dashboard-page-header">
     <div class="page-header-content">
         <div class="page-title-wrapper">
-            <div class="page-icon">🖥️</div>
+            <div class="page-icon dashboard-page-icon">DB</div>
             <div>
                 <h1 class="page-title">Dashboard Overview</h1>
-                <p class="page-subtitle">Welcome back! Here's what's happening.</p>
             </div>
         </div>
         <div class="page-filters">
             <form method="get" class="year-filter-form">
                 <label for="year-select">
-                    <span class="filter-icon">📅</span>
+                    <span class="filter-icon">Year</span>
                     <span class="filter-label">Select Year:</span>
                 </label>
                 <select name="year" id="year-select" class="year-select" onchange="this.form.submit()">
@@ -34,62 +33,76 @@
 {% endblock %}
 
 {% block content %}
-
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-icon">📝</div>
-        <div class="stat-number">{{ enquiry_count }}</div>
-        <div class="stat-label">Total Enquiries</div>
-        {% if selected_year %}
-            <div class="stat-period">Year {{ selected_year }}</div>
-        {% endif %}
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-icon">
-            <img src="{% static 'logos/mscit-logo.png' %}" alt="MSCIT" class="mscit-logo-img">
+<section class="dashboard-view">
+    <div class="stats-grid dashboard-stats-grid">
+        <div class="stat-card stat-card-enquiries">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Enquiries</span>
+                <div class="stat-icon">ENQ</div>
+            </div>
+            <div class="stat-number">{{ enquiry_count }}</div>
+            <div class="stat-label">Total Enquiries</div>
+            <p class="stat-description">Fresh interest and leads collected in the selected period.</p>
+            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All recorded years{% endif %}</div>
         </div>
-        <div class="stat-number">{{ mscit_count|default:0 }}</div>
-        <div class="stat-label">MSCIT Students</div>
-        {% if selected_year %}
-            <div class="stat-period">Year {{ selected_year }}</div>
-        {% endif %}
+
+        <div class="stat-card stat-card-mscit">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Admissions</span>
+                <div class="stat-icon stat-icon-logo">
+                    <img src="{% static 'logos/mscit-logo.png' %}" alt="MSCIT" class="mscit-logo-img">
+                </div>
+            </div>
+            <div class="stat-number">{{ mscit_count|default:0 }}</div>
+            <div class="stat-label">MSCIT Students</div>
+            <p class="stat-description">Students enrolled in the main MSCIT program.</p>
+            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All recorded years{% endif %}</div>
+        </div>
+
+        <div class="stat-card stat-card-klic">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Programs</span>
+                <div class="stat-icon">KLIC</div>
+            </div>
+            <div class="stat-number">{{ klic_count|default:0 }}</div>
+            <div class="stat-label">KLIC Students</div>
+            <p class="stat-description">Students enrolled in non-MSCIT computer courses.</p>
+            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All recorded years{% endif %}</div>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-icon">💻</div>
-        <div class="stat-number">{{ klic_count|default:0 }}</div>
-        <div class="stat-label">KLIC Students</div>
-        {% if selected_year %}
-            <div class="stat-period">Year {{ selected_year }}</div>
-        {% endif %}
-    </div>
-</div>
+    <div class="charts-container dashboard-charts-container">
+        <div class="chart-container dashboard-chart-card">
+            <div class="chart-header">
+                <div>
+                    <h3>Student Admissions by Course</h3>
+                    <p class="chart-subtitle">Monthly comparison across the visible courses.</p>
+                </div>
+            </div>
+            <div class="chart-canvas-wrap">
+                <canvas id="clusteredBarChart"></canvas>
+            </div>
+        </div>
 
-<div class="charts-container">
-    <div class="chart-container">
-        <h3>Student Admissions by Course (Monthly)</h3>
-        <canvas id="clusteredBarChart"></canvas>
+        <div class="chart-container dashboard-chart-card">
+            <div class="chart-header">
+                <div>
+                    <h3>Total Monthly Admissions</h3>
+                    <p class="chart-subtitle">Overall admission movement month by month.</p>
+                </div>
+            </div>
+            <div class="chart-canvas-wrap">
+                <canvas id="monthlyTotalChart"></canvas>
+            </div>
+        </div>
     </div>
+</section>
 
-    <div class="chart-container">
-        <h3>Total Monthly Admissions</h3>
-        <canvas id="monthlyTotalChart"></canvas>
-    </div>
-</div>
-
-<!-- Pass data to JavaScript -->
 <script>
-    // Course distribution data from Django (kept for reference if needed)
     const courseDistribution = {{ course_distribution|safe }};
-    
-    // Monthly admissions by course data from Django
     const monthlyByCourse = {{ monthly_by_course|safe }};
-    
-    // Selected year (if any)
     const selectedYear = "{{ selected_year|default:'' }}";
 </script>
-
 {% endblock %}
 
 {% block extra_js %}
