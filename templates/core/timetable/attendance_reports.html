@@ -44,9 +44,13 @@
                     <tr>
                         <th>Student Name</th>
                         <th class="text-center">Total Days</th>
-                        <th class="text-center">Present</th>
-                        <th class="text-center">Absent</th>
+                        <th class="text-center">Theory Present</th>
+                        <th class="text-center">Theory Absent</th>
+                        <th class="text-center">Practical Present</th>
+                        <th class="text-center">Practical Absent</th>
                         <th class="text-center">Attendance %</th>
+                        <th class="text-center">Theory &#128197;</th>
+                        <th class="text-center">Practical &#128197;</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -57,10 +61,16 @@
                             <span class="badge badge-secondary">{{ report.total }}</span>
                         </td>
                         <td class="text-center">
-                            <span class="badge badge-success">{{ report.present }}</span>
+                            <span class="badge badge-success">{{ report.theory_present }}</span>
                         </td>
                         <td class="text-center">
-                            <span class="badge badge-danger">{{ report.absent }}</span>
+                            <span class="badge badge-danger">{{ report.theory_absent }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-success">{{ report.practical_present }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-danger">{{ report.practical_absent }}</span>
                         </td>
                         <td class="text-center">
                             <div class="percentage-bar">
@@ -68,16 +78,54 @@
                                 <span class="percentage-text">{{ report.percentage }}%</span>
                             </div>
                         </td>
+                        <td class="text-center">
+                            <button
+                                type="button"
+                                class="calendar-trigger"
+                                onclick="openAttendanceModal('{{ report.student.full_name|escapejs }}', 'Theory', this)"
+                                data-days="{% for item in report.theory_days %}{{ item.date|date:'d M Y' }}|{{ item.status|default:'' }}{% if not forloop.last %};{% endif %}{% endfor %}"
+                                title="Open theory attendance calendar">
+                                &#128197;
+                            </button>
+                        </td>
+                        <td class="text-center">
+                            <button
+                                type="button"
+                                class="calendar-trigger"
+                                onclick="openAttendanceModal('{{ report.student.full_name|escapejs }}', 'Practical', this)"
+                                data-days="{% for item in report.practical_days %}{{ item.date|date:'d M Y' }}|{{ item.status|default:'' }}{% if not forloop.last %};{% endif %}{% endfor %}"
+                                title="Open practical attendance calendar">
+                                &#128197;
+                            </button>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                        <td colspan="9" style="text-align: center; padding: 40px; color: #666;">
                             No attendance records found.
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div id="attendanceModal" class="attendance-modal" onclick="closeAttendanceModal(event)">
+        <div class="attendance-modal-content" onclick="event.stopPropagation()">
+            <div class="attendance-modal-header">
+                <div>
+                    <h3 id="attendanceModalTitle">Attendance Calendar</h3>
+                    <p id="attendanceModalSubtitle" class="attendance-modal-subtitle"></p>
+                </div>
+                <button type="button" class="attendance-modal-close" onclick="closeAttendanceModal()">&times;</button>
+            </div>
+            <div class="attendance-legend">
+                <span class="legend-item"><span class="legend-dot status-present"></span> Present</span>
+                <span class="legend-item"><span class="legend-dot status-absent"></span> Absent</span>
+                <span class="legend-item"><span class="legend-dot status-not-taken"></span> Not Taken</span>
+            </div>
+            <div id="attendanceModalDays" class="attendance-calendar"></div>
         </div>
     </div>
 
@@ -309,6 +357,165 @@
         border-left-color: #17a2b8;
     }
 
+    .attendance-calendar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-width: 220px;
+    }
+
+    .calendar-day {
+        min-width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #1f2937;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .status-present {
+        background: #d1fae5;
+        color: #065f46;
+        border-color: #86efac;
+    }
+
+    .status-absent {
+        background: #fee2e2;
+        color: #991b1b;
+        border-color: #fca5a5;
+    }
+
+    .status-not-taken {
+        background: #fef3c7;
+        color: #92400e;
+        border-color: #fcd34d;
+    }
+
+    .empty-days {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .calendar-trigger {
+        width: 40px;
+        height: 40px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 20px;
+        line-height: 1;
+        transition: all 0.2s ease;
+    }
+
+    .calendar-trigger:hover {
+        background: #eff6ff;
+        border-color: #60a5fa;
+    }
+
+    .attendance-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 2000;
+    }
+
+    .attendance-modal.is-open {
+        display: flex;
+    }
+
+    .attendance-modal-content {
+        width: min(760px, 100%);
+        max-height: 85vh;
+        overflow: auto;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    }
+
+    .attendance-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .attendance-modal-header h3 {
+        margin: 0;
+        color: #0f172a;
+    }
+
+    .attendance-modal-subtitle {
+        margin: 6px 0 0;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .attendance-modal-close {
+        border: 0;
+        background: transparent;
+        font-size: 28px;
+        line-height: 1;
+        cursor: pointer;
+        color: #475569;
+    }
+
+    .attendance-legend {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+        font-size: 14px;
+        color: #334155;
+    }
+
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .legend-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        display: inline-block;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .attendance-modal .attendance-calendar {
+        gap: 10px;
+    }
+
+    .attendance-modal .calendar-day {
+        min-width: 54px;
+        height: 54px;
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px 4px;
+    }
+
+    .calendar-day-number {
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .calendar-day-month {
+        font-size: 11px;
+        line-height: 1;
+    }
+
     .card-icon {
         font-size: 32px;
     }
@@ -331,7 +538,8 @@
     .table-container {
         background: white;
         border-radius: 8px;
-        overflow: auto;
+        overflow-x: auto;
+        overflow-y: visible;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
@@ -349,6 +557,10 @@
         text-align: left;
         border-bottom: 2px solid #dee2e6;
         font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: #f8f9fa;
     }
 
     .data-table td {
@@ -498,6 +710,15 @@
             padding: 10px 8px;
             font-size: 12px;
         }
+
+        .attendance-modal-content {
+            padding: 18px;
+        }
+
+        .attendance-modal .calendar-day {
+            min-width: 48px;
+            height: 48px;
+        }
     }
 
     @media (max-width: 600px) {
@@ -516,6 +737,64 @@
 </style>
 
 <script>
+    function openAttendanceModal(studentName, attendanceType, button) {
+        const modal = document.getElementById('attendanceModal');
+        const title = document.getElementById('attendanceModalTitle');
+        const subtitle = document.getElementById('attendanceModalSubtitle');
+        const daysContainer = document.getElementById('attendanceModalDays');
+        const rawDays = button.getAttribute('data-days') || '';
+
+        title.textContent = attendanceType + ' Attendance Calendar';
+        subtitle.textContent = studentName;
+        daysContainer.innerHTML = '';
+
+        if (!rawDays) {
+            daysContainer.innerHTML = '<span class="empty-days">No records</span>';
+        } else {
+            const days = rawDays.split(';').filter(Boolean);
+            days.forEach((entry) => {
+                const parts = entry.split('|');
+                const dateLabel = parts[0] || '';
+                const status = parts[1] || '';
+                const dateParts = dateLabel.split(' ');
+                const day = dateParts[0] || '';
+                const month = dateParts[1] || '';
+
+                const item = document.createElement('div');
+                item.className = 'calendar-day ' + getStatusClass(status);
+                item.title = dateLabel + ' - ' + getStatusLabel(status);
+                item.innerHTML = '<span class="calendar-day-number">' + day + '</span><span class="calendar-day-month">' + month + '</span>';
+                daysContainer.appendChild(item);
+            });
+        }
+
+        modal.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeAttendanceModal(event) {
+        const modal = document.getElementById('attendanceModal');
+
+        if (event && event.target && event.target !== modal) {
+            return;
+        }
+
+        modal.classList.remove('is-open');
+        document.body.style.overflow = '';
+    }
+
+    function getStatusClass(status) {
+        if (status === 'P') return 'status-present';
+        if (status === 'A') return 'status-absent';
+        return 'status-not-taken';
+    }
+
+    function getStatusLabel(status) {
+        if (status === 'P') return 'Present';
+        if (status === 'A') return 'Absent';
+        return 'Not Taken';
+    }
+
     // Submit date form without closing menu
     function submitDateForm(formId, reportType) {
         const form = document.getElementById(formId);
@@ -534,5 +813,11 @@
             window.location.href = url.toString();
         }, 50);
     }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeAttendanceModal();
+        }
+    });
 </script>
 {% endblock %}
