@@ -3417,14 +3417,22 @@ def save_attendance(request, date, batch_time, batch_type):
                 attendance, created = Attendance.objects.get_or_create(
                     student=student,
                     date=attendance_date,
-                    defaults={'marked_by': request.user}
+                    defaults={
+                        'marked_by': request.user,
+                        'theory_attendance': '',
+                        'practical_attendance': '',
+                    }
                 )
                 
                 # Update attendance based on batch type
                 if batch_type == 'theory':
                     attendance.theory_attendance = status
+                    if created:
+                        attendance.practical_attendance = ''
                 else:
                     attendance.practical_attendance = status
+                    if created:
+                        attendance.theory_attendance = ''
                 
                 if remarks:
                     attendance.remarks = remarks
@@ -3475,32 +3483,75 @@ def attendance_reports(request):
     # Student Attendance Report
     if report_type == 'student':
         students = AdmittedStudent.objects.all().order_by('full_name')
+        attendance_dates = list(
+            Attendance.objects.order_by('date').values_list('date', flat=True).distinct()
+        )
         
         student_reports = []
         for student in students:
-            total_records = student.attendance_records.count()
-            present_count = student.attendance_records.filter(
-                Q(theory_attendance='P') | Q(practical_attendance='P')
-            ).count()
-            absent_count = total_records - present_count
+            attendance_records = list(student.attendance_records.all().order_by('-date'))
+            total_records = len(attendance_records)
+            theory_present_count = sum(1 for record in attendance_records if record.theory_attendance == 'P')
+            theory_absent_count = sum(1 for record in attendance_records if record.theory_attendance == 'A')
+            practical_present_count = sum(1 for record in attendance_records if record.practical_attendance == 'P')
+            practical_absent_count = sum(1 for record in attendance_records if record.practical_attendance == 'A')
+            present_count = sum(
+                1 for record in attendance_records
+                if record.theory_attendance == 'P' or record.practical_attendance == 'P'
+            )
+            absent_count = sum(
+                1 for record in attendance_records
+                if record.theory_attendance == 'A' and record.practical_attendance == 'A'
+            )
             
             if total_records > 0:
                 percentage = (present_count / total_records) * 100
             else:
                 percentage = 0
+
+            attendance_by_date = {record.date: record for record in attendance_records}
+            theory_days = []
+            practical_days = []
+
+            for attendance_date in attendance_dates:
+                record = attendance_by_date.get(attendance_date)
+                theory_status = ''
+                practical_status = ''
+
+                if record:
+                    theory_status = record.theory_attendance or ''
+                    practical_status = record.practical_attendance or ''
+
+                theory_days.append({
+                    'date': attendance_date,
+                    'status': theory_status,
+                })
+                practical_days.append({
+                    'date': attendance_date,
+                    'status': practical_status,
+                })
             
             student_reports.append({
                 'student': student,
                 'total': total_records,
                 'present': present_count,
                 'absent': absent_count,
+                'theory_present': theory_present_count,
+                'theory_absent': theory_absent_count,
+                'practical_present': practical_present_count,
+                'practical_absent': practical_absent_count,
+                'records': attendance_records,
+                'theory_days': theory_days,
+                'practical_days': practical_days,
                 'percentage': round(percentage, 2)
             })
         
         context = {
             'report_type': 'student',
             'student_reports': student_reports,
-            'title': 'Student Attendance Report'
+            'attendance_dates': attendance_dates,
+            'title': 'Student Attendance Report',
+            'active_page': 'attendance_reports'
         }
     
     # Daily Report
@@ -3521,6 +3572,7 @@ def attendance_reports(request):
         total_students = AdmittedStudent.objects.count()
         present_count = attendance_records.filter(Q(theory_attendance='P') | Q(practical_attendance='P')).count()
         absent_count = total_students - present_count
+        percentage = (present_count / total_students) * 100 if total_students > 0 else 0
         
         context = {
             'report_type': 'daily',
@@ -3529,7 +3581,10 @@ def attendance_reports(request):
             'total_students': total_students,
             'present_count': present_count,
             'absent_count': absent_count,
+            'percentage': percentage,
             'title': f'Daily Attendance Report - {report_date}'
+            ,
+            'active_page': 'attendance_reports'
         }
     
     # Batch Attendance Report

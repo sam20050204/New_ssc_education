@@ -472,6 +472,8 @@ class Attendance(models.Model):
     
     def get_theory_attendance_display(self):
         """Get display name for theory attendance"""
+        if not self.theory_attendance:
+            return 'Not Taken'
         for value, display in self.STATUS_CHOICES:
             if value == self.theory_attendance:
                 return display
@@ -479,6 +481,8 @@ class Attendance(models.Model):
     
     def get_practical_attendance_display(self):
         """Get display name for practical attendance"""
+        if not self.practical_attendance:
+            return 'Not Taken'
         for value, display in self.STATUS_CHOICES:
             if value == self.practical_attendance:
                 return display
