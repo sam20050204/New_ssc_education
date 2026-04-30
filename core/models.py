@@ -135,9 +135,18 @@ class AdmittedStudent(models.Model):
     
     admission_date = models.DateField(default=date.today, help_text="Date of admission")
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def formatted_full_name(self):
+        parts = [self.surname, self.student_name, self.father_name]
+        return " ".join(part.strip() for part in parts if part and part.strip())
+
+    def save(self, *args, **kwargs):
+        self.full_name = self.formatted_full_name
+        super().save(*args, **kwargs)
     
     def __str__(self):
-        return self.full_name
+        return self.formatted_full_name
     
     @property
     def remaining_fees(self):

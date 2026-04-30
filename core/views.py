@@ -2609,7 +2609,7 @@ def student_finance_details(request):
         finance_data.append({
             'id': student.id,
             'sr_no': student.id,
-            'learner_name': student.full_name or f"{student.student_name} {student.father_name} {student.surname}",
+            'learner_name': student.full_name or f"{student.surname} {student.student_name} {student.father_name}",
             'student_id': student.id,  # Using student ID as identifier
             'mobile_no': student.mobile_own,
             'batch': student.batch_display,

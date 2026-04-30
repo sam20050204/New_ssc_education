@@ -426,9 +426,9 @@ function generateFullName() {
         const surname = surnameInput.value.trim();
         
         const parts = [];
+        if (surname) parts.push(surname);
         if (studentName) parts.push(studentName);
         if (fatherName) parts.push(fatherName);
-        if (surname) parts.push(surname);
         
         fullNameInput.value = parts.join(' ');
     }

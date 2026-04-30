@@ -100,9 +100,9 @@ function generateFullName() {
     const surname = document.getElementById('surname').value.trim();
     
     const parts = [];
+    if (surname) parts.push(surname);
     if (studentName) parts.push(studentName);
     if (fatherName) parts.push(fatherName);
-    if (surname) parts.push(surname);
     
     document.getElementById('fullName').value = parts.join(' ');
 }

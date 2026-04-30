@@ -24,9 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function generateFullName() {
         const parts = [];
+        if (surname && surname.value) parts.push(surname.value.trim());
         if (studentName && studentName.value) parts.push(studentName.value.trim());
         if (fatherName && fatherName.value) parts.push(fatherName.value.trim());
-        if (surname && surname.value) parts.push(surname.value.trim());
         const fullNameValue = parts.join(' ');
         if (fullName) fullName.value = fullNameValue;
         if (fullNameHidden) fullNameHidden.value = fullNameValue;
