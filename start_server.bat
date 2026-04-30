@@ -11,38 +11,38 @@ echo ============================================
 echo.
 
 REM Change to project directory
-cd /d e:\Projects\New_ssc_education
+cd /d d:\Website\New_ssc_education
 
-REM Check if .env file exists
-if not exist .env (
+REM Check if project files exist
+if not exist manage.py (
     echo.
-    echo ERROR: .env file not found!
-    echo Please create .env file from .env.example
+    echo ERROR: manage.py not found!
+    echo Please run this script from the project root directory
     pause
     exit /b 1
 )
 
 echo ✓ Project directory: %CD%
-echo ✓ Configuration file (.env) found
+echo ✓ Django project files found
 echo.
 
 REM Display server information
 echo ============================================
 echo  SERVER INFORMATION
 echo ============================================
-echo Server IP Address: 192.168.29.47
+echo Server IP Address: 0.0.0.0 (accessible on all network interfaces)
 echo Server Port: 8000
-echo Access URL: http://192.168.29.47:8000
+echo Access URL: http://127.0.0.1:8000 or http://localhost:8000
 echo.
-echo Make sure firewall allows port 8000!
+echo Make sure firewall allows port 8000 for network access!
 echo.
 
-REM Start the Django development server
+REM Start the Django development server using full Python path
 echo Starting Django development server...
 echo Press CTRL+C to stop the server
 echo.
 
-python manage.py runserver 0.0.0.0:8000
+C:/Users/Administrator/AppData/Local/Python/pythoncore-3.14-64/python.exe manage.py runserver 0.0.0.0:8000
 
 if errorlevel 1 (
     echo.
