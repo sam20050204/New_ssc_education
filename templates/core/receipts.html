@@ -28,6 +28,10 @@
 
 {% block content %}
 
+<form id="receiptsCsrfForm" style="display: none;">
+    {% csrf_token %}
+</form>
+
 <!-- TOP BAR WITH SEARCH AND FILTER BUTTON -->
 <div class="receipts-top-bar">
     <div class="search-container">
@@ -314,5 +318,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'core/receipts.js' %}?v={{ STATIC_VERSION }}"></script>
+<script src="{% static 'core/receipts.js' %}?v={{ STATIC_VERSION }}-receipts-delete-fix"></script>
 {% endblock %}

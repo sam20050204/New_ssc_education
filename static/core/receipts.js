@@ -456,7 +456,7 @@ async function handleEditSubmit(e) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify(formData)
         });
@@ -509,7 +509,7 @@ async function deleteReceipt(receiptId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCsrfToken()
             }
         });
         
@@ -707,6 +707,20 @@ function formatNumber(number) {
 }
 
 // Get CSRF token
+function getCsrfToken() {
+    const formTokenInput = document.querySelector('#receiptsCsrfForm input[name="csrfmiddlewaretoken"]');
+    if (formTokenInput && formTokenInput.value) {
+        return formTokenInput.value;
+    }
+
+    const globalTokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (globalTokenInput && globalTokenInput.value) {
+        return globalTokenInput.value;
+    }
+
+    return getCookie('csrftoken');
+}
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {

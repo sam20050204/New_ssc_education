@@ -1697,28 +1697,43 @@ def update_receipt(request, receipt_id):
 @require_http_methods(["POST"])
 def delete_receipt(request, receipt_id):
     """API endpoint to delete a receipt"""
-    from datetime import date
-    
-    if request.method != 'POST':
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid request method'
-        }, status=405)
-    
     try:
         payment = FeePayment.objects.select_related('student').get(id=receipt_id)
-        payment_amount = payment.amount
         student = payment.student
         receipt_no = payment.receipt_no
-        
+        student_total_fees = student.total_fees or Decimal('0')
+
         with transaction.atomic():
-            # Ensure admission_date is set before saving
-            if not student.admission_date:
-                student.admission_date = date.today()
-            
-            student.paid_fees = max(0, student.paid_fees - payment_amount)
-            student.save()
             payment.delete()
+
+            remaining_payments = list(
+                FeePayment.objects.filter(student_id=student.id)
+                .order_by('payment_date', 'created_at', 'id')
+            )
+
+            running_paid = Decimal('0')
+            payments_to_update = []
+
+            for remaining_payment in remaining_payments:
+                paid_before_this = running_paid
+                running_paid += remaining_payment.amount or Decimal('0')
+                remaining_after_this = max(Decimal('0'), student_total_fees - running_paid)
+
+                if (
+                    remaining_payment.paid_before_this != paid_before_this
+                    or remaining_payment.remaining_after_this != remaining_after_this
+                ):
+                    remaining_payment.paid_before_this = paid_before_this
+                    remaining_payment.remaining_after_this = remaining_after_this
+                    payments_to_update.append(remaining_payment)
+
+            if payments_to_update:
+                FeePayment.objects.bulk_update(
+                    payments_to_update,
+                    ['paid_before_this', 'remaining_after_this']
+                )
+
+            AdmittedStudent.objects.filter(id=student.id).update(paid_fees=running_paid)
         
         return JsonResponse({
             'success': True,
@@ -1731,6 +1746,7 @@ def delete_receipt(request, receipt_id):
             'error': 'Receipt not found'
         }, status=404)
     except Exception as e:
+        logger.exception("Error deleting receipt %s", receipt_id)
         return JsonResponse({
             'success': False,
             'error': f'Error deleting receipt: {str(e)}'

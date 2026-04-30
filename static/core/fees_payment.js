@@ -21,6 +21,14 @@ function getCookie(name) {
     return cookieValue;
 }
 
+function getCsrfToken() {
+    const formTokenInput = document.querySelector('#paymentForm input[name="csrfmiddlewaretoken"]');
+    if (formTokenInput && formTokenInput.value) {
+        return formTokenInput.value;
+    }
+    return getCookie('csrftoken');
+}
+
 // Search students
 document.addEventListener('DOMContentLoaded', function() {
     // Set default payment date to today
@@ -393,18 +401,31 @@ function submitPayment() {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
+            'X-CSRFToken': getCsrfToken(),
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => {
+    .then(async response => {
         console.log('Payment response status:', response.status);
-        return response.json().then(data => {
+
+        const contentType = response.headers.get('content-type') || '';
+        let data;
+
+        if (contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
             if (!response.ok) {
-                throw new Error(data.error || 'Payment submission failed');
+                throw new Error(`Payment submission failed with HTTP ${response.status}. Server returned HTML instead of JSON.`);
             }
-            return data;
-        });
+            throw new Error(`Unexpected response format: ${text.slice(0, 120)}`);
+        }
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Payment submission failed');
+        }
+
+        return data;
     })
     .then(data => {
         console.log('Payment successful:', data);
