@@ -3640,6 +3640,28 @@ def attendance_reports(request):
         
         # Combine all unique slots
         all_slots = sorted(set(theory_slots) | set(practical_slots))
+
+        attendance_records = Attendance.objects.filter(date=report_date).select_related('student')
+        attendance_by_student_id = {record.student_id: record for record in attendance_records}
+
+        def serialize_batch_students(students, attendance_type):
+            serialized = []
+            for student in students.order_by('full_name'):
+                attendance_record = attendance_by_student_id.get(student.id)
+                status = 'A'
+                if attendance_record:
+                    if attendance_type == 'theory':
+                        status = attendance_record.theory_attendance or 'A'
+                    else:
+                        status = attendance_record.practical_attendance or 'A'
+
+                serialized.append({
+                    'id': student.id,
+                    'full_name': student.full_name,
+                    'mobile_own': student.mobile_own,
+                    'status': status,
+                })
+            return serialized
         
         batch_reports = []
         for slot in all_slots:
@@ -3669,12 +3691,14 @@ def attendance_reports(request):
                 'theory': {
                     'total': theory_students.count(),
                     'present': theory_present,
-                    'absent': theory_absent
+                    'absent': theory_absent,
+                    'students': serialize_batch_students(theory_students, 'theory'),
                 },
                 'practical': {
                     'total': practical_students.count(),
                     'present': practical_present,
-                    'absent': practical_absent
+                    'absent': practical_absent,
+                    'students': serialize_batch_students(practical_students, 'practical'),
                 }
             })
         

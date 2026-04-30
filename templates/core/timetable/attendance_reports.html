@@ -38,6 +38,11 @@
     <!-- Student Attendance Report -->
     {% if report_type == 'student' %}
     <div class="report-section">
+        <div class="report-toolbar">
+            <div class="search-box">
+                <input type="text" id="studentReportSearch" class="search-input" placeholder="Search student by name..." oninput="filterAttendanceRows('studentReportSearch', 'studentReportTableBody', 9)">
+            </div>
+        </div>
         <div class="table-container">
             <table class="data-table">
                 <thead>
@@ -53,7 +58,7 @@
                         <th class="text-center">Practical &#128197;</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="studentReportTableBody">
                     {% for report in student_reports %}
                     <tr>
                         <td><strong>{{ report.student.full_name }}</strong></td>
@@ -140,6 +145,12 @@
             </form>
         </div>
 
+        <div class="report-toolbar">
+            <div class="search-box">
+                <input type="text" id="dailyReportSearch" class="search-input" placeholder="Search student by name..." oninput="filterAttendanceRows('dailyReportSearch', 'dailyReportTableBody', 4)">
+            </div>
+        </div>
+
         <!-- Summary Cards -->
         <div class="summary-cards">
             <div class="summary-card card-primary">
@@ -189,7 +200,7 @@
                         <th class="text-center">Remarks</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="dailyReportTableBody">
                     {% for record in attendance_records %}
                     <tr>
                         <td><strong>{{ record.student.full_name }}</strong></td>
@@ -248,6 +259,9 @@
                         <span class="stat-label">Absent:</span>
                         <span class="stat-value badge-danger">{{ report.theory.absent }}</span>
                     </div>
+                    <button type="button" class="batch-students-btn" onclick="openBatchStudentsModal('{{ report.display|escapejs }}', 'Theory', {{ forloop.counter0 }})">
+                        View Theory Students
+                    </button>
                 </div>
 
                 <div class="batch-group">
@@ -264,9 +278,69 @@
                         <span class="stat-label">Absent:</span>
                         <span class="stat-value badge-danger">{{ report.practical.absent }}</span>
                     </div>
+                    <button type="button" class="batch-students-btn practical-btn" onclick="openBatchStudentsModal('{{ report.display|escapejs }}', 'Practical', {{ forloop.counter0 }})">
+                        View Practical Students
+                    </button>
                 </div>
             </div>
             {% endfor %}
+        </div>
+    </div>
+    {{ batch_reports|json_script:"batch-report-data" }}
+
+    <div id="batchStudentsModal" class="attendance-modal" onclick="closeBatchStudentsModal(event)">
+        <div class="attendance-modal-content batch-students-modal-content" onclick="event.stopPropagation()">
+            <div class="attendance-modal-header">
+                <div>
+                    <h3 id="batchStudentsModalTitle">Batch Students</h3>
+                    <p id="batchStudentsModalSubtitle" class="attendance-modal-subtitle"></p>
+                </div>
+                <button type="button" class="attendance-modal-close" onclick="closeBatchStudentsModal()">&times;</button>
+            </div>
+            <div class="batch-students-search">
+                <input type="text" id="batchStudentsSearch" class="search-input" placeholder="Search student by name or mobile..." oninput="filterBatchStudentsList()">
+            </div>
+            <div class="batch-students-table-wrapper">
+                <table class="data-table batch-students-table">
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Mobile Number</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchStudentsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="batchStudentDetailModal" class="attendance-modal" onclick="closeBatchStudentDetailModal(event)">
+        <div class="attendance-modal-content student-info-modal-content" onclick="event.stopPropagation()">
+            <div class="attendance-modal-header">
+                <div>
+                    <h3 id="batchStudentDetailTitle">Student Details</h3>
+                    <p id="batchStudentDetailSubtitle" class="attendance-modal-subtitle"></p>
+                </div>
+                <button type="button" class="attendance-modal-close" onclick="closeBatchStudentDetailModal()">&times;</button>
+            </div>
+            <div class="student-detail-layout">
+                <div class="student-detail-photo-wrap">
+                    <img id="batchStudentDetailPhoto" src="" alt="Student Photo">
+                </div>
+                <div class="student-detail-grid">
+                    <div class="student-detail-item"><span>Full Name</span><strong id="detailFullName">-</strong></div>
+                    <div class="student-detail-item"><span>Mobile</span><strong id="detailMobile">-</strong></div>
+                    <div class="student-detail-item"><span>Parent Mobile</span><strong id="detailParentMobile">-</strong></div>
+                    <div class="student-detail-item"><span>Course</span><strong id="detailCourse">-</strong></div>
+                    <div class="student-detail-item"><span>Batch</span><strong id="detailBatch">-</strong></div>
+                    <div class="student-detail-item"><span>Admission Date</span><strong id="detailAdmissionDate">-</strong></div>
+                    <div class="student-detail-item"><span>Total Fees</span><strong id="detailTotalFees">-</strong></div>
+                    <div class="student-detail-item"><span>Paid Fees</span><strong id="detailPaidFees">-</strong></div>
+                    <div class="student-detail-item"><span>Remaining Fees</span><strong id="detailRemainingFees">-</strong></div>
+                    <div class="student-detail-item student-detail-item-wide"><span>Address</span><strong id="detailAddress">-</strong></div>
+                </div>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -539,8 +613,36 @@
         background: white;
         border-radius: 8px;
         overflow-x: auto;
-        overflow-y: visible;
+        overflow-y: auto;
+        max-height: calc(100vh - 210px);
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .report-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 14px;
+    }
+
+    .search-box {
+        width: min(360px, 100%);
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #d0d7e2;
+        border-radius: 10px;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .search-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
     }
 
     .data-table {
@@ -559,7 +661,7 @@
         font-weight: 600;
         position: sticky;
         top: 0;
-        z-index: 5;
+        z-index: 20;
         background: #f8f9fa;
     }
 
@@ -640,6 +742,31 @@
         border-top: 4px solid #007bff;
     }
 
+    .batch-students-btn {
+        width: 100%;
+        margin-top: 12px;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+    }
+
+    .batch-students-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.28);
+    }
+
+    .batch-students-btn.practical-btn {
+        background: linear-gradient(135deg, #0f766e, #0d9488);
+        box-shadow: 0 8px 20px rgba(13, 148, 136, 0.2);
+    }
+
     .batch-time {
         margin: 0 0 15px 0;
         font-size: 16px;
@@ -696,6 +823,119 @@
         font-size: 11px;
     }
 
+    .batch-students-search {
+        margin-bottom: 16px;
+    }
+
+    .batch-students-modal-content {
+        width: min(900px, 100%);
+    }
+
+    .batch-students-table-wrapper {
+        max-height: 60vh;
+        overflow: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+    }
+
+    .batch-students-table th {
+        position: sticky;
+        top: 0;
+        z-index: 15;
+    }
+
+    .student-name-link {
+        background: none;
+        border: 0;
+        padding: 0;
+        color: #1d4ed8;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .student-name-link:hover {
+        text-decoration: underline;
+    }
+
+    .status-pill {
+        display: inline-block;
+        min-width: 88px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .status-pill.present {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-pill.absent {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .student-info-modal-content {
+        width: min(820px, 100%);
+    }
+
+    .student-detail-layout {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+
+    .student-detail-photo-wrap {
+        width: 160px;
+        height: 160px;
+        border-radius: 18px;
+        overflow: hidden;
+        background: #e2e8f0;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+    }
+
+    .student-detail-photo-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .student-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .student-detail-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px 14px;
+    }
+
+    .student-detail-item span {
+        display: block;
+        margin-bottom: 6px;
+        color: #64748b;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .student-detail-item strong {
+        color: #0f172a;
+        font-size: 14px;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+
+    .student-detail-item-wide {
+        grid-column: 1 / -1;
+    }
+
     @media (max-width: 768px) {
         .summary-cards {
             grid-template-columns: repeat(2, 1fr);
@@ -718,6 +958,18 @@
         .attendance-modal .calendar-day {
             min-width: 48px;
             height: 48px;
+        }
+
+        .student-detail-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .student-detail-photo-wrap {
+            margin: 0 auto;
+        }
+
+        .student-detail-grid {
+            grid-template-columns: 1fr;
         }
     }
 
@@ -793,6 +1045,211 @@
         if (status === 'P') return 'Present';
         if (status === 'A') return 'Absent';
         return 'Not Taken';
+    }
+
+    const batchReportDataElement = document.getElementById('batch-report-data');
+    const batchReportData = batchReportDataElement ? JSON.parse(batchReportDataElement.textContent) : [];
+    let currentBatchStudents = [];
+
+    function filterAttendanceRows(inputId, tbodyId, columnCount) {
+        const input = document.getElementById(inputId);
+        const tbody = document.getElementById(tbodyId);
+
+        if (!input || !tbody) {
+            return;
+        }
+
+        const searchValue = input.value.trim().toLowerCase();
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        let visibleCount = 0;
+
+        rows.forEach((row) => {
+            const firstCell = row.querySelector('td');
+            if (!firstCell) {
+                return;
+            }
+
+            const studentName = firstCell.textContent.trim().toLowerCase();
+            const matches = searchValue === '' || studentName.includes(searchValue);
+            row.style.display = matches ? '' : 'none';
+
+            if (matches) {
+                visibleCount += 1;
+            }
+        });
+
+        const existingEmptyRow = tbody.querySelector('.search-empty-row');
+        if (existingEmptyRow) {
+            existingEmptyRow.remove();
+        }
+
+        if (visibleCount === 0 && rows.length > 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.className = 'search-empty-row';
+            emptyRow.innerHTML = `<td colspan="${columnCount}" style="text-align: center; padding: 32px; color: #666;">No matching students found.</td>`;
+            tbody.appendChild(emptyRow);
+        }
+    }
+
+    function openBatchStudentsModal(batchDisplay, attendanceType, batchIndex) {
+        const modal = document.getElementById('batchStudentsModal');
+        const title = document.getElementById('batchStudentsModalTitle');
+        const subtitle = document.getElementById('batchStudentsModalSubtitle');
+        const searchInput = document.getElementById('batchStudentsSearch');
+        const report = batchReportData[batchIndex];
+
+        if (!report) {
+            return;
+        }
+
+        currentBatchStudents = attendanceType === 'Theory' ? (report.theory.students || []) : (report.practical.students || []);
+        title.textContent = `${attendanceType} Students`;
+        subtitle.textContent = `${batchDisplay} - {{ report_date|date:'d M Y' }}`;
+        searchInput.value = '';
+        renderBatchStudents(currentBatchStudents);
+        modal.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeBatchStudentsModal(event) {
+        const modal = document.getElementById('batchStudentsModal');
+
+        if (event && event.target && event.target !== modal) {
+            return;
+        }
+
+        modal.classList.remove('is-open');
+        document.body.style.overflow = '';
+    }
+
+    function filterBatchStudentsList() {
+        const searchInput = document.getElementById('batchStudentsSearch');
+        const query = searchInput.value.trim().toLowerCase();
+        const filteredStudents = currentBatchStudents.filter((student) => {
+            const name = (student.full_name || '').toLowerCase();
+            const mobile = (student.mobile_own || '').toLowerCase();
+            return query === '' || name.includes(query) || mobile.includes(query);
+        });
+
+        renderBatchStudents(filteredStudents);
+    }
+
+    function renderBatchStudents(students) {
+        const tbody = document.getElementById('batchStudentsTableBody');
+        tbody.innerHTML = '';
+
+        if (!students.length) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 32px; color:#666;">No students found.</td></tr>';
+            return;
+        }
+
+        students.forEach((student) => {
+            const row = document.createElement('tr');
+            const statusLabel = student.status === 'P' ? 'Present' : 'Absent';
+            const statusClass = student.status === 'P' ? 'present' : 'absent';
+
+            row.innerHTML = `
+                <td><button type="button" class="student-name-link" onclick="openBatchStudentDetail(${student.id})">${escapeHtml(student.full_name || '-')}</button></td>
+                <td>${escapeHtml(student.mobile_own || '-')}</td>
+                <td class="text-center"><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    async function openBatchStudentDetail(studentId) {
+        const modal = document.getElementById('batchStudentDetailModal');
+
+        setStudentDetailField('detailFullName', 'Loading...');
+        setStudentDetailField('detailMobile', '-');
+        setStudentDetailField('detailParentMobile', '-');
+        setStudentDetailField('detailCourse', '-');
+        setStudentDetailField('detailBatch', '-');
+        setStudentDetailField('detailAdmissionDate', '-');
+        setStudentDetailField('detailTotalFees', '-');
+        setStudentDetailField('detailPaidFees', '-');
+        setStudentDetailField('detailRemainingFees', '-');
+        setStudentDetailField('detailAddress', '-');
+        document.getElementById('batchStudentDetailTitle').textContent = 'Student Details';
+        document.getElementById('batchStudentDetailSubtitle').textContent = '';
+        document.getElementById('batchStudentDetailPhoto').src = '';
+
+        modal.classList.add('is-open');
+
+        try {
+            const response = await fetch(`/admission/${studentId}/detail/`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Unable to load student details');
+            }
+
+            const data = await response.json();
+            const address = [data.address, data.city, data.tehsil_block, data.district, data.pin_code].filter(Boolean).join(', ');
+
+            document.getElementById('batchStudentDetailTitle').textContent = data.full_name || 'Student Details';
+            document.getElementById('batchStudentDetailSubtitle').textContent = data.course || data.custom_course || '';
+            setStudentDetailField('detailFullName', data.full_name || '-');
+            setStudentDetailField('detailMobile', data.mobile_own || '-');
+            setStudentDetailField('detailParentMobile', data.parent_mobile || '-');
+            setStudentDetailField('detailCourse', data.course || data.custom_course || '-');
+            setStudentDetailField('detailBatch', data.batch_display || '-');
+            setStudentDetailField('detailAdmissionDate', data.admission_date || '-');
+            setStudentDetailField('detailTotalFees', formatMoney(data.total_fees));
+            setStudentDetailField('detailPaidFees', formatMoney(data.paid_fees));
+            setStudentDetailField('detailRemainingFees', formatMoney(data.remaining_fees));
+            setStudentDetailField('detailAddress', address || '-');
+
+            const photo = document.getElementById('batchStudentDetailPhoto');
+            if (data.photo) {
+                photo.src = data.photo;
+            } else {
+                photo.src = buildInitialAvatar((data.full_name || 'S').charAt(0).toUpperCase());
+            }
+        } catch (error) {
+            setStudentDetailField('detailFullName', 'Error loading student');
+            document.getElementById('batchStudentDetailSubtitle').textContent = error.message;
+            document.getElementById('batchStudentDetailPhoto').src = buildInitialAvatar('E');
+        }
+    }
+
+    function closeBatchStudentDetailModal(event) {
+        const modal = document.getElementById('batchStudentDetailModal');
+
+        if (event && event.target && event.target !== modal) {
+            return;
+        }
+
+        modal.classList.remove('is-open');
+    }
+
+    function setStudentDetailField(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value || '-';
+        }
+    }
+
+    function formatMoney(value) {
+        const amount = parseFloat(value);
+        return Number.isFinite(amount) ? `Rs. ${amount.toFixed(2)}` : '-';
+    }
+
+    function buildInitialAvatar(letter) {
+        return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" fill="#cbd5e1"/><text x="50%" y="52%" font-size="64" font-family="Arial, sans-serif" fill="#0f172a" text-anchor="middle">${letter}</text></svg>`)}`;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     // Submit date form without closing menu
