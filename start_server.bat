@@ -1,4 +1,5 @@
 @echo off
+setlocal
 REM ========================================
 REM Network Server Launcher Script
 REM Start Django Server for Network Access
@@ -10,8 +11,8 @@ echo  SSC Education - Network Server Launcher
 echo ============================================
 echo.
 
-REM Change to project directory
-cd /d d:\Website\New_ssc_education
+REM Change to this script's directory so the launcher works from any cwd
+cd /d "%~dp0"
 
 REM Check if project files exist
 if not exist manage.py (
@@ -22,8 +23,8 @@ if not exist manage.py (
     exit /b 1
 )
 
-echo ✓ Project directory: %CD%
-echo ✓ Django project files found
+echo [OK] Project directory: %CD%
+echo [OK] Django project files found
 echo.
 
 REM Display server information
@@ -37,17 +38,22 @@ echo.
 echo Make sure firewall allows port 8000 for network access!
 echo.
 
-REM Start the Django development server using full Python path
+REM Prefer the project's virtual environment, then fall back to PATH
 echo Starting Django development server...
 echo Press CTRL+C to stop the server
 echo.
 
-C:/Users/Administrator/AppData/Local/Python/pythoncore-3.14-64/python.exe manage.py runserver 0.0.0.0:8000
+set "PYTHON_EXE=%~dp0venv\Scripts\python.exe"
+if exist "%PYTHON_EXE%" (
+    "%PYTHON_EXE%" manage.py runserver 0.0.0.0:8000
+) else (
+    python manage.py runserver 0.0.0.0:8000
+)
 
 if errorlevel 1 (
     echo.
     echo ERROR: Failed to start server
-    echo Make sure Python is installed and available in PATH
+    echo Make sure Python is installed or that venv\Scripts\python.exe exists
     pause
     exit /b 1
 )

@@ -124,6 +124,9 @@
 
 {% block content %}
 <div class="finance-section">
+    <form id="financeCsrfForm" style="display: none;">
+        {% csrf_token %}
+    </form>
     <!-- Save Indicator -->
     <div class="save-indicator" id="saveIndicator">
         <span class="save-indicator-icon">✓</span>

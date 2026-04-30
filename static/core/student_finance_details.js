@@ -77,8 +77,22 @@ function getCookie(name) {
     return cookieValue;
 }
 
+function getCsrfToken() {
+    const formTokenInput = document.querySelector('#financeCsrfForm input[name="csrfmiddlewaretoken"]');
+    if (formTokenInput && formTokenInput.value) {
+        return formTokenInput.value;
+    }
+
+    const globalTokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (globalTokenInput && globalTokenInput.value) {
+        return globalTokenInput.value;
+    }
+
+    return getCookie('csrftoken');
+}
+
 function updateField(studentId, field, value) {
-    const csrftoken = getCookie('csrftoken');
+    const csrftoken = getCsrfToken();
     const indicator = document.getElementById('saveIndicator');
     
     // Show saving indicator
@@ -90,15 +104,35 @@ function updateField(studentId, field, value) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrftoken
+            'Accept': 'application/json',
+            'X-CSRFToken': csrftoken,
+            'X-Requested-With': 'XMLHttpRequest'
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
             student_id: studentId,
             field: field,
             value: value
         })
     })
-    .then(response => response.json())
+    .then(async response => {
+        let data = null;
+
+        try {
+            data = await response.json();
+        } catch (error) {
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+            throw new Error('Invalid server response');
+        }
+
+        if (!response.ok) {
+            throw new Error(data.error || `Request failed with status ${response.status}`);
+        }
+
+        return data;
+    })
     .then(data => {
         if (data.success) {
             // Update calculated fields
@@ -132,7 +166,7 @@ function updateField(studentId, field, value) {
     })
     .catch(error => {
         console.error('Error:', error);
-        showError('Network error. Please check your connection.');
+        showError(error.message || 'Failed to save');
     });
 }
 

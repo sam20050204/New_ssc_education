@@ -9,8 +9,8 @@ Write-Host " SSC Education - Network Server Launcher"
 Write-Host "============================================"
 Write-Host ""
 
-# Change to project directory
-Set-Location "e:\Projects\New_ssc_education"
+# Change to the script directory so the launcher works from any cwd
+Set-Location $PSScriptRoot
 
 # Check if .env file exists
 if (-not (Test-Path ".env")) {
@@ -20,8 +20,8 @@ if (-not (Test-Path ".env")) {
     exit 1
 }
 
-Write-Host "✓ Project directory: $(Get-Location)" -ForegroundColor Green
-Write-Host "✓ Configuration file (.env) found" -ForegroundColor Green
+Write-Host "[OK] Project directory: $(Get-Location)" -ForegroundColor Green
+Write-Host "[OK] Configuration file (.env) found" -ForegroundColor Green
 Write-Host ""
 
 # Display server information
@@ -32,17 +32,24 @@ Write-Host "Server IP Address: 192.168.29.47" -ForegroundColor Cyan
 Write-Host "Server Port: 8000" -ForegroundColor Cyan
 Write-Host "Access URL: http://192.168.29.47:8000" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "⚠️  Make sure firewall allows port 8000!" -ForegroundColor Yellow
+Write-Host "[WARN] Make sure firewall allows port 8000!" -ForegroundColor Yellow
 Write-Host ""
 
-# Check if Python is available
-try {
-    $pythonVersion = python --version 2>&1
-    Write-Host "✓ Python found: $pythonVersion" -ForegroundColor Green
-} catch {
-    Write-Host "ERROR: Python is not installed or not in PATH" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-    exit 1
+# Prefer the project's virtual environment, then fall back to PATH
+$pythonExe = Join-Path $PSScriptRoot "venv\Scripts\python.exe"
+if (Test-Path $pythonExe) {
+    $pythonVersion = & $pythonExe --version 2>&1
+    Write-Host "[OK] Python found in venv: $pythonVersion" -ForegroundColor Green
+} else {
+    try {
+        $pythonVersion = python --version 2>&1
+        $pythonExe = "python"
+        Write-Host "[OK] Python found in PATH: $pythonVersion" -ForegroundColor Green
+    } catch {
+        Write-Host "ERROR: Python is not installed or not in PATH" -ForegroundColor Red
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
 }
 
 Write-Host ""
@@ -51,7 +58,7 @@ Write-Host "Press CTRL+C to stop the server" -ForegroundColor Yellow
 Write-Host ""
 
 # Start the Django development server
-python manage.py runserver 0.0.0.0:8000
+& $pythonExe manage.py runserver 0.0.0.0:8000
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
