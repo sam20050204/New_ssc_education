@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 import os
+import zipfile
 from PIL import Image
 
 
@@ -83,3 +84,42 @@ def validate_filename(filename):
             _('Filename contains invalid control characters.'),
             code='invalid_characters',
         )
+
+
+def validate_zip_upload(file, allowed_extensions=None, max_file_count=500, max_uncompressed_size=250 * 1024 * 1024):
+    """Validate ZIP uploads before extraction."""
+    if not file:
+        raise ValidationError(_("ZIP file is required."), code="missing_zip")
+
+    if not file.name.lower().endswith(".zip"):
+        raise ValidationError(_("Only ZIP archives are allowed."), code="invalid_zip_extension")
+
+    try:
+        archive = zipfile.ZipFile(file)
+    except zipfile.BadZipFile as exc:
+        raise ValidationError(_("Invalid or corrupted ZIP archive."), code="invalid_zip") from exc
+
+    allowed_extensions = {ext.lower() for ext in (allowed_extensions or set())}
+    total_size = 0
+    file_count = 0
+
+    for member in archive.infolist():
+        file_count += 1
+        total_size += member.file_size
+        normalized_name = member.filename.replace("\\", "/")
+
+        if normalized_name.startswith("/") or ".." in normalized_name.split("/"):
+            raise ValidationError(_("ZIP archive contains unsafe paths."), code="unsafe_zip_path")
+        if file_count > max_file_count:
+            raise ValidationError(_("ZIP archive contains too many files."), code="zip_too_many_files")
+        if total_size > max_uncompressed_size:
+            raise ValidationError(_("ZIP archive is too large when extracted."), code="zip_too_large")
+        if allowed_extensions and not member.is_dir():
+            extension = os.path.splitext(normalized_name)[1].lower()
+            if extension not in allowed_extensions:
+                raise ValidationError(
+                    _("ZIP archive contains unsupported files."),
+                    code="zip_invalid_member",
+                )
+
+    file.seek(0)

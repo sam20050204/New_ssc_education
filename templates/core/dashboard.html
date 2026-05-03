@@ -66,7 +66,18 @@
             </div>
             <div class="stat-number">{{ klic_count|default:0 }}</div>
             <div class="stat-label">KLIC Students</div>
-            <p class="stat-description">Students enrolled in non-MSCIT computer courses.</p>
+            <p class="stat-description">Students enrolled in KLIC and other non-MSCIT, non-Practice courses.</p>
+            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All recorded years{% endif %}</div>
+        </div>
+
+        <div class="stat-card stat-card-practice">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Practice</span>
+                <div class="stat-icon">PR</div>
+            </div>
+            <div class="stat-number">{{ practice_count|default:0 }}</div>
+            <div class="stat-label">Practice Students</div>
+            <p class="stat-description">Students admitted in the Practice course only.</p>
             <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All recorded years{% endif %}</div>
         </div>
     </div>

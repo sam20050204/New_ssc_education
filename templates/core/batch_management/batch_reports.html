@@ -1,0 +1,98 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Batch Reports{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">BR</div>
+            <div>
+                <h1 class="page-title">Batch Reports</h1>
+                <p class="page-subtitle">Revenue, completion status, and lifecycle actions across batches.</p>
+            </div>
+        </div>
+        <div class="page-filters">
+            <a href="{% url 'export_batch_reports' %}?month={{ filters.month }}&year={{ filters.year }}&course={{ filters.course }}&status={{ filters.status }}" class="btn btn-primary">Export Excel</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% include 'core/batch_management/_batch_cards.html' with reset_url='/batch/reports/' batch_summaries=report_data.summaries include_status_filter=True %}
+
+    <div class="report-stat-grid">
+        <div class="report-stat-card"><span>Total Students</span><strong>{{ report_data.stats.total_students }}</strong></div>
+        <div class="report-stat-card"><span>Active Students</span><strong>{{ report_data.stats.active_students }}</strong></div>
+        <div class="report-stat-card"><span>Completed Students</span><strong>{{ report_data.stats.completed_students }}</strong></div>
+        <div class="report-stat-card"><span>Completion Rate</span><strong>{{ report_data.stats.completion_rate }}%</strong></div>
+        <div class="report-stat-card"><span>Archived Students</span><strong>{{ report_data.stats.archived_students }}</strong></div>
+        <div class="report-stat-card"><span>Revenue</span><strong>Rs. {{ report_data.stats.fee_revenue }}</strong></div>
+    </div>
+
+    <div class="action-log-table">
+        <h3>Recent Batch Actions</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Batch</th>
+                    <th>Action</th>
+                    <th>By</th>
+                    <th>Date</th>
+                    <th>Affected Students</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in report_data.action_logs %}
+                <tr>
+                    <td>{{ log.batch_month }} {{ log.batch_year }}</td>
+                    <td>{{ log.action_type|title }}</td>
+                    <td>{{ log.action_by|default:"System" }}</td>
+                    <td>{{ log.action_date }}</td>
+                    <td>{{ log.affected_students_count }}</td>
+                    <td>{{ log.remarks|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6">No lifecycle actions logged yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .report-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin: 24px 0;
+    }
+    .report-stat-card, .action-log-table {
+        background: #fff;
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+    .report-stat-card span {
+        display: block;
+        color: #64748b;
+        font-size: 12px;
+    }
+    .report-stat-card strong {
+        color: #0f172a;
+        font-size: 22px;
+    }
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .data-table th, .data-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: left;
+    }
+</style>
+{% endblock %}

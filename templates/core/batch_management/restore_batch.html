@@ -1,0 +1,23 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Restore Batch{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">RB</div>
+            <div>
+                <h1 class="page-title">Restore Batch</h1>
+                <p class="page-subtitle">Reactivate a previously ended batch and return students to daily attendance eligibility.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% include 'core/batch_management/_batch_cards.html' with reset_url='/batch/restore/' card_actions='core/batch_management/restore_actions.html' %}
+</div>
+{% endblock %}

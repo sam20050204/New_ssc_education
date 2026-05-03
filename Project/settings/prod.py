@@ -100,12 +100,16 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
 }
 
 # ==================== SENTRY - Error Tracking ====================
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+except ImportError:
+    sentry_sdk = None
 
-sentry_sdk.init(
-    dsn=config('SENTRY_DSN', default=''),
-    integrations=[DjangoIntegration()],
-    traces_sample_rate=0.1,
-    send_default_pii=False
-)
+if sentry_sdk and config('SENTRY_DSN', default=''):
+    sentry_sdk.init(
+        dsn=config('SENTRY_DSN', default=''),
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=0.1,
+        send_default_pii=False
+    )

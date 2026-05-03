@@ -31,6 +31,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from .models import FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem, Attendance, Batch
 from .forms import EnquiryForm, AdmittedStudentForm, FeePaymentForm, CourseForm
 from .utils import number_to_words, is_valid_mobile, is_valid_pincode, get_cached_courses, calculate_total_profit
+from .constants import TIME_SLOT_CHOICES, TIME_SLOT_DISPLAY_MAP, TIME_SLOT_VALUES
 import logging
 
 logger = logging.getLogger(__name__)
@@ -176,12 +177,20 @@ def dashboard(request):
         enquiries = enquiries.filter(created_at__year=selected_year)
     enquiry_count = enquiries.count()
     
-    mscit_count = students.filter(course='MS-CIT').count()
-    klic_count = students.exclude(course='MS-CIT').count()
+    def get_display_course_name(student):
+        return (student.custom_course if student.course == 'Other' and student.custom_course else student.course or '').strip()
+
+    display_courses = [get_display_course_name(student) for student in students]
+    mscit_count = sum(1 for course_name in display_courses if course_name.lower() == 'ms-cit')
+    practice_count = sum(1 for course_name in display_courses if course_name.lower() == 'practice')
+    klic_count = sum(
+        1 for course_name in display_courses
+        if course_name and course_name.lower() not in {'ms-cit', 'practice'}
+    )
     
     course_distribution = {}
     for student in students:
-        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+        course_name = get_display_course_name(student)
         course_distribution[course_name] = course_distribution.get(course_name, 0) + 1
     
     # Prepare data for clustered bar chart: admissions by course for each month (based on admission_date)
@@ -195,7 +204,7 @@ def dashboard(request):
     # Get unique courses
     unique_courses = set()
     for student in year_students:
-        course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+        course_name = get_display_course_name(student)
         unique_courses.add(course_name)
     unique_courses = sorted(list(unique_courses))
     
@@ -207,7 +216,7 @@ def dashboard(request):
     # Populate with actual data using admission_date month
     for student in year_students:
         if student.admission_date:
-            course_name = student.custom_course if student.course == 'Other' and student.custom_course else student.course
+            course_name = get_display_course_name(student)
             # Get month from admission_date, not entry date
             month = str(student.admission_date.month)
             if course_name in monthly_by_course:
@@ -219,6 +228,7 @@ def dashboard(request):
     context = {
         "enquiry_count": enquiry_count,
         "mscit_count": mscit_count,
+        "practice_count": practice_count,
         "klic_count": klic_count,
         "available_years": available_years,
         "selected_year": selected_year,
@@ -1075,7 +1085,9 @@ def admitted_students(request):
         'available_batch_months': available_batch_months,  # NEW
         'available_batch_years': available_batch_years,    # NEW
         'active_page': 'admitted_students',
-        'all_courses': all_courses
+        'all_courses': all_courses,
+        'time_slots': TIME_SLOT_CHOICES,
+        'time_slot_display_map': TIME_SLOT_DISPLAY_MAP,
     })
 
 
@@ -1122,6 +1134,11 @@ def student_detail_admitted(request, student_id):
             'batch_month': student.batch_month or '',
             'batch_year': student.batch_year or '',
             'batch_display': student.batch_display or 'Not Assigned',
+            'batch_status': student.batch_status,
+            'batch_end_date': student.batch_end_date.strftime('%Y-%m-%d') if student.batch_end_date else '',
+            'batch_restored_date': student.batch_restored_date.strftime('%Y-%m-%d') if student.batch_restored_date else '',
+            'theory_batch_time': student.theory_batch_time or '',
+            'practical_batch_time': student.practical_batch_time or '',
             'address': student.address,
             'city': student.city,
             'tehsil_block': student.tehsil_block,
@@ -1460,7 +1477,7 @@ def submit_fee_payment(request):
                     'receipt_no': payment.receipt_no,
                     'date': payment_date_formatted,
                     'time': '',  # No time for DateField
-                    'student_name': student.full_name,
+                    'student_name': student.formatted_full_name,
                     'course': course_name,
                     'batch': batch_display,  # ✅ CORRECTED: Use batch_display
                     'mobile': student.mobile_own,
@@ -3186,30 +3203,8 @@ def student_timetable(request):
     all_available_slots = set(list(available_theory_batches) + list(available_practical_batches))
     total_available_slots = len(all_available_slots)
     
-    # Map time slots to display format
-    time_slot_display_map = {
-        '08:00-09:00': '8:00 AM - 9:00 AM',
-        '09:00-10:00': '9:00 AM - 10:00 AM',
-        '10:00-11:00': '10:00 AM - 11:00 AM',
-        '11:00-12:00': '11:00 AM - 12:00 PM',
-        '12:00-13:00': '12:00 PM - 1:00 PM',
-        '15:00-16:00': '3:00 PM - 4:00 PM',
-        '16:00-17:00': '4:00 PM - 5:00 PM',
-        '17:00-18:00': '5:00 PM - 6:00 PM',
-        '18:00-19:00': '6:00 PM - 7:00 PM',
-    }
-    
-    time_slots = [
-        ('08:00-09:00', '8:00 AM - 9:00 AM'),
-        ('09:00-10:00', '9:00 AM - 10:00 AM'),
-        ('10:00-11:00', '10:00 AM - 11:00 AM'),
-        ('11:00-12:00', '11:00 AM - 12:00 PM'),
-        ('12:00-13:00', '12:00 PM - 1:00 PM'),
-        ('15:00-16:00', '3:00 PM - 4:00 PM'),
-        ('16:00-17:00', '4:00 PM - 5:00 PM'),
-        ('17:00-18:00', '5:00 PM - 6:00 PM'),
-        ('18:00-19:00', '6:00 PM - 7:00 PM'),
-    ]
+    time_slot_display_map = TIME_SLOT_DISPLAY_MAP
+    time_slots = TIME_SLOT_CHOICES
     
     context = {
         'page_obj': page_obj,
@@ -3260,17 +3255,7 @@ def edit_student_batch(request, student_id):
     theory_batches = Batch.objects.filter(batch_type='Theory', course__isnull=True).values_list('time_slot', flat=True)
     practical_batches = Batch.objects.filter(batch_type='Practical', course__isnull=True).values_list('time_slot', flat=True)
     
-    time_slots = [
-        ('08:00-09:00', '8:00 AM - 9:00 AM'),
-        ('09:00-10:00', '9:00 AM - 10:00 AM'),
-        ('10:00-11:00', '10:00 AM - 11:00 AM'),
-        ('11:00-12:00', '11:00 AM - 12:00 PM'),
-        ('12:00-13:00', '12:00 PM - 1:00 PM'),
-        ('15:00-16:00', '3:00 PM - 4:00 PM'),
-        ('16:00-17:00', '4:00 PM - 5:00 PM'),
-        ('17:00-18:00', '5:00 PM - 6:00 PM'),
-        ('18:00-19:00', '6:00 PM - 7:00 PM'),
-    ]
+    time_slots = TIME_SLOT_CHOICES
     
     # Filter to only show existing batches
     available_theory_slots = [(slot, display) for slot, display in time_slots if slot in theory_batches]
@@ -3290,17 +3275,7 @@ def edit_student_batch(request, student_id):
 @staff_member_required
 def batch_overview_dashboard(request):
     """Dashboard showing batch-wise student distribution"""
-    time_slots = [
-        ('08:00-09:00', '8:00 AM - 9:00 AM'),
-        ('09:00-10:00', '9:00 AM - 10:00 AM'),
-        ('10:00-11:00', '10:00 AM - 11:00 AM'),
-        ('11:00-12:00', '11:00 AM - 12:00 PM'),
-        ('12:00-13:00', '12:00 PM - 1:00 PM'),
-        ('15:00-16:00', '3:00 PM - 4:00 PM'),
-        ('16:00-17:00', '4:00 PM - 5:00 PM'),
-        ('17:00-18:00', '5:00 PM - 6:00 PM'),
-        ('18:00-19:00', '6:00 PM - 7:00 PM'),
-    ]
+    time_slots = TIME_SLOT_CHOICES
     
     # Get only existing theory batches from database
     theory_batches = []
@@ -3375,18 +3350,7 @@ def mark_attendance_page(request):
         course__isnull=True
     ).values_list('time_slot', flat=True).distinct()
     
-    # Map time slots to display format
-    time_slot_display_map = {
-        '08:00-09:00': '8:00 AM - 9:00 AM',
-        '09:00-10:00': '9:00 AM - 10:00 AM',
-        '10:00-11:00': '10:00 AM - 11:00 AM',
-        '11:00-12:00': '11:00 AM - 12:00 PM',
-        '12:00-13:00': '12:00 PM - 1:00 PM',
-        '15:00-16:00': '3:00 PM - 4:00 PM',
-        '16:00-17:00': '4:00 PM - 5:00 PM',
-        '17:00-18:00': '5:00 PM - 6:00 PM',
-        '18:00-19:00': '6:00 PM - 7:00 PM',
-    }
+    time_slot_display_map = TIME_SLOT_DISPLAY_MAP
     
     # Create filtered time slots for display
     theory_slots = [(slot, time_slot_display_map.get(slot, slot)) for slot in theory_batches]
@@ -3459,18 +3423,7 @@ def save_attendance(request, date, batch_time, batch_type):
         messages.success(request, f"✅ Attendance saved for {batch_type.capitalize()} batch on {attendance_date}")
         return redirect('attendance_reports')
     
-    # Display form to mark attendance
-    time_slot_display_map = {
-        '08:00-09:00': '8:00 AM - 9:00 AM',
-        '09:00-10:00': '9:00 AM - 10:00 AM',
-        '10:00-11:00': '10:00 AM - 11:00 AM',
-        '11:00-12:00': '11:00 AM - 12:00 PM',
-        '12:00-13:00': '12:00 PM - 1:00 PM',
-        '15:00-16:00': '3:00 PM - 4:00 PM',
-        '16:00-17:00': '4:00 PM - 5:00 PM',
-        '17:00-18:00': '5:00 PM - 6:00 PM',
-        '18:00-19:00': '6:00 PM - 7:00 PM',
-    }
+    time_slot_display_map = TIME_SLOT_DISPLAY_MAP
     
     # Get time slot display
     time_slot_display = time_slot_display_map.get(batch_time, batch_time)
@@ -3615,17 +3568,7 @@ def attendance_reports(request):
         else:
             report_date = date_class.today()
         
-        time_slot_display_map = {
-            '08:00-09:00': '8:00 AM - 9:00 AM',
-            '09:00-10:00': '9:00 AM - 10:00 AM',
-            '10:00-11:00': '10:00 AM - 11:00 AM',
-            '11:00-12:00': '11:00 AM - 12:00 PM',
-            '12:00-13:00': '12:00 PM - 1:00 PM',
-            '15:00-16:00': '3:00 PM - 4:00 PM',
-            '16:00-17:00': '4:00 PM - 5:00 PM',
-            '17:00-18:00': '5:00 PM - 6:00 PM',
-            '18:00-19:00': '6:00 PM - 7:00 PM',
-        }
+        time_slot_display_map = TIME_SLOT_DISPLAY_MAP
         
         # Get all existing theory and practical batch time slots
         theory_slots = Batch.objects.filter(
@@ -3739,33 +3682,13 @@ def export_timetable_excel(request):
     
     # Add data
     for student in students:
-        theory_display = next(
-            (display for slot, display in [
-                ('08:00-09:00', '8:00 AM - 9:00 AM'),
-                ('09:00-10:00', '9:00 AM - 10:00 AM'),
-                ('10:00-11:00', '10:00 AM - 11:00 AM'),
-                ('11:00-12:00', '11:00 AM - 12:00 PM'),
-                ('12:00-13:00', '12:00 PM - 1:00 PM'),
-                ('15:00-16:00', '3:00 PM - 4:00 PM'),
-                ('16:00-17:00', '4:00 PM - 5:00 PM'),
-                ('17:00-18:00', '5:00 PM - 6:00 PM'),
-                ('18:00-19:00', '6:00 PM - 7:00 PM'),
-            ] if slot == student.theory_batch_time),
+        theory_display = TIME_SLOT_DISPLAY_MAP.get(
+            student.theory_batch_time,
             student.theory_batch_time or 'Not Assigned'
         )
         
-        practical_display = next(
-            (display for slot, display in [
-                ('08:00-09:00', '8:00 AM - 9:00 AM'),
-                ('09:00-10:00', '9:00 AM - 10:00 AM'),
-                ('10:00-11:00', '10:00 AM - 11:00 AM'),
-                ('11:00-12:00', '11:00 AM - 12:00 PM'),
-                ('12:00-13:00', '12:00 PM - 1:00 PM'),
-                ('15:00-16:00', '3:00 PM - 4:00 PM'),
-                ('16:00-17:00', '4:00 PM - 5:00 PM'),
-                ('17:00-18:00', '5:00 PM - 6:00 PM'),
-                ('18:00-19:00', '6:00 PM - 7:00 PM'),
-            ] if slot == student.practical_batch_time),
+        practical_display = TIME_SLOT_DISPLAY_MAP.get(
+            student.practical_batch_time,
             student.practical_batch_time or 'Not Assigned'
         )
         
@@ -3806,7 +3729,7 @@ def export_attendance_report_excel(request):
         ws.title = "Student Attendance"
         
         # Headers
-        headers = ['Student Name', 'Course', 'Total Days', 'Present Days', 'Absent Days', 'Attendance %']
+        headers = ['Student Name', 'Mobile No', 'Course', 'Total Days', 'Present Days', 'Absent Days', 'Attendance %']
         ws.append(headers)
         
         # Style header
@@ -3833,6 +3756,7 @@ def export_attendance_report_excel(request):
             
             ws.append([
                 student.full_name,
+                student.mobile_own or '',
                 student.course or 'N/A',
                 total_records,
                 present_count,
@@ -3842,11 +3766,12 @@ def export_attendance_report_excel(request):
         
         # Adjust column widths
         ws.column_dimensions['A'].width = 25
-        ws.column_dimensions['B'].width = 18
-        ws.column_dimensions['C'].width = 15
+        ws.column_dimensions['B'].width = 16
+        ws.column_dimensions['C'].width = 18
         ws.column_dimensions['D'].width = 15
         ws.column_dimensions['E'].width = 15
         ws.column_dimensions['F'].width = 15
+        ws.column_dimensions['G'].width = 15
     
     # Return as attachment
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -3883,10 +3808,7 @@ def create_batch(request):
             }, status=400)
         
         # Validate time slot
-        valid_slots = [
-            '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
-            '12:00-13:00', '15:00-16:00', '16:00-17:00', '17:00-18:00', '18:00-19:00'
-        ]
+        valid_slots = TIME_SLOT_VALUES
         if time_slot not in valid_slots:
             return JsonResponse({
                 'success': False,
@@ -4010,17 +3932,7 @@ def get_batch_list(request):
     try:
         from .models import Batch
         
-        time_slots = [
-            ('08:00-09:00', '8:00 AM - 9:00 AM'),
-            ('09:00-10:00', '9:00 AM - 10:00 AM'),
-            ('10:00-11:00', '10:00 AM - 11:00 AM'),
-            ('11:00-12:00', '11:00 AM - 12:00 PM'),
-            ('12:00-13:00', '12:00 PM - 1:00 PM'),
-            ('15:00-16:00', '3:00 PM - 4:00 PM'),
-            ('16:00-17:00', '4:00 PM - 5:00 PM'),
-            ('17:00-18:00', '5:00 PM - 6:00 PM'),
-            ('18:00-19:00', '6:00 PM - 7:00 PM'),
-        ]
+        time_slots = TIME_SLOT_CHOICES
         
         # Get theory batches that actually exist in database
         theory_batches = []
@@ -4136,10 +4048,7 @@ def edit_batch(request, batch_id):
             }, status=400)
         
         # Validate time slot
-        valid_slots = [
-            '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
-            '12:00-13:00', '15:00-16:00', '16:00-17:00', '17:00-18:00', '18:00-19:00'
-        ]
+        valid_slots = TIME_SLOT_VALUES
         if new_time_slot not in valid_slots:
             return JsonResponse({
                 'success': False,

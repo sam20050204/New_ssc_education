@@ -5,171 +5,109 @@
         </button>
     </div>
 
-    <a href="{% url 'dashboard' %}"
-       class="menu-item {% if active_page == 'dashboard' %}active{% endif %}">
-        🖥️ Dashboard
+    <a href="{% url 'dashboard' %}" class="menu-item {% if active_page == 'dashboard' %}active{% endif %}">
+        Dashboard
     </a>
 
-    <a href="{% url 'statistics' %}"
-       class="menu-item {% if active_page == 'statistics' %}active{% endif %}">
-        📈 Statistics
+    <a href="{% url 'statistics' %}" class="menu-item {% if active_page == 'statistics' %}active{% endif %}">
+        Statistics
     </a>
 
-    <a href="{% url 'enquiry_list' %}"
-       class="menu-item {% if active_page == 'enquiries' %}active{% endif %}">
-        🔍 Enquiries
+    <a href="{% url 'enquiry_list' %}" class="menu-item {% if active_page == 'enquiries' %}active{% endif %}">
+        Enquiries
     </a>
 
-    <!-- Students Section with Submenu -->
     <div class="menu-section">
-        <button class="menu-item menu-toggle" onclick="toggleStudentsMenu(this)">
-            👨‍🎓 Students
+        <button class="menu-item menu-toggle" onclick="toggleMenu(this, 'menu-students-open')">
+            Students
             <span class="toggle-icon">▶</span>
         </button>
         <div class="submenu">
-            <a href="{% url 'new_admission' %}"
-               class="submenu-item {% if active_page == 'new_admission' %}active{% endif %}">
-                ➕ New Admission
-            </a>
-            <a href="{% url 'admitted_students' %}"
-               class="submenu-item {% if active_page == 'admitted_students' %}active{% endif %}">
-                👥 All Students
-            </a>
-            <a href="{% url 'fees_payment' %}"
-               class="submenu-item {% if active_page == 'fees_payment' %}active{% endif %}">
-                💳 Fees Payment
-            </a>
-            <a href="{% url 'receipts_view' %}"
-               class="submenu-item {% if active_page == 'receipts' %}active{% endif %}">
-                📄 Receipts
-            </a>
-            <a href="{% url 'payment_tracking' %}"
-               class="submenu-item {% if active_page == 'payment_tracking' %}active{% endif %}">
-                💰 Payment Tracking
-            </a>
+            <a href="{% url 'new_admission' %}" class="submenu-item {% if active_page == 'new_admission' %}active{% endif %}">New Admission</a>
+            <a href="{% url 'admitted_students' %}" class="submenu-item {% if active_page == 'admitted_students' %}active{% endif %}">All Students</a>
+            <a href="{% url 'fees_payment' %}" class="submenu-item {% if active_page == 'fees_payment' %}active{% endif %}">Fees Payment</a>
+            <a href="{% url 'receipts_view' %}" class="submenu-item {% if active_page == 'receipts' %}active{% endif %}">Receipts</a>
+            <a href="{% url 'payment_tracking' %}" class="submenu-item {% if active_page == 'payment_tracking' %}active{% endif %}">Payment Tracking</a>
         </div>
     </div>
 
-    <!-- Attendance Section with Submenu -->
     <div class="menu-section">
-        <button class="menu-item menu-toggle" onclick="toggleAttendanceMenu(this)">
-            📋 Attendance
+        <button class="menu-item menu-toggle" onclick="toggleMenu(this, 'menu-attendance-open')">
+            Attendance
             <span class="toggle-icon">▶</span>
         </button>
         <div class="submenu">
-            <a href="{% url 'student_timetable' %}"
-               class="submenu-item {% if active_page == 'student_timetable' %}active{% endif %}">
-                📚 Student Timetable
-            </a>
-            <a href="{% url 'batch_overview' %}"
-               class="submenu-item {% if active_page == 'batch_overview' %}active{% endif %}">
-                📊 Batch Overview
-            </a>
-            <a href="{% url 'mark_attendance' %}"
-               class="submenu-item {% if active_page == 'mark_attendance' %}active{% endif %}">
-                ✏️ Mark Attendance
-            </a>
-            <a href="{% url 'attendance_reports' %}"
-               class="submenu-item {% if active_page == 'attendance_reports' %}active{% endif %}">
-                📈 Attendance Reports
-            </a>
+            <a href="{% url 'student_timetable' %}" class="submenu-item {% if active_page == 'student_timetable' %}active{% endif %}">Student Timetable</a>
+            <a href="{% url 'batch_overview' %}" class="submenu-item {% if active_page == 'batch_overview' %}active{% endif %}">Batch Overview</a>
+            <a href="{% url 'mark_attendance' %}" class="submenu-item {% if active_page == 'mark_attendance' %}active{% endif %}">Mark Attendance</a>
+            <a href="{% url 'attendance_reports' %}" class="submenu-item {% if active_page == 'attendance_reports' %}active{% endif %}">Attendance Reports</a>
         </div>
     </div>
 
-    <!-- Database Backup Management -->
-    <a href="{% url 'backup_page' %}"
-       class="menu-item {% if active_page == 'backup' %}active{% endif %}">
-        💾 Backup
+    <div class="menu-section">
+        <button class="menu-item menu-toggle" onclick="toggleMenu(this, 'menu-batch-open')">
+            Batch Management
+            <span class="toggle-icon">▶</span>
+        </button>
+        <div class="submenu">
+            <a href="{% url 'active_batches' %}" class="submenu-item {% if active_page == 'active_batches' %}active{% endif %}">Active Batches</a>
+            <a href="{% url 'end_batch' %}" class="submenu-item {% if active_page == 'end_batch' %}active{% endif %}">End Batch</a>
+            <a href="{% url 'ended_batches' %}" class="submenu-item {% if active_page == 'ended_batches' %}active{% endif %}">Ended Batches</a>
+            <a href="{% url 'restore_batch' %}" class="submenu-item {% if active_page == 'restore_batch' %}active{% endif %}">Restore Batch</a>
+            <a href="{% url 'batch_reports' %}" class="submenu-item {% if active_page == 'batch_reports' %}active{% endif %}">Batch Reports</a>
+        </div>
+    </div>
+
+    <a href="{% url 'backup_page' %}" class="menu-item {% if active_page == 'backup' %}active{% endif %}">
+        Backup
     </a>
 
-    <!-- Logout as a form to handle POST request properly -->
     <form method="post" action="{% url 'logout' %}" style="margin: 0;">
         {% csrf_token %}
         <button type="submit" class="menu-item logout-item">
-            🚪 Logout
+            Logout
         </button>
     </form>
 </nav>
 
 <script>
-function toggleStudentsMenu(button) {
+function toggleMenu(button, storageKey) {
     const submenu = button.nextElementSibling;
     const icon = button.querySelector('.toggle-icon');
-    
     submenu.classList.toggle('active');
     icon.classList.toggle('rotated');
-    
-    // Save menu state to localStorage
-    const isOpen = submenu.classList.contains('active');
-    localStorage.setItem('menu-students-open', isOpen);
+    localStorage.setItem(storageKey, submenu.classList.contains('active'));
 }
 
-function toggleAttendanceMenu(button) {
-    const submenu = button.nextElementSibling;
-    const icon = button.querySelector('.toggle-icon');
-    
-    submenu.classList.toggle('active');
-    icon.classList.toggle('rotated');
-    
-    // Save menu state to localStorage
-    const isOpen = submenu.classList.contains('active');
-    localStorage.setItem('menu-attendance-open', isOpen);
-}
-
-// On page load, restore menu states based on localStorage only
 document.addEventListener('DOMContentLoaded', function() {
-    // Get all menu sections
-    const menuSections = document.querySelectorAll('.menu-section');
-    
-    menuSections.forEach(section => {
+    const menuKeys = {
+        'Students': 'menu-students-open',
+        'Attendance': 'menu-attendance-open',
+        'Batch Management': 'menu-batch-open'
+    };
+
+    document.querySelectorAll('.menu-section').forEach(section => {
         const button = section.querySelector('.menu-toggle');
         const submenu = section.querySelector('.submenu');
         const icon = button.querySelector('.toggle-icon');
-        const buttonText = button.textContent.trim();
-        
-        let menuKey = '';
-        if (buttonText.includes('Students')) {
-            menuKey = 'menu-students-open';
-        } else if (buttonText.includes('Attendance')) {
-            menuKey = 'menu-attendance-open';
-        }
-        
-        if (!menuKey) return;
-        
-        // Only open if it was explicitly opened and saved in localStorage
-        const shouldBeOpen = localStorage.getItem(menuKey) === 'true';
-        
-        // Apply the state
-        if (shouldBeOpen) {
-            submenu.classList.add('active');
-            icon.classList.add('rotated');
-        } else {
-            submenu.classList.remove('active');
-            icon.classList.remove('rotated');
-            localStorage.setItem(menuKey, 'false');
-        }
-    });
-});
+        const text = button.textContent.trim();
 
-// Before page unload, save the current menu states
-window.addEventListener('beforeunload', function() {
-    const menuSections = document.querySelectorAll('.menu-section');
-    
-    menuSections.forEach(section => {
-        const button = section.querySelector('.menu-toggle');
-        const submenu = section.querySelector('.submenu');
-        const buttonText = button.textContent.trim();
-        
-        let menuKey = '';
-        if (buttonText.includes('Students')) {
-            menuKey = 'menu-students-open';
-        } else if (buttonText.includes('Attendance')) {
-            menuKey = 'menu-attendance-open';
+        let storageKey = '';
+        Object.keys(menuKeys).forEach(label => {
+            if (text.includes(label)) {
+                storageKey = menuKeys[label];
+            }
+        });
+
+        if (!storageKey) {
+            return;
         }
-        
-        if (menuKey) {
-            const isOpen = submenu.classList.contains('active');
-            localStorage.setItem(menuKey, isOpen);
+
+        const shouldBeOpen = localStorage.getItem(storageKey) === 'true';
+        submenu.classList.toggle('active', shouldBeOpen);
+        icon.classList.toggle('rotated', shouldBeOpen);
+        if (!shouldBeOpen) {
+            localStorage.setItem(storageKey, 'false');
         }
     });
 });

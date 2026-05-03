@@ -1,0 +1,23 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Ended Batches{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">HB</div>
+            <div>
+                <h1 class="page-title">Ended Batches</h1>
+                <p class="page-subtitle">Review completed, archived, and cancelled batches with restore visibility.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% include 'core/batch_management/_batch_cards.html' with reset_url='/batch/ended/' %}
+</div>
+{% endblock %}

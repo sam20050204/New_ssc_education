@@ -203,6 +203,8 @@ function openStudentModal(studentId) {
         // Batch info
         document.getElementById('batchMonth').value = data.batch_month || '';
         document.getElementById('batchYear').value = data.batch_year || '';
+        document.getElementById('theoryBatchTime').value = data.theory_batch_time || '';
+        document.getElementById('practicalBatchTime').value = data.practical_batch_time || '';
         document.getElementById('currentBatchDisplay').textContent = data.batch_display || 'Not Assigned';
         
         // Populate batch years

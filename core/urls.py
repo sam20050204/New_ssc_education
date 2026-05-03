@@ -1,5 +1,10 @@
 from django.urls import path
 from . import views
+from admissions import views as admission_views
+from attendance import views as attendance_views
+from batch_management import views as batch_views
+from finance import views as finance_views
+from reports import views as report_views
 
 urlpatterns = [
     # Home & Auth
@@ -17,7 +22,7 @@ urlpatterns = [
     path('enquiry/export/', views.export_enquiries, name='export_enquiries'),
     
     # Admission URLs
-    path('admission/', views.new_admission, name='new_admission'),
+    path('admission/', admission_views.new_admission, name='new_admission'),
     path('admission/import/', views.import_admissions_excel, name='import_admissions_excel'),
     path('admission/import-photos/', views.import_student_photos_zip, name='import_photos'),
     path('admission/list/', views.admitted_students, name='admitted_students'),
@@ -27,9 +32,9 @@ urlpatterns = [
     path('admission/delete/', views.delete_admitted_students, name='delete_admitted_students'),
     
     # Fees Payment URLs
-    path('fees/payment/', views.fees_payment, name='fees_payment'),
-    path('fees/search-students/', views.search_students_for_payment, name='search_students_for_payment'),
-    path('fees/submit-payment/', views.submit_fee_payment, name='submit_fee_payment'),
+    path('fees/payment/', finance_views.fees_payment, name='fees_payment'),
+    path('fees/search-students/', finance_views.search_students_for_payment, name='search_students_for_payment'),
+    path('fees/submit-payment/', finance_views.submit_fee_payment, name='submit_fee_payment'),
     
     # Receipts URLs
     path('receipts/', views.receipts_view, name='receipts_view'),
@@ -69,9 +74,17 @@ urlpatterns = [
     # Timetable & Attendance Management URLs
     path('timetable/', views.student_timetable, name='student_timetable'),
     path('timetable/<int:student_id>/edit/', views.edit_student_batch, name='edit_student_batch'),
-    path('batch/overview/', views.batch_overview_dashboard, name='batch_overview'),
-    path('batch/create/', views.create_batch, name='create_batch'),
-    path('batch/<int:batch_id>/delete/', views.delete_batch, name='delete_batch'),
+    path('batch/overview/', batch_views.batch_overview_dashboard, name='batch_overview'),
+    path('batch/active/', batch_views.active_batches, name='active_batches'),
+    path('batch/end/', batch_views.end_batch, name='end_batch'),
+    path('batch/end/confirm/', batch_views.end_batch_confirm, name='end_batch_confirm'),
+    path('batch/ended/', batch_views.ended_batches, name='ended_batches'),
+    path('batch/restore/', batch_views.restore_batch, name='restore_batch'),
+    path('batch/restore/confirm/', batch_views.restore_batch_confirm, name='restore_batch_confirm'),
+    path('batch/reports/', batch_views.batch_reports, name='batch_reports'),
+    path('batch/reports/export/', batch_views.export_batch_reports, name='export_batch_reports'),
+    path('batch/create/', batch_views.create_batch_view, name='create_batch'),
+    path('batch/<int:batch_id>/delete/', batch_views.delete_batch, name='delete_batch'),
     path('batch/<int:batch_id>/edit/', views.edit_batch, name='edit_batch'),
     path('batch/list/', views.get_batch_list, name='get_batch_list'),
     path('batch/get-id/', views.get_batch_id, name='get_batch_id'),
@@ -80,9 +93,10 @@ urlpatterns = [
     path('batch/update-capacity/', views.update_batch_capacity, name='update_batch_capacity'),
     path('admission/all/', views.get_all_students, name='get_all_students'),
     path('admission/<int:student_id>/batch-detail/', views.get_student_detail_batch, name='get_student_detail_batch'),
-    path('attendance/mark/', views.mark_attendance_page, name='mark_attendance'),
-    path('attendance/save/<str:date>/<str:batch_time>/<str:batch_type>/', views.save_attendance, name='save_attendance'),
-    path('attendance/reports/', views.attendance_reports, name='attendance_reports'),
+    path('attendance/mark/', attendance_views.mark_attendance_page, name='mark_attendance'),
+    path('attendance/save/<str:date>/<str:batch_time>/<str:batch_type>/', attendance_views.save_attendance, name='save_attendance'),
+    path('attendance/reports/', attendance_views.attendance_reports, name='attendance_reports'),
     path('export/timetable/', views.export_timetable_excel, name='export_timetable'),
     path('export/attendance/', views.export_attendance_report_excel, name='export_attendance_report'),
+    path('health/', report_views.healthcheck, name='healthcheck'),
 ]

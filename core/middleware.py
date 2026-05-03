@@ -1,5 +1,7 @@
 import logging
 import time
+from django.conf import settings
+from django.contrib.auth import logout
 from django.utils.deprecation import MiddlewareMixin
 from datetime import datetime, timedelta
 
@@ -114,3 +116,26 @@ class NoCacheMiddleware(MiddlewareMixin):
                 break
         
         return response
+
+
+class SessionTimeoutMiddleware(MiddlewareMixin):
+    """Expire idle authenticated sessions."""
+
+    def process_request(self, request):
+        if not getattr(request, "user", None) or not request.user.is_authenticated:
+            return None
+
+        if request.path.startswith("/static/") or request.path.startswith("/media/"):
+            return None
+
+        timeout_seconds = getattr(settings, "SESSION_IDLE_TIMEOUT", 1800)
+        now = int(time.time())
+        last_activity = request.session.get("last_activity")
+
+        if last_activity and now - last_activity > timeout_seconds:
+            logout(request)
+            request.session.flush()
+            return None
+
+        request.session["last_activity"] = now
+        return None

@@ -1,0 +1,7 @@
+<form method="post" action="{% url 'restore_batch_confirm' %}" onsubmit="return confirm('Restore this batch to active status?');">
+    {% csrf_token %}
+    <input type="hidden" name="batch_month" value="{{ batch.batch_month }}">
+    <input type="hidden" name="batch_year" value="{{ batch.batch_year }}">
+    <input type="text" name="remarks" class="filter-input" placeholder="Restore remarks">
+    <button type="submit" class="btn btn-primary">Restore Batch</button>
+</form>

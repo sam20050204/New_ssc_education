@@ -1,0 +1,23 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Active Batches{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">AB</div>
+            <div>
+                <h1 class="page-title">Active Batches</h1>
+                <p class="page-subtitle">Track current operational batches, pending fees, and course mix.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% include 'core/batch_management/_batch_cards.html' with reset_url='/batch/active/' %}
+</div>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends 'base/base.html' %}
+
+{% block title %}End Batch{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon">EB</div>
+            <div>
+                <h1 class="page-title">End Batch</h1>
+                <p class="page-subtitle">Safely complete a batch without deleting admissions, fees, or attendance history.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="lifecycle-panel">
+        <form method="get" class="selection-form">
+            <select name="batch_month" required class="filter-select">
+                <option value="">Select Month</option>
+                {% for month in filter_months %}
+                    <option value="{{ month }}" {% if selected_month == month %}selected{% endif %}>{{ month }}</option>
+                {% endfor %}
+            </select>
+            <select name="batch_year" required class="filter-select">
+                <option value="">Select Year</option>
+                {% for year in filter_years %}
+                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">Load Summary</button>
+        </form>
+
+        {% if preview %}
+        <div class="preview-card">
+            <h3>{{ preview.batch_month }} {{ preview.batch_year }}</h3>
+            <div class="preview-grid">
+                <div><span>Total Students</span><strong>{{ preview.student_count }}</strong></div>
+                <div><span>Active Students</span><strong>{{ preview.active_count }}</strong></div>
+                <div><span>Pending Fees</span><strong>Rs. {{ preview.pending_fees }}</strong></div>
+                <div><span>Attendance Taken</span><strong>{{ preview.attendance_marked_students }}</strong></div>
+                <div><span>First Admission</span><strong>{{ preview.first_admission_date|default:"-" }}</strong></div>
+                <div><span>Last Admission</span><strong>{{ preview.last_admission_date|default:"-" }}</strong></div>
+            </div>
+            <p class="warning-line">
+                {% if preview.pending_fees > 0 %}
+                    Warning: pending fees exist for this batch. Admin override is required to proceed.
+                {% else %}
+                    No pending fee blocker detected.
+                {% endif %}
+            </p>
+            <form method="post" action="{% url 'end_batch_confirm' %}" onsubmit="return confirm('Are you sure you want to end this batch?');">
+                {% csrf_token %}
+                <input type="hidden" name="batch_month" value="{{ preview.batch_month }}">
+                <input type="hidden" name="batch_year" value="{{ preview.batch_year }}">
+                <textarea name="remarks" rows="3" class="filter-input full-width" placeholder="Remarks for audit log"></textarea>
+                <label class="checkbox-line">
+                    <input type="checkbox" name="admin_override">
+                    Allow admin override when warnings exist
+                </label>
+                <button type="submit" class="btn btn-danger">End Batch</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .lifecycle-panel, .preview-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+    .selection-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin: 16px 0;
+    }
+    .preview-grid div {
+        background: #eff6ff;
+        padding: 14px;
+        border-radius: 14px;
+    }
+    .preview-grid span {
+        display: block;
+        color: #64748b;
+        font-size: 12px;
+    }
+    .preview-grid strong {
+        color: #0f172a;
+    }
+    .warning-line {
+        margin: 0 0 16px 0;
+        color: #9a3412;
+        font-weight: 600;
+    }
+    .full-width {
+        width: 100%;
+        margin-bottom: 12px;
+    }
+    .checkbox-line {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+    .btn-danger {
+        background: #dc2626;
+        color: #fff;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}

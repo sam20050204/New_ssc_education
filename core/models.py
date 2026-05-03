@@ -1,13 +1,16 @@
 from django.db import models, transaction
 from django.core.validators import MinValueValidator
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from decimal import Decimal
 from datetime import date
+from django.utils import timezone
 from core.validators import validate_image_file
 from core.constants import (
     COURSE_CHOICES, GENDER_CHOICES, MARITAL_STATUS_CHOICES,
     TIME_SLOT_CHOICES, PAYMENT_MODE_CHOICES, ATTENDANCE_STATUS_CHOICES,
-    BATCH_TYPE_CHOICES, DEFAULT_TOTAL_FEES
+    BATCH_TYPE_CHOICES, DEFAULT_TOTAL_FEES, BATCH_STATUS_CHOICES, BATCH_ACTION_CHOICES
 )
 
 class Enquiry(models.Model):
@@ -24,6 +27,9 @@ class Enquiry(models.Model):
     district = models.CharField(max_length=100, blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_archived = models.BooleanField(default=False, db_index=True)
+    archived_at = models.DateTimeField(blank=True, null=True)
     
     class Meta:
         ordering = ['-created_at']
@@ -88,6 +94,23 @@ class AdmittedStudent(models.Model):
         null=True,
         help_text="Year of batch (e.g., 2024, 2025)"
     )
+    batch_status = models.CharField(max_length=20, choices=BATCH_STATUS_CHOICES, default='active', db_index=True)
+    batch_end_date = models.DateField(null=True, blank=True)
+    batch_ended_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='ended_batches'
+    )
+    batch_restored_date = models.DateField(null=True, blank=True)
+    batch_restored_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='restored_batches'
+    )
     
     # Timetable & Attendance Management Fields
     theory_batch_time = models.CharField(
@@ -134,7 +157,11 @@ class AdmittedStudent(models.Model):
     )
     
     admission_date = models.DateField(default=date.today, help_text="Date of admission")
+    student_id = models.CharField(max_length=20, unique=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_archived = models.BooleanField(default=False, db_index=True)
+    archived_at = models.DateTimeField(blank=True, null=True)
 
     @property
     def formatted_full_name(self):
@@ -143,7 +170,31 @@ class AdmittedStudent(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_name = self.formatted_full_name
+        if not self.student_id:
+            self.student_id = self.generate_student_id()
         super().save(*args, **kwargs)
+
+    def generate_student_id(self):
+        admission_year = (self.admission_date or date.today()).year
+        prefix = f"SSC{admission_year}"
+        last_student = (
+            AdmittedStudent.objects.filter(student_id__startswith=prefix)
+            .order_by("-student_id")
+            .only("student_id")
+            .first()
+        )
+        next_number = 1
+        if last_student and last_student.student_id:
+            try:
+                next_number = int(last_student.student_id[-5:]) + 1
+            except ValueError:
+                next_number = AdmittedStudent.objects.filter(student_id__startswith=prefix).count() + 1
+        return f"{prefix}{next_number:05d}"
+
+    def archive(self):
+        self.is_archived = True
+        self.archived_at = timezone.now()
+        self.save(update_fields=["is_archived", "archived_at", "updated_at"])
     
     def __str__(self):
         return self.formatted_full_name
@@ -167,6 +218,9 @@ class AdmittedStudent(models.Model):
             models.Index(fields=['admission_date']),
             models.Index(fields=['mobile_own']),
             models.Index(fields=['-admission_date']),
+            models.Index(fields=['batch_month']),
+            models.Index(fields=['batch_status']),
+            models.Index(fields=['batch_month', 'batch_year', 'batch_status']),
         ]
 
 
@@ -563,6 +617,7 @@ class Batch(models.Model):
         default=50,
         help_text="Maximum students in this batch"
     )
+    is_archived = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -598,4 +653,75 @@ class Batch(models.Model):
             filters['course'] = self.course
         
         return AdmittedStudent.objects.filter(**filters).count()
+
+
+class AuditLog(models.Model):
+    action = models.CharField(max_length=100, db_index=True)
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+    )
+    content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
+    object_id = models.CharField(max_length=64, blank=True)
+    content_object = GenericForeignKey("content_type", "object_id")
+    target_repr = models.CharField(max_length=255, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["action", "created_at"]),
+            models.Index(fields=["content_type", "object_id"]),
+        ]
+
+    def __str__(self):
+        return f"{self.action} by {self.actor or 'system'} at {self.created_at:%Y-%m-%d %H:%M:%S}"
+
+
+class LoginAttempt(models.Model):
+    username = models.CharField(max_length=150, db_index=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    successful = models.BooleanField(default=False, db_index=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="login_attempts")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["username", "created_at"]),
+            models.Index(fields=["ip_address", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.username} - {'success' if self.successful else 'failed'}"
+
+
+class BatchActionLog(models.Model):
+    batch_month = models.CharField(max_length=20, db_index=True)
+    batch_year = models.CharField(max_length=4, db_index=True)
+    action_type = models.CharField(max_length=20, choices=BATCH_ACTION_CHOICES, db_index=True)
+    action_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='batch_action_logs'
+    )
+    action_date = models.DateTimeField(auto_now_add=True, db_index=True)
+    affected_students_count = models.PositiveIntegerField(default=0)
+    remarks = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-action_date']
+        indexes = [
+            models.Index(fields=['batch_month', 'batch_year', 'action_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.batch_month} {self.batch_year} - {self.action_type}"
 

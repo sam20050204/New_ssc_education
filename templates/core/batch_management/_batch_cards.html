@@ -1,0 +1,176 @@
+<div class="batch-toolbar">
+    <form method="get" class="batch-filter-form">
+        <input type="text" name="search" value="{{ filters.search }}" placeholder="Search batch or course..." class="filter-input">
+        <select name="month" class="filter-select">
+            <option value="">All Months</option>
+            {% for month in filter_months %}
+                <option value="{{ month }}" {% if filters.month == month %}selected{% endif %}>{{ month }}</option>
+            {% endfor %}
+        </select>
+        <select name="year" class="filter-select">
+            <option value="">All Years</option>
+            {% for year in filter_years %}
+                <option value="{{ year }}" {% if filters.year == year %}selected{% endif %}>{{ year }}</option>
+            {% endfor %}
+        </select>
+        <select name="course" class="filter-select">
+            <option value="">All Courses</option>
+            {% for course in filter_courses %}
+                <option value="{{ course }}" {% if filters.course == course %}selected{% endif %}>{{ course }}</option>
+            {% endfor %}
+        </select>
+        {% if include_status_filter %}
+        <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            {% for key, label in status_choices %}
+                <option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <a href="{{ reset_url }}" class="btn btn-secondary">Reset</a>
+    </form>
+</div>
+
+<div class="batch-card-grid">
+    {% for batch in batch_summaries %}
+    <div class="lifecycle-card">
+        <div class="lifecycle-card-head">
+            <div>
+                <h3>{{ batch.batch_month }} {{ batch.batch_year }}</h3>
+                <p>{{ batch.course_names|default:"No course assigned" }}</p>
+            </div>
+            <span class="status-badge status-{{ batch.batch_status }}">{{ batch.batch_status|title }}</span>
+        </div>
+        <div class="lifecycle-stats">
+            <div><span>Students</span><strong>{{ batch.student_count }}</strong></div>
+            <div><span>Admissions</span><strong>{{ batch.admission_count }}</strong></div>
+            <div><span>Paid Fees</span><strong>Rs. {{ batch.paid_fees }}</strong></div>
+            <div><span>Pending Fees</span><strong>Rs. {{ batch.pending_fees }}</strong></div>
+        </div>
+        {% if batch.courses %}
+        <div class="course-pills">
+            {% for course in batch.courses %}
+                <span class="course-pill">{{ course.name }} ({{ course.count }})</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if card_actions %}
+        <div class="card-actions">
+            {% include card_actions %}
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="empty-state-card">
+        <h3>No batches found</h3>
+        <p>Adjust filters or create more admissions with batch month and year data.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+    .batch-toolbar {
+        margin-bottom: 20px;
+    }
+    .batch-filter-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        background: #fff;
+        padding: 16px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    .filter-input,
+    .filter-select {
+        min-width: 180px;
+        padding: 10px 12px;
+        border: 1px solid #dbe3ef;
+        border-radius: 10px;
+        background: #f8fafc;
+    }
+    .batch-card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 18px;
+    }
+    .lifecycle-card,
+    .empty-state-card {
+        background: linear-gradient(180deg, #ffffff, #f8fbff);
+        border: 1px solid #dbe7f3;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    }
+    .lifecycle-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+    .lifecycle-card-head h3 {
+        margin: 0 0 6px 0;
+        color: #0f172a;
+    }
+    .lifecycle-card-head p {
+        margin: 0;
+        color: #64748b;
+        font-size: 13px;
+    }
+    .lifecycle-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .lifecycle-stats div {
+        background: #eff6ff;
+        border-radius: 14px;
+        padding: 12px;
+    }
+    .lifecycle-stats span {
+        display: block;
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 4px;
+    }
+    .lifecycle-stats strong {
+        color: #0f172a;
+        font-size: 15px;
+    }
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 96px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .status-active { background: #dcfce7; color: #166534; }
+    .status-completed { background: #dbeafe; color: #1d4ed8; }
+    .status-archived { background: #e5e7eb; color: #374151; }
+    .status-cancelled { background: #fee2e2; color: #b91c1c; }
+    .course-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    .course-pill {
+        background: #f1f5f9;
+        color: #334155;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+</style>

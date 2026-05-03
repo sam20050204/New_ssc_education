@@ -172,6 +172,7 @@ class AdmittedStudentForm(forms.ModelForm):
         all_courses.append(('Other', 'Other'))
         
         self.fields['course'].choices = all_courses
+        self.fields['full_name'].required = False
     
     class Meta:
         model = AdmittedStudent

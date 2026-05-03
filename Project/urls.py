@@ -3,13 +3,14 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from core import views as core_views
+from core import security_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path('login/', core_views.custom_login, name='login'),
+    path('login/', security_views.custom_login, name='login'),
 
-    path('logout/', core_views.custom_logout, name='logout'),
+    path('logout/', security_views.custom_logout, name='logout'),
 
     path('', include('core.urls')),
 ]

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment, StudentFinanceDetail, SalesItem, Attendance, Batch
+from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment, StudentFinanceDetail, SalesItem, Attendance, Batch, AuditLog, LoginAttempt, BatchActionLog
 from .admin_customization import (
     CustomAdminSite,
     EnquiryAdmin,
@@ -90,3 +90,39 @@ class BatchAdmin(admin.ModelAdmin):
 
 admin.site.register(Attendance, AttendanceAdmin)
 admin.site.register(Batch, BatchAdmin)
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ["created_at", "action", "actor", "target_repr", "ip_address"]
+    list_filter = ["action", "created_at"]
+    search_fields = ["action", "target_repr", "actor__username", "object_id"]
+    readonly_fields = ["created_at", "action", "actor", "content_type", "object_id", "target_repr", "metadata", "ip_address"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+
+@admin.register(LoginAttempt)
+class LoginAttemptAdmin(admin.ModelAdmin):
+    list_display = ["created_at", "username", "successful", "ip_address", "user"]
+    list_filter = ["successful", "created_at"]
+    search_fields = ["username", "ip_address", "user__username"]
+    readonly_fields = ["created_at", "username", "successful", "ip_address", "user"]
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(BatchActionLog)
+class BatchActionLogAdmin(admin.ModelAdmin):
+    list_display = ["batch_month", "batch_year", "action_type", "action_by", "action_date", "affected_students_count"]
+    list_filter = ["action_type", "batch_year", "action_date"]
+    search_fields = ["batch_month", "batch_year", "remarks", "action_by__username"]
+    readonly_fields = ["batch_month", "batch_year", "action_type", "action_by", "action_date", "affected_students_count", "remarks"]
+
+    def has_add_permission(self, request):
+        return False

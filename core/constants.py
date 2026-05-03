@@ -11,6 +11,8 @@ TIME_SLOT_CHOICES = [
     ('10:00-11:00', '10:00 AM - 11:00 AM'),
     ('11:00-12:00', '11:00 AM - 12:00 PM'),
     ('12:00-13:00', '12:00 PM - 1:00 PM'),
+    ('13:00-14:00', '1:00 PM - 2:00 PM'),
+    ('14:00-15:00', '2:00 PM - 3:00 PM'),
     ('15:00-16:00', '3:00 PM - 4:00 PM'),
     ('16:00-17:00', '4:00 PM - 5:00 PM'),
     ('17:00-18:00', '5:00 PM - 6:00 PM'),
@@ -63,6 +65,20 @@ ATTENDANCE_STATUS_CHOICES = [
 BATCH_TYPE_CHOICES = [
     ('Theory', 'Theory'),
     ('Practical', 'Practical'),
+]
+
+BATCH_STATUS_CHOICES = [
+    ('active', 'Active'),
+    ('completed', 'Completed'),
+    ('archived', 'Archived'),
+    ('cancelled', 'Cancelled'),
+]
+
+BATCH_ACTION_CHOICES = [
+    ('ended', 'Ended'),
+    ('restored', 'Restored'),
+    ('cancelled', 'Cancelled'),
+    ('archived', 'Archived'),
 ]
 
 # ==================== MONTH DEFINITIONS ====================

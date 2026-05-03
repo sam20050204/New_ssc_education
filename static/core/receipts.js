@@ -1040,6 +1040,239 @@ function printReceipt() {
     printWindow.document.close();
 }
 
+function formatReceiptStudentName(receipt) {
+    return [receipt.surname, receipt.student_name, receipt.father_name]
+        .map(part => (part || '').trim())
+        .filter(Boolean)
+        .join(' ');
+}
+
+function showPrintModal(receiptId) {
+    const receipt = allReceipts.find(r => r.id === receiptId);
+    if (!receipt) {
+        showError('Receipt not found');
+        return;
+    }
+
+    const batchDisplay = receipt.batch || receipt.batch_display || 'Not Assigned';
+    const studentFullName = formatReceiptStudentName(receipt) || receipt.student_name || 'N/A';
+
+    const receiptHTML = `
+        <div class="receipt-header">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 14px;">
+                <div style="flex: 1;">
+                    <div class="institute-name" style="font-size: 28px; letter-spacing: 0.4px; margin-bottom: 6px;">Shri Samarth Computer Education, Murud</div>
+                    <div style="width: 88px; height: 3px; background: linear-gradient(90deg, #0f766e, #f97316); border-radius: 999px; margin-bottom: 10px;"></div>
+                    <div class="institute-details" style="line-height: 1.75;">
+                        Samarth Road, Behind Bus Stand, Shivaji Nagar, Murud<br>
+                        TQ. Dist. Latur - 413510<br>
+                        Contact No: 9960638066<br>
+                        <strong>MKCL Authorized Center Code: 45210017</strong>
+                    </div>
+                </div>
+                <div style="min-width: 180px; text-align: right; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px 14px; background: linear-gradient(180deg, #f8fafc 0%, #eef6ff 100%);">
+                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #475569; margin-bottom: 4px;">Receipt Date</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a;">${formatDate(receipt.payment_date)}</div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="receipt-title" style="letter-spacing: 0.8px;">FEE PAYMENT RECEIPT</h2>
+
+        <div class="receipt-info" style="grid-template-columns: 170px 1fr; gap: 12px 14px;">
+            <span class="receipt-label">Receipt No:</span>
+            <span class="receipt-value">${receipt.receipt_no}</span>
+
+            <span class="receipt-label">Student Name:</span>
+            <span class="receipt-value">${studentFullName}</span>
+
+            <span class="receipt-label">Course:</span>
+            <span class="receipt-value">${receipt.course || 'N/A'}</span>
+
+            <span class="receipt-label">Batch:</span>
+            <span class="receipt-value">${batchDisplay}</span>
+
+            <span class="receipt-label">Mobile:</span>
+            <span class="receipt-value">${receipt.mobile}</span>
+
+            <span class="receipt-label">Payment Mode:</span>
+            <span class="receipt-value">${receipt.payment_mode || 'N/A'}</span>
+        </div>
+        <hr class="receipt-divider">
+
+        <div class="amount-section">
+            <div class="amount-row">
+                <span>Total Course Fees:</span>
+                <strong>Rs. ${formatNumber(receipt.total_fees || 0)}</strong>
+            </div>
+            <div class="amount-row">
+                <span>Previously Paid:</span>
+                <strong>Rs. ${formatNumber(receipt.paid_before_this || 0)}</strong>
+            </div>
+            <div class="amount-row paid">
+                <span>Amount Paid Now:</span>
+                <strong>Rs. ${formatNumber(receipt.paid_fees)}</strong>
+            </div>
+            <div class="amount-row">
+                <span>Remaining:</span>
+                <strong>Rs. ${formatNumber(receipt.remaining_fees)}</strong>
+            </div>
+            <div class="amount-in-words">
+                <strong>In Words:</strong> ${convertToWords(parseFloat(receipt.paid_fees))}
+            </div>
+        </div>
+
+        <hr class="receipt-divider">
+
+        <div class="receipt-footer">
+            <p style="text-align: center;">Thank you for your payment!</p>
+            <p style="text-align: center;"><small>This is a computer-generated receipt</small></p>
+            <div style="text-align: right; margin-top: 46px; padding-right: 20px;">
+                <div style="border-top: 2px solid #333; width: 200px; margin-left: auto; margin-bottom: 5px;"></div>
+                <strong>Authorized Signature</strong>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('receiptContent').innerHTML = receiptHTML;
+    const modal = document.getElementById('printModal');
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function printReceipt() {
+    const receiptContent = document.getElementById('receiptContent');
+    if (!receiptContent || !receiptContent.innerHTML) {
+        alert('Receipt not found');
+        return;
+    }
+
+    const printWindow = window.open('', '', 'width=900,height=700');
+
+    if (!printWindow) {
+        alert('Please allow popups to print the receipt');
+        return;
+    }
+
+    const printHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Fee Payment Receipt - Print</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                    font-family: "Segoe UI", Arial, sans-serif;
+                    padding: 20px;
+                    background: white;
+                    color: #1e293b;
+                }
+                .receipt-container {
+                    max-width: 760px;
+                    margin: 0 auto;
+                    background: white;
+                    padding: 32px;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 18px;
+                }
+                .receipt-header {
+                    border-bottom: 3px solid #0f766e;
+                    padding-bottom: 16px;
+                    margin-bottom: 20px;
+                }
+                .institute-name {
+                    font-size: 22px;
+                    font-weight: 800;
+                    color: #0f172a;
+                }
+                .institute-details {
+                    font-size: 11px;
+                    line-height: 1.6;
+                    color: #334155;
+                }
+                .receipt-title {
+                    text-align: center;
+                    font-size: 19px;
+                    margin: 22px 0 18px;
+                    font-weight: 800;
+                    color: #0f172a;
+                }
+                .receipt-info {
+                    display: grid;
+                    grid-template-columns: 170px 1fr;
+                    gap: 10px 14px;
+                    margin: 20px 0;
+                    font-size: 13px;
+                }
+                .receipt-label {
+                    font-weight: 700;
+                    color: #475569;
+                }
+                .receipt-value {
+                    font-weight: 600;
+                    color: #0f172a;
+                }
+                .receipt-divider {
+                    border: none;
+                    border-top: 1px dashed #94a3b8;
+                    margin: 18px 0;
+                }
+                .amount-section {
+                    margin: 20px 0;
+                    font-size: 13px;
+                }
+                .amount-row {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 10px 0;
+                    border-bottom: 1px dotted #cbd5e1;
+                }
+                .amount-row.paid {
+                    background: linear-gradient(90deg, #ecfdf5 0%, #f0fdf4 100%);
+                    padding: 14px 12px;
+                    font-weight: 700;
+                    border: 2px solid #22c55e;
+                    border-radius: 10px;
+                    margin: 10px 0;
+                }
+                .amount-in-words {
+                    margin-top: 15px;
+                    padding: 12px;
+                    background: #f8fafc;
+                    border-left: 4px solid #0f766e;
+                    border-radius: 8px;
+                    font-size: 12px;
+                }
+                .receipt-footer {
+                    margin-top: 30px;
+                    text-align: center;
+                }
+                @media print {
+                    body { margin: 0; padding: 0; }
+                    .receipt-container { border: none; border-radius: 0; padding: 18px; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="receipt-container">
+                ${receiptContent.innerHTML}
+            </div>
+            <script>
+                window.focus();
+                window.print();
+                setTimeout(function() {
+                    window.close();
+                }, 1000);
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+}
+
 // ===================== FILTER DRAWER FUNCTIONS =====================
 
 // Open filter drawer
