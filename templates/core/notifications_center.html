@@ -1,0 +1,82 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon"><i class="fa-regular fa-bell"></i></div>
+            <div>
+                <h1 class="page-title">Notification Center</h1>
+                <p class="page-subtitle">Operational alerts, fee reminders, admissions updates, and team attention points.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="workspace-grid">
+    <article class="workspace-panel">
+        <div class="workspace-head">
+            <div>
+                <h2>Inbox</h2>
+                <p>Filter and review notification history.</p>
+            </div>
+            <button type="button" class="action-btn secondary btn-sm" data-mark-all-notifications>Mark all read</button>
+        </div>
+        <form method="get" class="workspace-filters">
+            <select name="category" class="filter-select">
+                <option value="">All Categories</option>
+                {% for value, label in notification_categories %}
+                    <option value="{{ value }}" {% if notification_category == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" class="filter-select">
+                <option value="">All Status</option>
+                <option value="unread" {% if notification_status == 'unread' %}selected{% endif %}>Unread</option>
+                <option value="read" {% if notification_status == 'read' %}selected{% endif %}>Read</option>
+            </select>
+            <button type="submit" class="action-btn primary btn-sm">Apply</button>
+        </form>
+
+        <div class="activity-list activity-list-wide" data-notification-list>
+            {% for item in notification_items %}
+            <div class="activity-card {% if not item.is_read %}activity-card-unread{% endif %}" data-notification-item data-notification-id="{{ item.id }}">
+                <div class="activity-pill priority-{{ item.priority }}">{{ item.get_priority_display }}</div>
+                <div class="activity-copy">
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.message }}</p>
+                    <div class="activity-meta">
+                        <span>{{ item.get_category_display }}</span>
+                        <span>{{ item.created_at|date:"d M Y, h:i A" }}</span>
+                        {% if item.actor %}<span>By {{ item.actor.username }}</span>{% endif %}
+                    </div>
+                </div>
+                <div class="activity-actions">
+                    {% if item.link_url %}
+                    <a href="{{ item.link_url }}" class="mini-link-btn">{{ item.action_label|default:"Open" }}</a>
+                    {% endif %}
+                    <button type="button" class="mini-link-btn" data-toggle-notification-read="{{ item.id }}">
+                        {% if item.is_read %}Mark Unread{% else %}Mark Read{% endif %}
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="collaboration-empty">No notifications found for this filter.</div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <aside class="workspace-panel">
+        <div class="workspace-head">
+            <div>
+                <h2>Settings</h2>
+                <p>Per-category delivery preferences.</p>
+            </div>
+        </div>
+        <div class="settings-stack" data-notification-settings></div>
+    </aside>
+</section>
+{% endblock %}

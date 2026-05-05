@@ -91,14 +91,35 @@ function getCsrfToken() {
     return getCookie('csrftoken');
 }
 
+function setIndicatorState(message, isError = false) {
+    const indicator = document.getElementById('saveIndicator');
+    if (!indicator) return;
+
+    const icon = indicator.querySelector('.save-indicator-icon');
+    const text = indicator.querySelector('.save-indicator-text');
+
+    if (icon) {
+        icon.textContent = isError ? '✕' : '✓';
+    }
+
+    if (text) {
+        text.textContent = message;
+    }
+
+    indicator.classList.toggle('error-indicator', isError);
+    indicator.classList.add('is-visible');
+}
+
+function hideIndicator() {
+    const indicator = document.getElementById('saveIndicator');
+    if (!indicator) return;
+    indicator.classList.remove('is-visible');
+}
+
 function updateField(studentId, field, value) {
     const csrftoken = getCsrfToken();
-    const indicator = document.getElementById('saveIndicator');
-    
-    // Show saving indicator
-    indicator.textContent = 'Saving...';
-    indicator.classList.remove('error-indicator');
-    indicator.style.display = 'block';
+
+    setIndicatorState('Saving...');
     
     fetch('/update-finance-detail/', {
         method: 'POST',
@@ -150,13 +171,11 @@ function updateField(studentId, field, value) {
                 profitCell.classList.add(data.profit >= 0 ? 'profit-positive' : 'profit-negative');
             }
             
-            // Show success indicator
-            indicator.textContent = '✓ Saved successfully!';
-            indicator.classList.remove('error-indicator');
-            
-            // Hide after 2 seconds
+            updateSummaryTotals();
+            setIndicatorState('Saved successfully!');
+
             setTimeout(() => {
-                indicator.style.display = 'none';
+                hideIndicator();
             }, 2000);
             
         } else {
@@ -219,14 +238,10 @@ function updateFieldRealTime(studentId, field, value) {
 }
 
 function showError(message) {
-    const indicator = document.getElementById('saveIndicator');
-    indicator.textContent = '✗ ' + message;
-    indicator.classList.add('error-indicator');
-    indicator.style.display = 'block';
-    
-    // Hide after 3 seconds
+    setIndicatorState(message, true);
+
     setTimeout(() => {
-        indicator.style.display = 'none';
+        hideIndicator();
     }, 3000);
 }
 
@@ -375,15 +390,10 @@ function exportToExcel() {
         }, 100);
         
         // Show success message
-        const indicator = document.getElementById('saveIndicator');
-        if (indicator) {
-            indicator.textContent = '✓ Data exported successfully!';
-            indicator.classList.remove('error-indicator');
-            indicator.style.display = 'block';
-            setTimeout(() => {
-                indicator.style.display = 'none';
-            }, 2000);
-        }
+        setIndicatorState('Data exported successfully!');
+        setTimeout(() => {
+            hideIndicator();
+        }, 2000);
         
     } catch (error) {
         console.error('Export error:', error);
@@ -444,25 +454,47 @@ function updateMKCLTotal(studentId) {
         }
     }
     
-    // Update total profit on the page
-    updateTotalProfit();
+    updateSummaryTotals();
 }
 
-// Function to calculate and update the total profit across all students
-function updateTotalProfit() {
-    const profitCells = document.querySelectorAll('[class^="profit-"]');
+function parseCurrencyValue(value) {
+    return parseFloat(String(value || '').replace(/[^\d.-]/g, '')) || 0;
+}
+
+function updateSummaryTotals() {
+    const profitCells = document.querySelectorAll('.profit-cell');
+    const learnerPaidCells = document.querySelectorAll('.col-learner-total');
+    const mkclTotalCells = document.querySelectorAll('.mkcl-total-cell');
+    let totalLearnerPaid = 0;
+    let totalMkclPaid = 0;
     let totalProfit = 0;
-    
-    profitCells.forEach(cell => {
-        const profitText = cell.textContent.replace('₹', '').trim();
-        const profit = parseFloat(profitText) || 0;
-        totalProfit += profit;
+
+    learnerPaidCells.forEach(cell => {
+        totalLearnerPaid += parseCurrencyValue(cell.textContent);
     });
-    
-    // Update the total profit box
+
+    mkclTotalCells.forEach(cell => {
+        totalMkclPaid += parseCurrencyValue(cell.textContent);
+    });
+
+    profitCells.forEach(cell => {
+        totalProfit += parseCurrencyValue(cell.textContent);
+    });
+
     const totalProfitAmount = document.getElementById('totalProfitAmount');
+    const totalLearnerPaidAmount = document.getElementById('totalLearnerPaidAmount');
+    const totalMkclPaidAmount = document.getElementById('totalMkclPaidAmount');
+
+    if (totalLearnerPaidAmount) {
+        totalLearnerPaidAmount.textContent = formatCurrency(totalLearnerPaid);
+    }
+
+    if (totalMkclPaidAmount) {
+        totalMkclPaidAmount.textContent = formatCurrency(totalMkclPaid);
+    }
+
     if (totalProfitAmount) {
-        totalProfitAmount.textContent = '₹ ' + totalProfit.toFixed(2);
+        totalProfitAmount.textContent = formatCurrency(totalProfit);
     }
 }
 
@@ -644,10 +676,12 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         setupStickyScrollbar();
         setupMKCLInstallmentListeners();
+        updateSummaryTotals();
     });
 } else {
     setupStickyScrollbar();
     setupMKCLInstallmentListeners();
+    updateSummaryTotals();
 }
 
 // ------------------------

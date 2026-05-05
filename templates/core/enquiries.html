@@ -4,20 +4,20 @@
 {% block title %}Enquiries{% endblock %}
 
 {% block page_heading %}
-<div class="page-header-enq">
+<div class="page-header-enq enquiries-hero">
     <div class="page-header-content-enq">
         <div class="page-title-wrapper">
             <div class="page-icon-enq">📋</div>
             <div>
                 <h1 class="page-title-enq">Enquiries Management</h1>
-                <p class="page-subtitle">Filter and manage all student enquiries</p>
+                <p class="page-subtitle-enq">Filter, review, and convert incoming student enquiries in one workspace.</p>
             </div>
         </div>
         <div class="page-actions-enq">
             <button onclick="openNewEnquiryModal()" class="action-btn-enq primary">
                 <span>➕</span> Add New Enquiry
             </button>
-            <a href="{% url 'export_enquiries' %}?{{ request.GET.urlencode }}" class="action-btn-enq primary">
+            <a href="{% url 'export_enquiries' %}?{{ request.GET.urlencode }}" class="action-btn-enq secondary">
                 <span>📥</span> Export to Excel
             </a>
         </div>
@@ -27,283 +27,23 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/enquiries.css' %}">
-<style>
-    /* Enhanced modal styles for landscape orientation */
-    .enquiry-modal-content {
-        max-width: 900px; /* Increased width for landscape */
-        width: 95%;
-    }
-
-    .enquiry-form-section input,
-    .enquiry-form-section select,
-    .enquiry-form-section textarea {
-        width: 100%;
-        padding: 12px 16px;
-        border: 2px solid #e8e8e8;
-        border-radius: 8px;
-        font-size: 14px;
-        margin-bottom: 12px;
-        transition: all 0.3s ease;
-        font-family: 'Segoe UI', sans-serif;
-    }
-
-    .enquiry-form-section input:focus,
-    .enquiry-form-section select:focus,
-    .enquiry-form-section textarea:focus {
-        border-color: #667eea;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-
-    .enquiry-form-section textarea {
-        resize: vertical;
-        min-height: 60px;
-    }
-
-    /* Landscape form layout */
-    .form-row-modal {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
-    .form-row-modal.triple {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .form-note {
-        font-size: 12px;
-        color: #7f8c8d;
-        margin-top: -8px;
-        margin-bottom: 12px;
-        font-style: italic;
-    }
-
-    /* Success message styling */
-    .success-message {
-        background: #d4edda;
-        color: #155724;
-        padding: 12px 16px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        border: 1px solid #c3e6cb;
-        display: none;
-        animation: slideDown 0.3s ease;
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @media (max-width: 768px) {
-        .form-row-modal,
-        .form-row-modal.triple {
-            grid-template-columns: 1fr;
-        }
-
-        .detail-row {
-            grid-template-columns: 1fr;
-            gap: 5px;
-        }
-
-        .modal-actions {
-            flex-direction: column;
-        }
-
-        .btn-submit,
-        .btn-cancel {
-            width: 100%;
-        }
-    }
-
-/* Other existing styles... */
-    .enquiry-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        z-index: 9998; /* FIXED: Changed from 10000 to 9998 to be below navbar (which is 1000) */
-        overflow-y: auto;
-        animation: fadeIn 0.3s ease;
-    }
-
-    .enquiry-modal.active {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-    }
-
-    .enquiry-modal-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 25px 30px;
-        border-radius: 16px 16px 0 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .enquiry-modal-header h2 {
-        margin: 0;
-        font-size: 24px;
-        font-weight: 700;
-    }
-
-    .modal-close {
-        background: rgba(255, 255, 255, 0.2);
-        border: none;
-        color: white;
-        font-size: 28px;
-        cursor: pointer;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-    }
-
-    .modal-close:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: rotate(90deg);
-    }
-
-    .enquiry-modal-body {
-        padding: 30px;
-        max-height: 70vh;
-        overflow-y: auto;
-    }
-
-    .detail-section {
-        margin-bottom: 25px;
-        padding-bottom: 20px;
-        border-bottom: 2px solid #f0f0f0;
-    }
-
-    .detail-section:last-child {
-        border-bottom: none;
-    }
-
-    .detail-section h3 {
-        font-size: 16px;
-        font-weight: 700;
-        color: #667eea;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .detail-row {
-        display: grid;
-        grid-template-columns: 140px 1fr;
-        gap: 15px;
-        margin-bottom: 12px;
-        font-size: 14px;
-    }
-
-    .detail-label {
-        font-weight: 600;
-        color: #2c3e50;
-    }
-
-    .detail-value {
-        color: #495057;
-    }
-
-    .detail-value.empty {
-        color: #95a5a6;
-        font-style: italic;
-    }
-
-    .course-badge-modal {
-        display: inline-block;
-        padding: 6px 16px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .modal-actions {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        padding: 20px 30px;
-        border-top: 2px solid #e8e8e8;
-        background: #f8f9fa;
-        border-radius: 0 0 16px 16px;
-    }
-
-    .btn-submit,
-    .btn-cancel {
-        padding: 12px 30px;
-        border: none;
-        border-radius: 8px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .btn-submit {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    }
-
-    .btn-submit:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-cancel {
-        background: #e9ecef;
-        color: #495057;
-    }
-
-    .btn-cancel:hover {
-        background: #dee2e6;
-        transform: translateY(-2px);
-    }
-
-    .student-name-link {
-        color: #667eea;
-        font-weight: 600;
-        text-decoration: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .student-name-link:hover {
-        color: #764ba2;
-        text-decoration: underline;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-</style>
 {% endblock %}
 
 {% block content %}
+<div class="enquiries-shell">
 
 <!-- FILTERS SECTION -->
-<div class="filters-container">
+<div class="filters-container enquiries-panel">
+    <div class="panel-heading">
+        <div>
+            <h2>Find Enquiries</h2>
+            <p>Search by learner details, month, year, or target course.</p>
+        </div>
+        <div class="panel-badge">
+            <strong>{{ page_obj.paginator.count }}</strong>
+            <span>Total Records</span>
+        </div>
+    </div>
     <form method="get" class="filters-form">
         
         <div class="filter-group">
@@ -384,17 +124,39 @@
 </div>
 
 <!-- RESULTS SUMMARY -->
-<div class="results-summary">
-    <p>
-        Showing <strong>{{ page_obj.paginator.count }}</strong> enquir{{ page_obj.paginator.count|pluralize:"y,ies" }}
-        {% if search or month or year or course %}
-            with applied filters
-        {% endif %}
-    </p>
+<div class="results-summary enquiries-panel">
+    <div class="summary-chip primary">
+        <span class="summary-label">Visible Enquiries</span>
+        <strong>{{ page_obj.paginator.count }}</strong>
+    </div>
+    <div class="summary-chip">
+        <span class="summary-label">Search</span>
+        <strong>{% if search %}{{ search }}{% else %}All{% endif %}</strong>
+    </div>
+    <div class="summary-chip">
+        <span class="summary-label">Course</span>
+        <strong>{% if course %}{{ course }}{% else %}All Courses{% endif %}</strong>
+    </div>
+    <div class="summary-chip">
+        <span class="summary-label">Period</span>
+        <strong>
+            {% if month or year %}
+                {% if month %}Month {{ month }}{% else %}All Months{% endif %} / {% if year %}{{ year }}{% else %}All Years{% endif %}
+            {% else %}
+                All Time
+            {% endif %}
+        </strong>
+    </div>
 </div>
 
 <!-- ENQUIRIES TABLE -->
-<div class="table-container">
+<div class="table-container enquiries-panel">
+    <div class="panel-heading table-heading">
+        <div>
+            <h2>Enquiry Register</h2>
+            <p>Open a record to review details or convert it into an admission.</p>
+        </div>
+    </div>
     <table class="data-table">
         <thead>
             <tr>
@@ -410,7 +172,7 @@
         <tbody>
             {% for e in page_obj %}
             <tr>
-                <td>
+                <td class="actions-cell">
                     <div class="name-cell">
                         <span class="avatar">{{ e.name.0|upper }}</span>
                         <a href="javascript:void(0)" class="student-name-link" onclick="viewEnquiry({{ e.id }})">
@@ -433,7 +195,7 @@
                 <td>{{ e.created_at|date:"d M Y, h:i A" }}</td>
                 
                 <td>
-                    <a href="{% url 'convert_enquiry' e.id %}" class="btn" style="background: #10b981; margin-right: 5px;">
+                    <a href="{% url 'convert_enquiry' e.id %}" class="btn btn-convert">
                         🎓 Convert
                     </a>
                     <button
@@ -572,7 +334,7 @@
         </form>
     </div>
 </div>
-
+</div>
 {% endblock %}
 
 {% block extra_js %}

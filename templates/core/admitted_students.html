@@ -4,726 +4,934 @@
 {% block title %}Admitted Students{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'core/admitted_students.css' %}">
+<link rel="stylesheet" href="{% static 'core/admitted_students.css' %}?v={{ STATIC_VERSION }}">
 {% endblock %}
 
 {% block page_heading %}
-<div class="page-header">
-    <div class="page-header-content">
-        <div class="page-title-wrapper">
-            <div class="page-icon">🎓</div>
-            <div>
-                <h1 class="page-title">Admitted Students</h1>
-                <p class="page-subtitle">👥 Total Students: <strong>{{ students|length }}</strong> | View and manage all admitted students</p>
+<section class="students-hero">
+    <div class="students-hero-copy">
+        <div class="students-breadcrumbs">
+            <span>Dashboard</span>
+            <i class="fa-solid fa-chevron-right"></i>
+            <span>Students</span>
+            <i class="fa-solid fa-chevron-right"></i>
+            <strong>Admitted Students</strong>
+        </div>
+        <div class="students-hero-row">
+            <div class="students-hero-title">
+                <div class="hero-mark">
+                    <i class="fa-solid fa-user-graduate"></i>
+                </div>
+                <div>
+                    <h1 class="page-title">Admitted Students Command Center</h1>
+                    <p class="page-subtitle">A premium ERP workspace for enrolled student visibility, fee tracking, lifecycle review, and day-to-day academic operations.</p>
+                </div>
+            </div>
+            <div class="page-actions">
+                <button id="selectAllBtn" class="action-btn secondary" style="display: none;" onclick="selectAllStudents()">
+                    <i class="fa-solid fa-check-double"></i>
+                    <span>Select All</span>
+                </button>
+                <button id="deselectAllBtn" class="action-btn secondary" style="display: none;" onclick="deselectAllStudents()">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>Deselect All</span>
+                </button>
+                <button id="deleteSelectedBtn" class="action-btn danger" style="display: none;" onclick="deleteSelectedStudents()">
+                    <i class="fa-solid fa-trash"></i>
+                    <span>Delete Selected</span>
+                    <strong id="selectedCount">0</strong>
+                </button>
+                <a href="{% url 'export_admitted_students_excel' %}?search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}" class="action-btn primary">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Export Excel</span>
+                </a>
+                <a href="{% url 'new_admission' %}" class="action-btn primary">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Add New Student</span>
+                </a>
             </div>
         </div>
-        <div class="page-actions">
-            <button id="selectAllBtn" class="action-btn info" style="display: none;" onclick="selectAllStudents()">
-                <span>✅</span> Select All
-            </button>
-            <button id="deselectAllBtn" class="action-btn info" style="display: none;" onclick="deselectAllStudents()">
-                <span>⬜</span> Deselect All
-            </button>
-            <button id="deleteSelectedBtn" class="action-btn danger" style="display: none;" onclick="deleteSelectedStudents()">
-                <span>🗑️</span> Delete Selected (<span id="selectedCount">0</span>)
-            </button>
-            <a href="{% url 'export_admitted_students_excel' %}?search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}" class="action-btn primary">
-                <span>📥</span> Export to Excel
-            </a>
-            <a href="{% url 'new_admission' %}" class="action-btn primary">
-                <span>➕</span> Add New Student
-            </a>
-        </div>
     </div>
-</div>
+</section>
 {% endblock %}
 
 {% block content %}
-
-<!-- RECEIPTS-STYLE SEARCH AND FILTERS -->
-<div class="receipts-top-bar">
-    <div class="search-container">
-        <input
-            type="text"
-            name="search"
-            id="search"
-            form="filterForm"
-            placeholder="Search by name or mobile..."
-            value="{{ search }}"
-            class="search-input"
-            onkeyup="autoSearchStudents()"
-        >
+<section class="students-dashboard">
+    <div class="summary-grid">
+        <article class="summary-card accent-indigo">
+            <div class="summary-head">
+                <span class="summary-icon"><i class="fa-solid fa-users"></i></span>
+                <span class="summary-label">Total Admitted Students</span>
+            </div>
+            <strong>{{ dashboard_metrics.total_students }}</strong>
+            <p>Current filtered student inventory across admissions, finance, and batches.</p>
+        </article>
+        <article class="summary-card accent-emerald">
+            <div class="summary-head">
+                <span class="summary-icon"><i class="fa-solid fa-user-check"></i></span>
+                <span class="summary-label">Active Students</span>
+            </div>
+            <strong>{{ dashboard_metrics.active_students }}</strong>
+            <p>{{ dashboard_metrics.retention_rate }}% retention rate in the active student pool.</p>
+        </article>
+        <article class="summary-card accent-amber">
+            <div class="summary-head">
+                <span class="summary-icon"><i class="fa-solid fa-wallet"></i></span>
+                <span class="summary-label">Pending Fees</span>
+            </div>
+            <strong>{{ dashboard_metrics.pending_fees }}</strong>
+            <p>{{ dashboard_metrics.fee_recovery_rate }}% fee recovery achieved on this student set.</p>
+        </article>
+        <article class="summary-card accent-violet">
+            <div class="summary-head">
+                <span class="summary-icon"><i class="fa-solid fa-medal"></i></span>
+                <span class="summary-label">Completed Students</span>
+            </div>
+            <strong>{{ dashboard_metrics.completed_students }}</strong>
+            <p>Course completions and batch closures from the current filtered result.</p>
+        </article>
     </div>
-    <button type="button" id="filterToggleBtn" class="filter-toggle-btn">
-        <span class="filter-icon">⚙</span>
-        <span class="filter-text">Filters</span>
-    </button>
-</div>
 
-<div id="filterDrawer" class="filter-drawer" aria-hidden="true">
-    <div class="drawer-header">
-        <h3>Student Filters</h3>
-        <button type="button" id="drawerCloseBtn" class="drawer-close">×</button>
-    </div>
-    <div class="drawer-body">
-    <form method="get" class="filters-form" id="filterForm">
-        
-        <div class="filter-group search-group">
-            <label for="search">🔍 Search Student</label>
-            <input
-                type="text"
-                data-drawer-search="true"
-                placeholder="Search by name or mobile..."
-                value="{{ search }}"
-                class="filter-input"
-                onkeyup="autoSearchStudents()"
-            >
-        </div>
-
-        <div class="filter-group">
-            <label for="month">📅 Month</label>
-            <select name="month" id="month" class="filter-select">
-                <option value="">All Months</option>
-                <option value="1" {% if month == "1" %}selected{% endif %}>January</option>
-                <option value="2" {% if month == "2" %}selected{% endif %}>February</option>
-                <option value="3" {% if month == "3" %}selected{% endif %}>March</option>
-                <option value="4" {% if month == "4" %}selected{% endif %}>April</option>
-                <option value="5" {% if month == "5" %}selected{% endif %}>May</option>
-                <option value="6" {% if month == "6" %}selected{% endif %}>June</option>
-                <option value="7" {% if month == "7" %}selected{% endif %}>July</option>
-                <option value="8" {% if month == "8" %}selected{% endif %}>August</option>
-                <option value="9" {% if month == "9" %}selected{% endif %}>September</option>
-                <option value="10" {% if month == "10" %}selected{% endif %}>October</option>
-                <option value="11" {% if month == "11" %}selected{% endif %}>November</option>
-                <option value="12" {% if month == "12" %}selected{% endif %}>December</option>
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label for="year">📆 Year</label>
-            <select name="year" id="year" class="filter-select">
-                <option value="">All Years</option>
-                {% for y in available_years %}
-                    <option value="{{ y }}" {% if year == y|stringformat:"s" %}selected{% endif %}>
-                        {{ y }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label for="course">📚 Course</label>
-            <select name="course" id="course" class="filter-select">
-                <option value="">All Courses</option>
-                <option value="MS-CIT" {% if course == "MS-CIT" %}selected{% endif %}>MS-CIT</option>
-                <option value="Tally" {% if course == "Tally" %}selected{% endif %}>Tally</option>
-                <option value="Advance Excel" {% if course == "Advance Excel" %}selected{% endif %}>Advance Excel</option>
-                <option value="IOT" {% if course == "IOT" %}selected{% endif %}>IOT</option>
-                <option value="Scratch" {% if course == "Scratch" %}selected{% endif %}>Scratch</option>
-                
-                <!-- Dynamic Courses from Database -->
-                {% for c in all_courses %}
-                    {% if c.name not in "MS-CIT,Tally,Advance Excel,IOT,Scratch" %}
-                        <option value="{{ c.name }}" {% if course == c.name %}selected{% endif %}>
-                            {{ c.name }}
-                        </option>
-                    {% endif %}
-                {% endfor %}
-                
-                <option value="Other" {% if course == "Other" %}selected{% endif %}>Other</option>
-            </select>
-        </div>
-
-        <!-- Add these two new filter groups after the course filter -->
-        <div class="filter-group">
-            <label for="batch_month">📅 Batch Month</label>
-            <select name="batch_month" id="batch_month" class="filter-select">
-                <option value="">All Batch Months</option>
-                {% for bm in available_batch_months %}
-                    <option value="{{ bm }}" {% if batch_month == bm %}selected{% endif %}>
-                        {{ bm }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label for="batch_year">📆 Batch Year</label>
-            <select name="batch_year" id="batch_year" class="filter-select">
-                <option value="">All Batch Years</option>
-                {% for by in available_batch_years %}
-                    <option value="{{ by }}" {% if batch_year == by %}selected{% endif %}>
-                        {{ by }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label for="sort">📊 Sort By</label>
-            <select name="sort" id="sort" class="filter-select" onchange="applySorting()">
-                <option value="">Default (Admission Date)</option>
-                <option value="name_asc" {% if sort == "name_asc" %}selected{% endif %}>📝 A-Z (Name)</option>
-                <option value="name_desc" {% if sort == "name_desc" %}selected{% endif %}>📝 Z-A (Name)</option>
-                <option value="course" {% if sort == "course" %}selected{% endif %}>📚 Course</option>
-                <option value="batch" {% if sort == "batch" %}selected{% endif %}>📅 Batch (Month-Year)</option>
-                <option value="remaining_asc" {% if sort == "remaining_asc" %}selected{% endif %}>💰 Fees Remaining (Low to High)</option>
-                <option value="remaining_desc" {% if sort == "remaining_desc" %}selected{% endif %}>💰 Fees Remaining (High to Low)</option>
-            </select>
-        </div>
-
-        <div class="drawer-actions">
-            <button type="submit" class="filter-btn apply">
-                🔍 Apply Filters
-            </button>
-            <a href="{% url 'admitted_students' %}" class="filter-btn reset">
-                🔄 Reset
-            </a>
-        </div>
-    </form>
-    </div>
-</div>
-<div id="filterOverlay" class="filter-overlay" aria-hidden="true"></div>
-
-<!-- RESULTS SUMMARY -->
-{% if search or month or year or course %}
-<div class="results-summary">
-    <p>
-        Showing <strong>{{ students|length }}</strong> student{{ students|length|pluralize }}
-        {% if search %}matching "{{ search }}"{% endif %}
-        {% if course %}in {{ course }}{% endif %}
-        {% if month %}for month {{ month }}{% endif %}
-        {% if year %}in year {{ year }}{% endif %}
-        {% if batch_month or batch_year %}
-            in batch 
-            {% if batch_month %}{{ batch_month }}{% endif %}
-            {% if batch_year %}{{ batch_year }}{% endif %}
-        {% endif %}
-    </p>
-</div>
-{% endif %}
-
-<!-- STUDENTS GRID -->
-<div class="students-container">
-    <div class="students-grid">
-        {% if students %}
-            {% for student in students %}
-            <div class="student-card{% if student.remaining_fees > 0 %} has-remaining-fees{% endif %}" data-student-id="{{ student.id }}" data-mobile="{{ student.mobile_own }}" data-email="{{ student.email_own }}" data-fullname="{{ student.full_name|lower }}" data-surname="{{ student.surname|lower }}" data-studentname="{{ student.student_name|lower }}" data-fathername="{{ student.father_name|lower }}">
-                <!-- Selection Checkbox -->
-                <div class="student-select">
-                    <input type="checkbox" class="student-checkbox" value="{{ student.id }}" onclick="event.stopPropagation(); updateSelectedCount();">
+    <div class="dashboard-panels">
+        <article class="analytics-panel glass-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Admission Trends</h2>
+                    <p>Monthly pattern of admitted students within the current filtered list.</p>
                 </div>
-                
-                <!-- Photo -->
-                <div class="student-photo" onclick="openStudentModal({{ student.id }})">
-                    {% if student.photo %}
-                        <img src="{{ student.photo.url }}" alt="{{ student.full_name }}">
-                    {% else %}
-                        <div class="photo-placeholder">
-                            {{ student.student_name|slice:":1"|upper }}
+            </div>
+            <div class="trend-bars">
+                {% for item in admission_trends %}
+                <div class="trend-item">
+                    <div class="trend-label-row">
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.count }}</strong>
+                    </div>
+                    <div class="trend-bar">
+                        <div class="trend-fill" style="width: {% widthratio item.count dashboard_metrics.total_students 100 %}%"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-inline">No trend data available.</div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="analytics-panel glass-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Course Popularity</h2>
+                    <p>Most represented courses in the current result set.</p>
+                </div>
+            </div>
+            <div class="rank-list">
+                {% for course_name, count in top_courses %}
+                <div class="rank-item">
+                    <div>
+                        <strong>{{ course_name }}</strong>
+                        <span>{{ count }} students</span>
+                    </div>
+                    <div class="mini-bar">
+                        <div class="mini-fill" style="width: {% widthratio count dashboard_metrics.total_students 100 %}%"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-inline">No course distribution available.</div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="analytics-panel glass-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Batch Performance</h2>
+                    <p>Most utilized academic batches from the visible student pool.</p>
+                </div>
+            </div>
+            <div class="rank-list">
+                {% for batch_name, count in top_batches %}
+                <div class="rank-item">
+                    <div>
+                        <strong>{{ batch_name }}</strong>
+                        <span>{{ count }} students</span>
+                    </div>
+                    <div class="mini-bar">
+                        <div class="mini-fill alt" style="width: {% widthratio count dashboard_metrics.total_students 100 %}%"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-inline">No batch allocation data available.</div>
+                {% endfor %}
+            </div>
+        </article>
+    </div>
+
+    <div class="toolbar-shell glass-panel">
+        <div class="toolbar-main">
+            <div class="search-cluster">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input
+                        type="text"
+                        name="search"
+                        id="search"
+                        form="filterForm"
+                        placeholder="Search by student name, mobile, admission ID, course, or batch..."
+                        value="{{ search }}"
+                        class="search-input"
+                        onkeyup="autoSearchStudents()"
+                    >
+                </div>
+                <button type="button" id="filterToggleBtn" class="filter-toggle-btn">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Advanced Filters</span>
+                </button>
+            </div>
+            <div class="toolbar-actions">
+                <button type="button" class="toolbar-action" onclick="bulkCopyMobiles()">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Fee Reminders</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="quick-filters">
+            <button type="button" class="quick-chip" data-quick-filter="all">All Students</button>
+            <button type="button" class="quick-chip" data-quick-filter="pending">Fee Pending</button>
+            <button type="button" class="quick-chip" data-quick-filter="paid">Fully Paid</button>
+            <button type="button" class="quick-chip" data-quick-filter="new">New Admissions</button>
+            <button type="button" class="quick-chip" data-quick-filter="completed">Completed</button>
+            <button type="button" class="quick-chip" data-quick-filter="overdue">Overdue Fees</button>
+        </div>
+    </div>
+
+    <div id="filterDrawer" class="filter-drawer" aria-hidden="true">
+        <div class="drawer-header">
+            <h3>Student Filters & Sorting</h3>
+            <button type="button" id="drawerCloseBtn" class="drawer-close">&times;</button>
+        </div>
+        <div class="drawer-body">
+            <form method="get" class="filters-form" id="filterForm">
+                <div class="filter-group search-group">
+                    <label for="drawerSearch">Global Search</label>
+                    <input
+                        type="text"
+                        id="drawerSearch"
+                        data-drawer-search="true"
+                        placeholder="Search by student, mobile, admission ID..."
+                        value="{{ search }}"
+                        class="filter-input"
+                        onkeyup="syncDrawerSearch(this.value)"
+                    >
+                </div>
+
+                <div class="filter-grid">
+                    <div class="filter-group">
+                        <label for="month">Admission Month</label>
+                        <select name="month" id="month" class="filter-select">
+                            <option value="">All Months</option>
+                            <option value="1" {% if month == "1" %}selected{% endif %}>January</option>
+                            <option value="2" {% if month == "2" %}selected{% endif %}>February</option>
+                            <option value="3" {% if month == "3" %}selected{% endif %}>March</option>
+                            <option value="4" {% if month == "4" %}selected{% endif %}>April</option>
+                            <option value="5" {% if month == "5" %}selected{% endif %}>May</option>
+                            <option value="6" {% if month == "6" %}selected{% endif %}>June</option>
+                            <option value="7" {% if month == "7" %}selected{% endif %}>July</option>
+                            <option value="8" {% if month == "8" %}selected{% endif %}>August</option>
+                            <option value="9" {% if month == "9" %}selected{% endif %}>September</option>
+                            <option value="10" {% if month == "10" %}selected{% endif %}>October</option>
+                            <option value="11" {% if month == "11" %}selected{% endif %}>November</option>
+                            <option value="12" {% if month == "12" %}selected{% endif %}>December</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="year">Admission Year</label>
+                        <select name="year" id="year" class="filter-select">
+                            <option value="">All Years</option>
+                            {% for y in available_years %}
+                                <option value="{{ y }}" {% if year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="course">Course</label>
+                        <select name="course" id="course" class="filter-select">
+                            <option value="">All Courses</option>
+                            <option value="MS-CIT" {% if course == "MS-CIT" %}selected{% endif %}>MS-CIT</option>
+                            <option value="Tally" {% if course == "Tally" %}selected{% endif %}>Tally</option>
+                            <option value="Advance Excel" {% if course == "Advance Excel" %}selected{% endif %}>Advance Excel</option>
+                            <option value="IOT" {% if course == "IOT" %}selected{% endif %}>IOT</option>
+                            <option value="Scratch" {% if course == "Scratch" %}selected{% endif %}>Scratch</option>
+                            {% for c in all_courses %}
+                                {% if c.name not in "MS-CIT,Tally,Advance Excel,IOT,Scratch" %}
+                                    <option value="{{ c.name }}" {% if course == c.name %}selected{% endif %}>{{ c.name }}</option>
+                                {% endif %}
+                            {% endfor %}
+                            <option value="Other" {% if course == "Other" %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="batch_month">Batch Month</label>
+                        <select name="batch_month" id="batch_month" class="filter-select">
+                            <option value="">All Batch Months</option>
+                            {% for bm in available_batch_months %}
+                                <option value="{{ bm }}" {% if batch_month == bm %}selected{% endif %}>{{ bm }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="batch_year">Batch Year</label>
+                        <select name="batch_year" id="batch_year" class="filter-select">
+                            <option value="">All Batch Years</option>
+                            {% for by in available_batch_years %}
+                                <option value="{{ by }}" {% if batch_year == by %}selected{% endif %}>{{ by }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="sort">Sort By</label>
+                        <select name="sort" id="sort" class="filter-select" onchange="applySorting()">
+                            <option value="">Default (Admission Date)</option>
+                            <option value="name_asc" {% if sort == "name_asc" %}selected{% endif %}>Alphabetical A-Z</option>
+                            <option value="name_desc" {% if sort == "name_desc" %}selected{% endif %}>Alphabetical Z-A</option>
+                            <option value="course" {% if sort == "course" %}selected{% endif %}>Course</option>
+                            <option value="batch" {% if sort == "batch" %}selected{% endif %}>Batch</option>
+                            <option value="remaining_asc" {% if sort == "remaining_asc" %}selected{% endif %}>Fee Due Lowest</option>
+                            <option value="remaining_desc" {% if sort == "remaining_desc" %}selected{% endif %}>Fee Due Highest</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="feeStatusClient">Fee Status</label>
+                        <select id="feeStatusClient" class="filter-select" onchange="autoSearchStudents()">
+                            <option value="">All Fee States</option>
+                            <option value="paid">Fully Paid</option>
+                            <option value="partial">Partially Paid</option>
+                            <option value="unpaid">Unpaid</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="lifecycleClient">Student Lifecycle</label>
+                        <select id="lifecycleClient" class="filter-select" onchange="autoSearchStudents()">
+                            <option value="">All Lifecycle Stages</option>
+                            <option value="newly-admitted">Newly Admitted</option>
+                            <option value="active">Active</option>
+                            <option value="fee-pending">Fee Pending</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="dateFromClient">Admission Date From</label>
+                        <input type="date" id="dateFromClient" class="filter-input" onchange="autoSearchStudents()">
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="dateToClient">Admission Date To</label>
+                        <input type="date" id="dateToClient" class="filter-input" onchange="autoSearchStudents()">
+                    </div>
+                </div>
+
+                <div class="drawer-actions">
+                    <button type="submit" class="filter-btn apply">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span>Apply Server Filters</span>
+                    </button>
+                    <button type="button" class="filter-btn secondary" onclick="autoSearchStudents()">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Apply Client Filters</span>
+                    </button>
+                    <a href="{% url 'admitted_students' %}" class="filter-btn reset">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>Reset All</span>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="filterOverlay" class="filter-overlay" aria-hidden="true"></div>
+
+    <div class="results-summary">
+        <div>
+            <strong id="liveVisibleCount">{{ students|length }}</strong>
+            <span>students visible in the current operational view.</span>
+        </div>
+        <div class="summary-tags">
+            {% if search %}<span class="summary-tag">Search: {{ search }}</span>{% endif %}
+            {% if course %}<span class="summary-tag">Course: {{ course }}</span>{% endif %}
+            {% if batch_month or batch_year %}<span class="summary-tag">Batch: {{ batch_month }} {{ batch_year }}</span>{% endif %}
+            {% if month or year %}<span class="summary-tag">Admission: {{ month }}/{{ year }}</span>{% endif %}
+            {% if sort %}<span class="summary-tag">Sort: {{ sort }}</span>{% endif %}
+        </div>
+    </div>
+
+    <div class="students-container">
+        <div class="students-grid">
+            <div class="table-head">
+                <div class="student-cell checkbox-cell">Select</div>
+                <div class="student-cell identity-cell">Student Profile</div>
+                <div class="student-cell course-cell">Course & Batch</div>
+                <div class="student-cell lifecycle-cell">Lifecycle</div>
+                <div class="student-cell finance-cell">Financial Tracking</div>
+                <div class="student-cell contact-cell">Contact</div>
+            </div>
+
+            {% if students %}
+                {% for student in students %}
+                <div
+                    class="student-card{% if student.remaining_fees > 0 %} has-remaining-fees{% endif %}{% if student.is_overdue_fee %} is-overdue{% endif %}"
+                    data-student-id="{{ student.id }}"
+                    data-student-code="{{ student.student_id|default:'' }}"
+                    data-mobile="{{ student.mobile_own }}"
+                    data-email=""
+                    data-fullname="{{ student.full_name|lower }}"
+                    data-surname="{{ student.surname|lower }}"
+                    data-studentname="{{ student.student_name|lower }}"
+                    data-fathername="{{ student.father_name|lower }}"
+                    data-course="{{ student.course_display|lower }}"
+                    data-batch="{{ student.batch_label|lower }}"
+                    data-fee-state="{{ student.fee_state }}"
+                    data-lifecycle="{{ student.lifecycle_slug }}"
+                    data-admission-date="{{ student.admission_date|date:'Y-m-d' }}"
+                    data-overdue="{% if student.is_overdue_fee %}yes{% else %}no{% endif %}">
+                    <div class="student-cell checkbox-cell">
+                        <div class="student-select">
+                            <input type="checkbox" class="student-checkbox" value="{{ student.id }}" onclick="event.stopPropagation(); updateSelectedCount();">
                         </div>
-                    {% endif %}
-                </div>
-                
-                <!-- Student Info -->
-                <div class="student-info" onclick="openStudentModal({{ student.id }})">
-                    <h3 class="student-name">{{ student.surname }} {{ student.student_name }} {{ student.father_name }}</h3>
-                    
-                    <div class="student-details">
+                    </div>
+
+                    <div class="student-cell identity-cell" onclick="openStudentModal({{ student.id }})">
+                        <div class="student-photo">
+                            {% if student.photo %}
+                                <img src="{{ student.photo.url }}" alt="{{ student.full_name }}">
+                            {% else %}
+                                <div class="photo-placeholder">{{ student.student_name|slice:":1"|upper }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="student-info">
+                            <h3 class="student-name">{{ student.surname }} {{ student.student_name }} {{ student.father_name }}</h3>
+                            <div class="student-subline">Admission ID: {{ student.student_id|default:"Pending" }}</div>
+                        </div>
+                    </div>
+
+                    <div class="student-cell course-cell" onclick="openStudentModal({{ student.id }})">
+                        <span class="info-badge course-badge">{{ student.course_display }}</span>
+                        <span class="batch-chip">{{ student.batch_label }}</span>
+                    </div>
+
+                    <div class="student-cell lifecycle-cell" onclick="openStudentModal({{ student.id }})">
+                        <span class="status-badge stage-{{ student.lifecycle_slug }}">{{ student.lifecycle_stage }}</span>
+                        <span class="meta-line">{{ student.batch_status|title }}</span>
+                    </div>
+
+                    <div class="student-cell finance-cell" onclick="openStudentModal({{ student.id }})">
+                        <div class="finance-stats">
+                            <div><span>Total</span><strong>Rs. {{ student.total_fees|floatformat:2 }}</strong></div>
+                            <div><span>Paid</span><strong>Rs. {{ student.paid_fees|floatformat:2 }}</strong></div>
+                            <div><span>Remaining</span><strong>Rs. {{ student.remaining_fees|floatformat:2 }}</strong></div>
+                        </div>
+                        <div class="payment-progress">
+                            <div class="payment-bar">
+                                <div class="payment-fill payment-{{ student.fee_state }}" style="width: {{ student.payment_progress }}%;"></div>
+                            </div>
+                            <div class="payment-meta">
+                                <span class="status-badge fee-{{ student.fee_state }}">
+                                    {% if student.is_overdue_fee %}Overdue{% elif student.fee_state == 'paid' %}Fully Paid{% elif student.fee_state == 'partial' %}Partial{% else %}Pending{% endif %}
+                                </span>
+                                <span>{{ student.payment_progress }}% collected</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="student-cell contact-cell" onclick="openStudentModal({{ student.id }})">
                         <div class="detail-item">
-                            <span class="detail-icon">📞</span>
+                            <i class="fa-solid fa-phone"></i>
                             <span>{{ student.mobile_own }}</span>
                         </div>
-                        {% if student.batch_month and student.batch_year %}
-                            <div class="detail-item" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 1px solid #0284c7;">
-                                <span class="detail-icon">📅</span>
-                                <span style="color: #0c4a6e; font-weight: 600;">{{ student.batch_month }} {{ student.batch_year }}</span>
-                            </div>
-                            {% endif %}
-
-                        <div class="detail-item fees">
-                            <span class="detail-icon">💰</span>
-                            <span>Remaining: ₹{{ student.remaining_fees|floatformat:2 }}</span>
+                        <div class="detail-item">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>{{ student.city|default:"Not available" }}</span>
                         </div>
                     </div>
                 </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state" style="grid-column: 1 / -1;">
-                <div class="empty-icon">📭</div>
-                <p>No students found</p>
-                {% if search or month or year or course %}
-                    <small>Try adjusting your filters</small>
-                    <br><br>
-                    <a href="{% url 'admitted_students' %}" class="btn-primary">Show All Students</a>
-                {% else %}
-                    <small>Start by adding your first student</small>
-                    <br><br>
-                    <a href="{% url 'new_admission' %}" class="btn-primary">Add First Student</a>
-                {% endif %}
-            </div>
-        {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fa-regular fa-folder-open"></i></div>
+                    <p>No admitted students found.</p>
+                    {% if search or month or year or course or batch_month or batch_year %}
+                        <small>Try adjusting your filters or clear the current search.</small>
+                        <a href="{% url 'admitted_students' %}" class="btn-primary">Show All Students</a>
+                    {% else %}
+                        <small>Start your enrolled student list by creating a new admission.</small>
+                        <a href="{% url 'new_admission' %}" class="btn-primary">Add First Student</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
     </div>
-</div>
 
-<!-- STUDENT DETAIL MODAL -->
-<div id="studentModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <h2>📋 Student Details</h2>
-        
-        <form id="studentForm" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" id="studentId" name="student_id">
+    <div id="studentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Student Details</h2>
             
-            <div class="form-grid">
-                <!-- Top Section: Personal Info on Left, Photo on Right -->
-                <div class="top-section">
-                    <!-- Personal Information (Left Side) -->
-                    <div class="form-section personal-info-left">
-                        <h3>👤 Personal Information</h3>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Student Name <span class="required">*</span></label>
-                                <input type="text" id="studentName" name="student_name" required>
+            <form id="studentForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" id="studentId" name="student_id">
+                
+                <div class="form-grid">
+                    <div class="top-section">
+                        <div class="form-section personal-info-left">
+                            <h3>Personal Information</h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Student Name <span class="required">*</span></label>
+                                    <input type="text" id="studentName" name="student_name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Father Name <span class="required">*</span></label>
+                                    <input type="text" id="fatherName" name="father_name" required>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Father Name <span class="required">*</span></label>
-                                <input type="text" id="fatherName" name="father_name" required>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Surname <span class="required">*</span></label>
+                                    <input type="text" id="surname" name="surname" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Mother Name</label>
+                                    <input type="text" id="motherName" name="mother_name">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group full-width">
+                                    <label>Full Name (Auto-generated)</label>
+                                    <input type="text" id="fullName" name="full_name" readonly class="readonly">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Date of Birth <span class="required">*</span></label>
+                                    <input type="date" id="dob" name="date_of_birth" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Gender <span class="required">*</span></label>
+                                    <select id="gender" name="gender" required>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
+                        <div class="photo-section-right">
+                            <div class="admission-date-box">
+                                <span class="admission-date-label">Admission Date</span>
+                                <input type="date" id="admissionDateInput" name="admission_date" class="admission-date-input" required>
+                            </div>
+
+                            <div class="photo-section">
+                                <label class="photo-label">Student Photo</label>
+                                <div class="modal-photo">
+                                    <img id="modalPhoto" src="" alt="Student Photo">
+                                    <video id="cameraVideoModal" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; background: #000;" playsinline autoplay muted></video>
+                                    <canvas id="photoCameraCanvas" style="display: none;"></canvas>
+                                </div>
+                                <input type="file" id="photoInput" name="photo" accept="image/*" style="display:none;">
+                                <div class="photo-actions">
+                                    <button type="button" class="change-photo-btn" onclick="document.getElementById('photoInput').click()">Change Photo</button>
+                                    <button type="button" class="change-photo-btn alt" id="cameraBtnModal" onclick="openCameraModal()">Take Photo</button>
+                                    <button type="button" class="change-photo-btn danger" onclick="removeStudentPhoto()">Remove Photo</button>
+                                </div>
+                                <div id="cameraControlsModal" style="display: none; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                                    <button type="button" class="change-photo-btn success" id="captureBtnModal" onclick="capturePhotoModal()">Capture</button>
+                                    <button type="button" class="change-photo-btn danger" id="cancelCameraBtnModal" onclick="cancelCameraModal()">Cancel</button>
+                                </div>
+                            </div>
+
+                            <div class="quick-fields-section">
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <label>Marital Status <span class="required">*</span></label>
+                                        <select id="maritalStatusRight" name="marital_status" class="form-control">
+                                            <option value="Single">Single</option>
+                                            <option value="Married">Married</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <label>Mobile (Own) <span class="required">*</span></label>
+                                        <input type="tel" id="mobileOwnRight" name="mobile_own" pattern="[0-9]{10}" class="form-control" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <label>Parent Mobile</label>
+                                        <input type="tel" id="parentMobileRight" name="parent_mobile" pattern="[0-9]{10}" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Course Information</h3>
+                        
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Surname <span class="required">*</span></label>
-                                <input type="text" id="surname" name="surname" required>
+                                <label>Course <span class="required">*</span></label>
+                                <select id="courseSelect" name="course" required>
+                                    <option value="MS-CIT">MS-CIT</option>
+                                    <option value="Tally">Tally</option>
+                                    <option value="Advance Excel">Advance Excel</option>
+                                    <option value="IOT">IOT</option>
+                                    <option value="Scratch">Scratch</option>
+                                    {% for c in all_courses %}
+                                        {% if c.name not in "MS-CIT,Tally,Advance Excel,IOT,Scratch" %}
+                                            <option value="{{ c.name }}">{{ c.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
                             <div class="form-group">
-                                <label>Mother Name</label>
-                                <input type="text" id="motherName" name="mother_name">
+                                <label>Custom Course</label>
+                                <input type="text" id="customCourse" name="custom_course" placeholder="If Other selected">
+                            </div>
+                        </div>
+
+                        <div class="form-section batch-section">
+                            <h3>Batch Information</h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Batch Month</label>
+                                    <select id="batchMonth" name="batch_month">
+                                        <option value="">-- Select Month --</option>
+                                        <option value="January">January</option>
+                                        <option value="February">February</option>
+                                        <option value="March">March</option>
+                                        <option value="April">April</option>
+                                        <option value="May">May</option>
+                                        <option value="June">June</option>
+                                        <option value="July">July</option>
+                                        <option value="August">August</option>
+                                        <option value="September">September</option>
+                                        <option value="October">October</option>
+                                        <option value="November">November</option>
+                                        <option value="December">December</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Batch Year</label>
+                                    <select id="batchYear" name="batch_year">
+                                        <option value="">-- Select Year --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group full-width current-batch-box">
+                                <strong>Current Batch:</strong>
+                                <span id="currentBatchDisplay">-</span>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Theory Timing</label>
+                                    <select id="theoryBatchTime" name="theory_batch_time">
+                                        <option value="">-- Select Theory Timing --</option>
+                                        {% for slot, display in time_slots %}
+                                            <option value="{{ slot }}">{{ display }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Practical Timing</label>
+                                    <select id="practicalBatchTime" name="practical_batch_time">
+                                        <option value="">-- Select Practical Timing --</option>
+                                        {% for slot, display in time_slots %}
+                                            <option value="{{ slot }}">{{ display }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group full-width">
-                                <label>Full Name (Auto-generated)</label>
-                                <input type="text" id="fullName" name="full_name" readonly class="readonly">
+                                <label>Educational Qualification <span class="required">*</span></label>
+                                <input type="text" id="qualification" name="educational_qualification" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Address</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>Address <span class="required">*</span></label>
+                                <textarea id="address" name="address" rows="2" required></textarea>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Date of Birth <span class="required">*</span></label>
-                                <input type="date" id="dob" name="date_of_birth" required>
+                                <label>City <span class="required">*</span></label>
+                                <input type="text" id="city" name="city" required>
                             </div>
                             <div class="form-group">
-                                <label>Gender <span class="required">*</span></label>
-                                <select id="gender" name="gender" required>
-                                    <option value="Male">Male</option>
-                                    <option value="Female">Female</option>
-                                    <option value="Other">Other</option>
+                                <label>Tehsil/Block <span class="required">*</span></label>
+                                <select id="tehsil" name="tehsil_block" required>
+                                    <option value="">-- Select Tehsil/Block --</option>
                                 </select>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Photo Section (Right Side) -->
-                    <div class="photo-section-right">
-                        <!-- Admission Date Display (Top Right) -->
-                        <div class="admission-date-box">
-                            <span class="admission-date-label">📅 Admission Date:</span>
-                            <input type="date" id="admissionDateInput" name="admission_date" class="admission-date-input" required>
-                        </div>
-
-                        <!-- Photo -->
-                        <div class="photo-section">
-                            <label class="photo-label">Student Photo</label>
-                            <div class="modal-photo">
-                                <img id="modalPhoto" src="" alt="Student Photo">
-                                <video id="cameraVideoModal" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; background: #000;" playsinline autoplay muted></video>
-                                <canvas id="photoCameraCanvas" style="display: none;"></canvas>
-                            </div>
-                            <input type="file" id="photoInput" name="photo" accept="image/*" style="display:none;">
-                            <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
-                                <button type="button" class="change-photo-btn" onclick="document.getElementById('photoInput').click()">
-                                    📸 Change Photo
-                                </button>
-                                <button type="button" class="change-photo-btn" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);" id="cameraBtnModal" onclick="openCameraModal()">
-                                    📷 Take Photo
-                                </button>
-                                <button type="button" class="change-photo-btn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);" onclick="removeStudentPhoto()">
-                                    🗑️ Remove Photo
-                                </button>
-                            </div>
-                            <div id="cameraControlsModal" style="display: none; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
-                                <button type="button" class="change-photo-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);" id="captureBtnModal" onclick="capturePhotoModal()">
-                                    ✓ Capture
-                                </button>
-                                <button type="button" class="change-photo-btn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);" id="cancelCameraBtnModal" onclick="cancelCameraModal()">
-                                    ✕ Cancel
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Quick Fields Below Photo -->
-                        <div class="quick-fields-section">
-                            <div class="form-row">
-                                <div class="form-group full-width">
-                                    <label>Marital Status <span class="required">*</span></label>
-                                    <select id="maritalStatusRight" name="marital_status" class="form-control">
-                                        <option value="Single">Single</option>
-                                        <option value="Married">Married</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group full-width">
-                                    <label>📞 Mobile (Own) <span class="required">*</span></label>
-                                    <input type="tel" id="mobileOwnRight" name="mobile_own" pattern="[0-9]{10}" class="form-control" required>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group full-width">
-                                    <label>Parent Mobile</label>
-                                    <input type="tel" id="parentMobileRight" name="parent_mobile" pattern="[0-9]{10}" class="form-control">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Course Information -->
-                <div class="form-section">
-                    <h3>📚 Course Information</h3>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Course <span class="required">*</span></label>
-                            <select id="courseSelect" name="course" required>
-                                <option value="MS-CIT">MS-CIT</option>
-                                <option value="Tally">Tally</option>
-                                <option value="Advance Excel">Advance Excel</option>
-                                <option value="IOT">IOT</option>
-                                <option value="Scratch">Scratch</option>
-                                
-                                <!-- Dynamic Courses from Database -->
-                                {% for c in all_courses %}
-                                    {% if c.name not in "MS-CIT,Tally,Advance Excel,IOT,Scratch" %}
-                                        <option value="{{ c.name }}">{{ c.name }}</option>
-                                    {% endif %}
-                                {% endfor %}
-                                
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Custom Course</label>
-                            <input type="text" id="customCourse" name="custom_course" placeholder="If Other selected">
-                        </div>
-                    </div>
-                    <div class="form-section" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left-color: #0284c7;">
-                        <h3 style="color: #0c4a6e;">📅 Batch Information</h3>
                         
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Batch Month</label>
-                                <select id="batchMonth" name="batch_month">
-                                    <option value="">-- Select Month --</option>
-                                    <option value="January">January</option>
-                                    <option value="February">February</option>
-                                    <option value="March">March</option>
-                                    <option value="April">April</option>
-                                    <option value="May">May</option>
-                                    <option value="June">June</option>
-                                    <option value="July">July</option>
-                                    <option value="August">August</option>
-                                    <option value="September">September</option>
-                                    <option value="October">October</option>
-                                    <option value="November">November</option>
-                                    <option value="December">December</option>
+                                <label>District <span class="required">*</span></label>
+                                <select id="district" name="district" required onchange="updateTehsilOptions()">
+                                    <option value="">-- Select District --</option>
+                                    <option value="Ahmednagar">Ahmednagar</option>
+                                    <option value="Akola">Akola</option>
+                                    <option value="Amravati">Amravati</option>
+                                    <option value="Beed">Beed</option>
+                                    <option value="Bhandara">Bhandara</option>
+                                    <option value="Buldhana">Buldhana</option>
+                                    <option value="Chandrapur">Chandrapur</option>
+                                    <option value="Chhatrapati Sambhajinagar">Chhatrapati Sambhajinagar</option>
+                                    <option value="Dharashiv">Dharashiv</option>
+                                    <option value="Dhule">Dhule</option>
+                                    <option value="Gadchiroli">Gadchiroli</option>
+                                    <option value="Gondia">Gondia</option>
+                                    <option value="Hingoli">Hingoli</option>
+                                    <option value="Jalgaon">Jalgaon</option>
+                                    <option value="Jalna">Jalna</option>
+                                    <option value="Kolhapur">Kolhapur</option>
+                                    <option value="Latur">Latur</option>
+                                    <option value="Mumbai City">Mumbai City</option>
+                                    <option value="Mumbai Suburban">Mumbai Suburban</option>
+                                    <option value="Nagpur">Nagpur</option>
+                                    <option value="Nanded">Nanded</option>
+                                    <option value="Nandurbar">Nandurbar</option>
+                                    <option value="Nashik">Nashik</option>
+                                    <option value="Parbhani">Parbhani</option>
+                                    <option value="Pune">Pune</option>
+                                    <option value="Raigad">Raigad</option>
+                                    <option value="Ratnagiri">Ratnagiri</option>
+                                    <option value="Sangli">Sangli</option>
+                                    <option value="Satara">Satara</option>
+                                    <option value="Sindhudurg">Sindhudurg</option>
+                                    <option value="Solapur">Solapur</option>
+                                    <option value="Thane">Thane</option>
+                                    <option value="Wardha">Wardha</option>
+                                    <option value="Washim">Washim</option>
+                                    <option value="Yavatmal">Yavatmal</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Batch Year</label>
-                                <select id="batchYear" name="batch_year">
-                                    <option value="">-- Select Year --</option>
-                                    <!-- Years will be populated by JavaScript -->
-                                </select>
+                                <label>Pin Code <span class="required">*</span></label>
+                                <input type="text" id="pinCode" name="pin_code" pattern="[0-9]{6}" required>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="form-section financial-section">
+                        <h3>Financial Information</h3>
                         
-                        <div class="form-group full-width">
-                            <div style="background: white; padding: 10px; border-radius: 6px; border: 2px solid #0284c7;">
-                                <strong style="color: #0c4a6e;">Current Batch:</strong> 
-                                <span id="currentBatchDisplay" style="color: #0284c7; font-weight: 700;">
-                                    -
-                                </span>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Total Fees (Rs.) <span class="required">*</span></label>
+                                <input type="number" id="totalFees" name="total_fees" step="0.01" min="0" value="5000" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Paid Fees (Rs.)</label>
+                                <input type="number" id="paidFees" name="paid_fees" step="0.01" min="0" value="0" readonly class="readonly">
+                            </div>
+                            <div class="form-group">
+                                <label>Remaining Fees (Rs.)</label>
+                                <input type="number" id="remainingFees" readonly class="readonly">
                             </div>
                         </div>
+                    </div>
 
-                        <div class="form-group">
-                            <label>Theory Timing</label>
-                            <select id="theoryBatchTime" name="theory_batch_time">
-                                <option value="">-- Select Theory Timing --</option>
-                                {% for slot, display in time_slots %}
-                                    <option value="{{ slot }}">{{ display }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Practical Timing</label>
-                            <select id="practicalBatchTime" name="practical_batch_time">
-                                <option value="">-- Select Practical Timing --</option>
-                                {% for slot, display in time_slots %}
-                                    <option value="{{ slot }}">{{ display }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>   
-                    <div class="form-row">
-                        <div class="form-group full-width">
-                            <label>Educational Qualification <span class="required">*</span></label>
-                            <input type="text" id="qualification" name="educational_qualification" required>
+                    <div class="payment-history-section">
+                        <h3>Payment History (Installments)</h3>
+                        <div id="paymentHistoryContainer">
+                            <div class="no-payments">
+                                <div class="no-payments-icon">⏳</div>
+                                <p>Loading payment history...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Address Information -->
-                <div class="form-section">
-                    <h3>🏠 Address</h3>
-                    
-                    <div class="form-row">
-                        <div class="form-group full-width">
-                            <label>Address <span class="required">*</span></label>
-                            <textarea id="address" name="address" rows="2" required></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>City <span class="required">*</span></label>
-                            <input type="text" id="city" name="city" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Tehsil/Block <span class="required">*</span></label>
-                            <select id="tehsil" name="tehsil_block" required>
-                                <option value="">-- Select Tehsil/Block --</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>District <span class="required">*</span></label>
-                            <select id="district" name="district" required onchange="updateTehsilOptions()">
-                                <option value="">-- Select District --</option>
-                                <option value="Ahmednagar">Ahmednagar</option>
-                                <option value="Akola">Akola</option>
-                                <option value="Amravati">Amravati</option>
-                                <option value="Beed">Beed</option>
-                                <option value="Bhandara">Bhandara</option>
-                                <option value="Buldhana">Buldhana</option>
-                                <option value="Chandrapur">Chandrapur</option>
-                                <option value="Chhatrapati Sambhajinagar">Chhatrapati Sambhajinagar</option>
-                                <option value="Dharashiv">Dharashiv</option>
-                                <option value="Dhule">Dhule</option>
-                                <option value="Gadchiroli">Gadchiroli</option>
-                                <option value="Gondia">Gondia</option>
-                                <option value="Hingoli">Hingoli</option>
-                                <option value="Jalgaon">Jalgaon</option>
-                                <option value="Jalna">Jalna</option>
-                                <option value="Kolhapur">Kolhapur</option>
-                                <option value="Latur">Latur</option>
-                                <option value="Mumbai City">Mumbai City</option>
-                                <option value="Mumbai Suburban">Mumbai Suburban</option>
-                                <option value="Nagpur">Nagpur</option>
-                                <option value="Nanded">Nanded</option>
-                                <option value="Nandurbar">Nandurbar</option>
-                                <option value="Nashik">Nashik</option>
-                                <option value="Parbhani">Parbhani</option>
-                                <option value="Pune">Pune</option>
-                                <option value="Raigad">Raigad</option>
-                                <option value="Ratnagiri">Ratnagiri</option>
-                                <option value="Sangli">Sangli</option>
-                                <option value="Satara">Satara</option>
-                                <option value="Sindhudurg">Sindhudurg</option>
-                                <option value="Solapur">Solapur</option>
-                                <option value="Thane">Thane</option>
-                                <option value="Wardha">Wardha</option>
-                                <option value="Washim">Washim</option>
-                                <option value="Yavatmal">Yavatmal</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Pin Code <span class="required">*</span></label>
-                            <input type="text" id="pinCode" name="pin_code" pattern="[0-9]{6}" required>
-                        </div>
-                    </div>
+                <div class="modal-actions">
+                    <a id="studentCommunicationLink" href="{% url 'communications_page' %}" class="cancel-btn" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
+                        Open Comments
+                    </a>
+                    <button type="submit" class="save-btn">Save Changes</button>
+                    <button type="button" class="cancel-btn" onclick="closeModal()">Close</button>
                 </div>
-
-                <!-- Financial Information -->
-                <div class="form-section financial-section">
-                    <h3>💰 Financial Information</h3>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Total Fees (₹) <span class="required">*</span></label>
-                            <input type="number" id="totalFees" name="total_fees" step="0.01" min="0" value="5000" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Paid Fees (₹)</label>
-                            <input type="number" id="paidFees" name="paid_fees" step="0.01" min="0" value="0" readonly class="readonly">
-                        </div>
-                        <div class="form-group">
-                            <label>Remaining Fees (₹)</label>
-                            <input type="number" id="remainingFees" readonly class="readonly">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Payment History Section -->
-                <div class="payment-history-section">
-                    <h3>📜 Payment History (Installments)</h3>
-                    <div id="paymentHistoryContainer">
-                        <div class="no-payments">
-                            <div class="no-payments-icon">⏳</div>
-                            <p>Loading payment history...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MODAL ACTIONS - THIS WAS MISSING! -->
-            <div class="modal-actions">
-                <button type="submit" class="save-btn">
-                    💾 Save Changes
-                </button>
-                <button type="button" class="cancel-btn" onclick="closeModal()">
-                    ❌ Close
-                </button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
-
+</section>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'core/admitted_students.js' %}?v={{ STATIC_VERSION }}"></script>
 <script>
-// ===================== SELECTION AND DELETION FUNCTIONS =====================
-
-// Delete selected students
-function deleteSelectedStudents() {
-    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
-    const studentIds = Array.from(checkboxes).map(cb => cb.value);
-    
-    if (studentIds.length === 0) {
-        alert('⚠️ Please select at least one student to delete');
-        return;
-    }
-    
-    const confirmMessage = `⚠️ Are you sure you want to delete ${studentIds.length} student${studentIds.length > 1 ? 's' : ''}?\n\n` +
-                          `This action cannot be undone and will also delete:\n` +
-                          `• All fee payment records\n` +
-                          `• Student photos and documents\n\n` +
-                          `Type "DELETE" to confirm:`;
-    
-    const userInput = prompt(confirmMessage);
-    
-    if (userInput !== 'DELETE') {
-        if (userInput !== null) {
-            alert('❌ Deletion cancelled. You must type "DELETE" to confirm.');
-        }
-        return;
-    }
-    
-    // Show loading
-    const deleteBtn = document.getElementById('deleteSelectedBtn');
-    const originalText = deleteBtn.innerHTML;
-    deleteBtn.innerHTML = '<span>⏳</span> Deleting...';
-    deleteBtn.disabled = true;
-    
-    // Send delete request
-    fetch('{% url "delete_admitted_students" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            student_ids: studentIds
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification(`✅ Successfully deleted ${data.deleted_count} student${data.deleted_count > 1 ? 's' : ''}!`, 'success');
-            
-            // Reload page after 1 second
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        } else {
-            alert('❌ Error: ' + (data.error || 'Failed to delete students'));
-            deleteBtn.innerHTML = originalText;
-            deleteBtn.disabled = false;
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('❌ Error deleting students. Please try again.');
-        deleteBtn.innerHTML = originalText;
-        deleteBtn.disabled = false;
-    });
-}
-
-// Get CSRF token
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-// Auto-search after 3 letters typed - Client side filtering
-function autoSearchStudents() {
+function syncDrawerSearch(value) {
     const searchInput = document.getElementById('search');
-    const searchValue = searchInput.value.trim().toLowerCase();
+    if (searchInput) {
+        searchInput.value = value;
+    }
+    autoSearchStudents();
+}
+
+function autoSearchStudents() {
+    const searchValue = (document.getElementById('search')?.value || '').trim().toLowerCase();
+    const feeStatus = document.getElementById('feeStatusClient')?.value || '';
+    const lifecycleStatus = document.getElementById('lifecycleClient')?.value || '';
+    const dateFrom = document.getElementById('dateFromClient')?.value || '';
+    const dateTo = document.getElementById('dateToClient')?.value || '';
+    const activeQuickFilter = document.querySelector('.quick-chip.active')?.dataset.quickFilter || 'all';
     const studentCards = document.querySelectorAll('.student-card');
     let visibleCount = 0;
-    
+
     studentCards.forEach(card => {
-        const studentName = card.querySelector('.student-name').textContent.toLowerCase();
-        const studentMobile = card.querySelector('.detail-item span:last-child')?.textContent.toLowerCase() || '';
-        
-        if (studentName.includes(searchValue) || studentMobile.includes(searchValue) || searchValue === '') {
-            card.style.display = '';
-            visibleCount++;
-        } else {
-            card.style.display = 'none';
+        const haystack = [
+            card.dataset.fullname,
+            card.dataset.mobile,
+            card.dataset.studentCode,
+            card.dataset.course,
+            card.dataset.batch,
+            card.dataset.surname,
+            card.dataset.studentname,
+            card.dataset.fathername
+        ].join(' ').toLowerCase();
+
+        const admissionDate = card.dataset.admissionDate || '';
+        let matches = !searchValue || haystack.includes(searchValue);
+
+        if (matches && feeStatus) {
+            if (feeStatus === 'overdue') {
+                matches = card.dataset.overdue === 'yes';
+            } else {
+                matches = card.dataset.feeState === feeStatus;
+            }
         }
+
+        if (matches && activeQuickFilter === 'pending') {
+            matches = ['partial', 'unpaid'].includes(card.dataset.feeState);
+        }
+
+        if (matches && lifecycleStatus) {
+            matches = card.dataset.lifecycle === lifecycleStatus;
+        }
+
+        if (matches && dateFrom) {
+            matches = admissionDate >= dateFrom;
+        }
+
+        if (matches && dateTo) {
+            matches = admissionDate <= dateTo;
+        }
+
+        card.style.display = matches ? '' : 'none';
+        if (matches) visibleCount++;
     });
-    
-    // Show empty state if no results
-    const emptyState = document.querySelector('.empty-state');
-    if (visibleCount === 0 && searchValue.length >= 3) {
-        if (emptyState) emptyState.style.display = 'grid';
-    } else if (emptyState) {
-        emptyState.style.display = 'none';
+
+    const visibleNode = document.getElementById('liveVisibleCount');
+    if (visibleNode) {
+        visibleNode.textContent = visibleCount;
     }
 }
+
+function copyStudentMobile(mobile) {
+    if (!mobile) return;
+    navigator.clipboard.writeText(mobile).then(() => {
+        if (typeof showNotification === 'function') {
+            showNotification('Mobile number copied.', 'success');
+        }
+    });
+}
+
+function bulkCopyMobiles() {
+    const selected = Array.from(document.querySelectorAll('.student-checkbox:checked'))
+        .map(cb => cb.closest('.student-card')?.dataset.mobile)
+        .filter(Boolean);
+
+    if (!selected.length) {
+        if (typeof showNotification === 'function') {
+            showNotification('Select at least one student to prepare fee reminders.', 'info');
+        }
+        return;
+    }
+
+    navigator.clipboard.writeText(selected.join(', ')).then(() => {
+        if (typeof showNotification === 'function') {
+            showNotification('Selected mobile numbers copied for reminders.', 'success');
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.quick-chip').forEach(function(chip) {
+        chip.addEventListener('click', function() {
+            document.querySelectorAll('.quick-chip').forEach(btn => btn.classList.remove('active'));
+            chip.classList.add('active');
+
+            const feeStatus = document.getElementById('feeStatusClient');
+            const lifecycle = document.getElementById('lifecycleClient');
+            const dateFrom = document.getElementById('dateFromClient');
+            const dateTo = document.getElementById('dateToClient');
+
+            if (feeStatus) feeStatus.value = '';
+            if (lifecycle) lifecycle.value = '';
+            if (dateFrom) dateFrom.value = '';
+            if (dateTo) dateTo.value = '';
+
+            switch (chip.dataset.quickFilter) {
+                case 'paid':
+                    if (feeStatus) feeStatus.value = 'paid';
+                    break;
+                case 'new':
+                    if (lifecycle) lifecycle.value = 'newly-admitted';
+                    break;
+                case 'completed':
+                    if (lifecycle) lifecycle.value = 'completed';
+                    break;
+                case 'overdue':
+                    if (feeStatus) feeStatus.value = 'overdue';
+                    break;
+            }
+
+            autoSearchStudents();
+        });
+    });
+
+    const defaultChip = document.querySelector('.quick-chip[data-quick-filter="all"]');
+    if (defaultChip) defaultChip.classList.add('active');
+    autoSearchStudents();
+});
 </script>
 {% endblock %}

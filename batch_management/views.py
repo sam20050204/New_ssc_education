@@ -85,19 +85,48 @@ def active_batches(request):
 def end_batch(request):
     selected_month = request.GET.get("batch_month", "").strip()
     selected_year = request.GET.get("batch_year", "").strip()
+    selected_course = request.GET.get("course", "").strip()
     preview = None
+    active_batches = AdmittedStudent.objects.filter(is_archived=False, batch_status="active")
 
-    if selected_month and selected_year:
+    if selected_month and selected_year and selected_course:
         try:
-            preview = get_batch_transition_preview(batch_month=selected_month, batch_year=selected_year)
+            preview = get_batch_transition_preview(
+                batch_month=selected_month,
+                batch_year=selected_year,
+                course=selected_course,
+                statuses=("active",),
+            )
         except ValueError as exc:
             messages.error(request, str(exc))
 
     context = _common_batch_filters()
+    context["filter_months"] = (
+        active_batches.exclude(batch_month__isnull=True)
+        .exclude(batch_month="")
+        .values_list("batch_month", flat=True)
+        .distinct()
+        .order_by("batch_month")
+    )
+    context["filter_years"] = (
+        active_batches.exclude(batch_year__isnull=True)
+        .exclude(batch_year="")
+        .values_list("batch_year", flat=True)
+        .distinct()
+        .order_by("-batch_year")
+    )
+    context["filter_courses"] = (
+        active_batches.exclude(course__isnull=True)
+        .exclude(course="")
+        .values_list("course", flat=True)
+        .distinct()
+        .order_by("course")
+    )
     context.update(
         {
             "selected_month": selected_month,
             "selected_year": selected_year,
+            "selected_course": selected_course,
             "preview": preview,
             "active_page": "end_batch",
             "page_title": "End Batch",
@@ -113,6 +142,7 @@ def end_batch(request):
 def end_batch_confirm(request):
     batch_month = request.POST.get("batch_month", "").strip()
     batch_year = request.POST.get("batch_year", "").strip()
+    course = request.POST.get("course", "").strip()
     remarks = request.POST.get("remarks", "").strip()
     override = request.POST.get("admin_override") == "on"
 
@@ -120,16 +150,17 @@ def end_batch_confirm(request):
         affected = update_batch_lifecycle(
             batch_month=batch_month,
             batch_year=batch_year,
+            course=course,
             action="end",
             actor=request.user,
             request=request,
             remarks=remarks,
             override=override,
         )
-        messages.success(request, f"Batch {batch_month} {batch_year} ended successfully for {affected} students.")
+        messages.success(request, f"Batch {batch_month} {batch_year} ({course}) ended successfully for {affected} students.")
     except ValueError as exc:
         messages.error(request, str(exc))
-        return redirect(f"{reverse('end_batch')}?batch_month={batch_month}&batch_year={batch_year}")
+        return redirect(f"{reverse('end_batch')}?batch_month={batch_month}&batch_year={batch_year}&course={course}")
 
     return redirect("ended_batches")
 
@@ -183,19 +214,21 @@ def restore_batch(request):
 def restore_batch_confirm(request):
     batch_month = request.POST.get("batch_month", "").strip()
     batch_year = request.POST.get("batch_year", "").strip()
+    course = request.POST.get("course", "").strip()
     remarks = request.POST.get("remarks", "").strip()
 
     try:
         affected = update_batch_lifecycle(
             batch_month=batch_month,
             batch_year=batch_year,
+            course=course,
             action="restore",
             actor=request.user,
             request=request,
             remarks=remarks,
             override=True,
         )
-        messages.success(request, f"Batch {batch_month} {batch_year} restored successfully for {affected} students.")
+        messages.success(request, f"Batch {batch_month} {batch_year} ({course}) restored successfully for {affected} students.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return redirect("restore_batch")

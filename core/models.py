@@ -725,3 +725,205 @@ class BatchActionLog(models.Model):
     def __str__(self):
         return f"{self.batch_month} {self.batch_year} - {self.action_type}"
 
+
+class NotificationSetting(models.Model):
+    CATEGORY_CHOICES = [
+        ("admissions", "Admissions"),
+        ("financial", "Financial"),
+        ("academic", "Academic"),
+        ("operational", "Operational"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notification_settings",
+    )
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    in_app_enabled = models.BooleanField(default=True)
+    email_enabled = models.BooleanField(default=False)
+    sms_enabled = models.BooleanField(default=False)
+    whatsapp_enabled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "category")
+        ordering = ["user_id", "category"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.category}"
+
+
+class Notification(models.Model):
+    CATEGORY_CHOICES = NotificationSetting.CATEGORY_CHOICES
+    PRIORITY_CHOICES = [
+        ("urgent", "Urgent"),
+        ("pending", "Pending"),
+        ("success", "Success"),
+        ("info", "Informational"),
+    ]
+
+    recipient = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="triggered_notifications",
+    )
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, db_index=True)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default="info", db_index=True)
+    event_key = models.CharField(max_length=120, db_index=True)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    link_url = models.CharField(max_length=255, blank=True)
+    is_read = models.BooleanField(default=False, db_index=True)
+    is_pinned = models.BooleanField(default=False)
+    action_label = models.CharField(max_length=60, blank=True)
+    due_at = models.DateTimeField(blank=True, null=True, db_index=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
+    object_id = models.CharField(max_length=64, blank=True)
+    content_object = GenericForeignKey("content_type", "object_id")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["is_read", "-is_pinned", "-created_at"]
+        indexes = [
+            models.Index(fields=["recipient", "is_read", "created_at"]),
+            models.Index(fields=["category", "priority", "created_at"]),
+            models.Index(fields=["event_key", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.recipient.username} - {self.title}"
+
+
+class CommunicationThread(models.Model):
+    STATUS_CHOICES = [
+        ("open", "Open"),
+        ("pending", "Pending"),
+        ("resolved", "Resolved"),
+        ("archived", "Archived"),
+    ]
+    SCOPE_CHOICES = [
+        ("student", "Student"),
+        ("enquiry", "Enquiry"),
+        ("finance", "Finance"),
+        ("internal", "Internal"),
+    ]
+
+    title = models.CharField(max_length=200)
+    scope = models.CharField(max_length=20, choices=SCOPE_CHOICES, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="open", db_index=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="created_threads",
+    )
+    assigned_to = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_threads",
+    )
+    content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
+    object_id = models.CharField(max_length=64, blank=True)
+    content_object = GenericForeignKey("content_type", "object_id")
+    tags = models.JSONField(default=list, blank=True)
+    visibility = models.JSONField(default=list, blank=True)
+    is_pinned = models.BooleanField(default=False)
+    last_activity_at = models.DateTimeField(default=timezone.now, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-is_pinned", "-last_activity_at"]
+        indexes = [
+            models.Index(fields=["scope", "status", "last_activity_at"]),
+            models.Index(fields=["content_type", "object_id"]),
+        ]
+
+    def __str__(self):
+        return self.title
+
+
+class CommentEntry(models.Model):
+    STATUS_UPDATE_CHOICES = [
+        ("none", "None"),
+        ("follow_up", "Follow-up"),
+        ("pending_docs", "Pending Documents"),
+        ("fee_discussion", "Fee Discussion"),
+        ("resolved", "Resolved"),
+    ]
+
+    thread = models.ForeignKey(
+        CommunicationThread,
+        on_delete=models.CASCADE,
+        related_name="entries",
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="comment_entries",
+    )
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="replies",
+    )
+    body = models.TextField()
+    status_update = models.CharField(max_length=30, choices=STATUS_UPDATE_CHOICES, default="none")
+    is_internal = models.BooleanField(default=True)
+    attachment = models.FileField(upload_to="communication_attachments/", blank=True, null=True)
+    mentions = models.ManyToManyField(User, blank=True, related_name="mentioned_in_comments")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["thread", "created_at"]),
+            models.Index(fields=["author", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.thread_id} - {self.author or 'system'}"
+
+
+class ThreadParticipantState(models.Model):
+    thread = models.ForeignKey(
+        CommunicationThread,
+        on_delete=models.CASCADE,
+        related_name="participant_states",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="thread_states",
+    )
+    last_read_at = models.DateTimeField(blank=True, null=True)
+    is_muted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("thread", "user")
+        indexes = [
+            models.Index(fields=["user", "last_read_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - thread {self.thread_id}"
+

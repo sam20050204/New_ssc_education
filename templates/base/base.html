@@ -48,14 +48,77 @@
                 <button id="theme-toggle" class="icon-btn" type="button" title="Toggle theme">
                     <i class="fa-solid fa-moon"></i>
                 </button>
-                <button class="icon-btn" type="button" title="Notifications">
-                    <i class="fa-regular fa-bell"></i>
-                    <span class="icon-badge">4</span>
-                </button>
-                <button class="icon-btn" type="button" title="Messages">
-                    <i class="fa-regular fa-message"></i>
-                    <span class="icon-badge icon-badge-alt">2</span>
-                </button>
+                <div class="dropdown-shell collaboration-shell">
+                    <button class="icon-btn collaboration-btn" type="button" title="Notifications" data-dropdown-target="notificationsPanel">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="icon-badge{% if not topbar_unread_notifications %} hidden{% endif %}" data-notification-badge>{{ topbar_unread_notifications }}</span>
+                    </button>
+                    <div class="dropdown-panel dropdown-panel-right collaboration-panel" id="notificationsPanel">
+                        <div class="panel-mini-head">
+                            <div>
+                                <strong>Notifications</strong>
+                                <span data-notification-summary>{{ topbar_unread_notifications }} unread</span>
+                            </div>
+                            <button type="button" class="mini-link-btn" data-mark-all-notifications>Mark all read</button>
+                        </div>
+                        <div class="collaboration-list" data-notification-list>
+                            {% for item in topbar_recent_notifications %}
+                            <div class="collaboration-item {% if not item.is_read %}is-unread{% endif %}" data-notification-item data-notification-id="{{ item.id }}">
+                                <div class="collaboration-item-main">
+                                    <div class="priority-dot priority-{{ item.priority }}"></div>
+                                    <div>
+                                        <strong>{{ item.title }}</strong>
+                                        <p>{{ item.message|truncatechars:110 }}</p>
+                                        <small>{{ item.created_at|date:"d M Y, h:i A" }}</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="mini-icon-btn" data-toggle-notification-read="{{ item.id }}" title="Toggle read">
+                                    <i class="fa-solid fa-envelope-open-text"></i>
+                                </button>
+                            </div>
+                            {% empty %}
+                            <div class="collaboration-empty">No notifications yet.</div>
+                            {% endfor %}
+                        </div>
+                        <div class="panel-mini-foot">
+                            <a href="{% url 'notifications_page' %}">Open Notification Center</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="dropdown-shell collaboration-shell">
+                    <button class="icon-btn collaboration-btn" type="button" title="Messages" data-dropdown-target="communicationsPanel">
+                        <i class="fa-regular fa-message"></i>
+                        <span class="icon-badge icon-badge-alt{% if not topbar_unread_threads %} hidden{% endif %}" data-thread-badge>{{ topbar_unread_threads }}</span>
+                    </button>
+                    <div class="dropdown-panel dropdown-panel-right collaboration-panel" id="communicationsPanel">
+                        <div class="panel-mini-head">
+                            <div>
+                                <strong>Team Communication</strong>
+                                <span data-thread-summary>{{ topbar_unread_threads }} unread</span>
+                            </div>
+                            <a href="{% url 'communications_page' %}" class="mini-link-btn">Open Hub</a>
+                        </div>
+                        <div class="collaboration-list" data-thread-list>
+                            {% for thread in topbar_recent_threads %}
+                            <a href="{% url 'communications_page' %}?thread={{ thread.id }}" class="collaboration-item">
+                                <div class="collaboration-item-main">
+                                    <div class="priority-dot priority-info"></div>
+                                    <div>
+                                        <strong>{{ thread.title }}</strong>
+                                        <p>{{ thread.scope|title }} thread{% if thread.assigned_to %} · Assigned to {{ thread.assigned_to.username }}{% endif %}</p>
+                                        <small>{{ thread.last_activity_at|date:"d M Y, h:i A" }}</small>
+                                    </div>
+                                </div>
+                            </a>
+                            {% empty %}
+                            <div class="collaboration-empty">No communication threads yet.</div>
+                            {% endfor %}
+                        </div>
+                        <div class="panel-mini-foot">
+                            <a href="{% url 'communications_page' %}">Open Communication Hub</a>
+                        </div>
+                    </div>
+                </div>
                 <div class="quick-actions dropdown-shell">
                     <button class="quick-action-btn" type="button" data-dropdown-target="quickActionsMenu">
                         <i class="fa-solid fa-bolt"></i>
@@ -103,6 +166,8 @@
 </div>
 
 {% block extra_js %}{% endblock %}
+
+<script src="{% static 'core/collaboration.js' %}?v={{ STATIC_VERSION }}"></script>
 
 <script>
 (function() {

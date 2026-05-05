@@ -1700,6 +1700,14 @@ function loadBatchStudentsTable(students) {
     });
     
     tbody.innerHTML = html;
+    updateCurrentBatchSummary();
+}
+
+function updateCurrentBatchSummary() {
+    const studentCountDisplay = document.getElementById('currentStudentCountDisplay');
+    if (studentCountDisplay) {
+        studentCountDisplay.textContent = currentBatchData.students.length;
+    }
 }
 
 function handleBatchTimeChange(selectElement) {
@@ -1923,8 +1931,16 @@ function removeStudentFromBatch(studentId) {
         }).then(response => response.json()).then(data => {
             if (data.success) {
                 showAlert('Student removed from batch', 'success');
-                openBatchStudentsModal(currentBatchData.type, currentBatchData.slot, currentBatchData.display);
+                openBatchStudentsModal(
+                    currentBatchData.type,
+                    currentBatchData.slot,
+                    currentBatchData.display,
+                    currentBatchData.batchId,
+                    currentBatchData.capacity
+                );
                 updateBatchList();
+            } else {
+                showAlert(data.error || 'Error removing student from batch', 'error');
             }
         });
     }
@@ -2251,6 +2267,13 @@ async function addStudentToBatch() {
         showAlert('Error: Batch information not available. Please close and reopen the batch.', 'error');
         return;
     }
+
+    if (currentBatchData.capacity && currentBatchData.students.length >= currentBatchData.capacity) {
+        const shouldContinue = confirm(`This batch is already full (${currentBatchData.students.length}/${currentBatchData.capacity}). Do you still want to try adding one more student?`);
+        if (!shouldContinue) {
+            return;
+        }
+    }
     
     try {
         const fieldName = currentBatchData.type === 'Theory' ? 'theory_batch_time' : 'practical_batch_time';
@@ -2327,6 +2350,84 @@ async function addStudentToBatch() {
 // Wrapper function for button click handler
 function addStudentToBatchButtonClicked() {
     addStudentToBatch();
+}
+
+function displayStudentDetailModal(student) {
+    const content = document.getElementById('student-detail-content');
+    const timeSlots = {
+        '08:00-09:00': '8:00 AM - 9:00 AM',
+        '09:00-10:00': '9:00 AM - 10:00 AM',
+        '10:00-11:00': '10:00 AM - 11:00 AM',
+        '11:00-12:00': '11:00 AM - 12:00 PM',
+        '12:00-13:00': '12:00 PM - 1:00 PM',
+        '13:00-14:00': '1:00 PM - 2:00 PM',
+        '14:00-15:00': '2:00 PM - 3:00 PM',
+        '15:00-16:00': '3:00 PM - 4:00 PM',
+        '16:00-17:00': '4:00 PM - 5:00 PM',
+        '17:00-18:00': '5:00 PM - 6:00 PM',
+        '18:00-19:00': '6:00 PM - 7:00 PM',
+    };
+    const theoryDisplay = timeSlots[student.theory_batch_time] || student.theory_batch_time || 'Not assigned';
+    const practicalDisplay = timeSlots[student.practical_batch_time] || student.practical_batch_time || 'Not assigned';
+    const batchDisplay = student.batch_display || [student.batch_month, student.batch_year].filter(Boolean).join(' ') || 'Not assigned';
+    const paymentHistory = Array.isArray(student.payment_history) && student.payment_history.length
+        ? student.payment_history.map(payment => `
+            <div class="detail-item">
+                <label>${payment.payment_date || '-'}</label>
+                <span>₹ ${payment.amount || 0} via ${payment.payment_mode || '-'}${payment.receipt_no ? ` (${payment.receipt_no})` : ''}</span>
+            </div>
+        `).join('')
+        : '<div class="detail-item"><span>No payment history available</span></div>';
+
+    content.innerHTML = `
+        <div class="student-detail-container">
+            <div class="detail-section">
+                <h3>Personal Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><label>Name:</label><span>${student.full_name || '-'}</span></div>
+                    <div class="detail-item"><label>Mobile:</label><span>${student.mobile_own || '-'}</span></div>
+                    <div class="detail-item"><label>Parent Mobile:</label><span>${student.parent_mobile || '-'}</span></div>
+                    <div class="detail-item"><label>Gender:</label><span>${student.gender || '-'}</span></div>
+                    <div class="detail-item"><label>Qualification:</label><span>${student.educational_qualification || '-'}</span></div>
+                    <div class="detail-item"><label>Admission Date:</label><span>${student.admission_date || '-'}</span></div>
+                </div>
+            </div>
+            <div class="detail-section">
+                <h3>Course & Batch Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><label>Course:</label><span>${student.course || '-'}</span></div>
+                    <div class="detail-item"><label>Batch:</label><span>${batchDisplay}</span></div>
+                    <div class="detail-item"><label>Batch Status:</label><span>${student.batch_status || '-'}</span></div>
+                    <div class="detail-item"><label>Theory Batch:</label><span>${theoryDisplay}</span></div>
+                    <div class="detail-item"><label>Practical Batch:</label><span>${practicalDisplay}</span></div>
+                </div>
+            </div>
+            <div class="detail-section">
+                <h3>Address</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><label>Address:</label><span>${student.address || '-'}</span></div>
+                    <div class="detail-item"><label>City:</label><span>${student.city || '-'}</span></div>
+                    <div class="detail-item"><label>Taluka / Block:</label><span>${student.tehsil_block || '-'}</span></div>
+                    <div class="detail-item"><label>District:</label><span>${student.district || '-'}</span></div>
+                    <div class="detail-item"><label>Pincode:</label><span>${student.pincode || '-'}</span></div>
+                </div>
+            </div>
+            <div class="detail-section">
+                <h3>Financial Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><label>Total Fees:</label><span>₹ ${student.total_fees || 0}</span></div>
+                    <div class="detail-item"><label>Paid Fees:</label><span>₹ ${student.paid_fees || 0}</span></div>
+                    <div class="detail-item"><label>Remaining:</label><span>₹ ${student.remaining_fees || ((student.total_fees || 0) - (student.paid_fees || 0))}</span></div>
+                </div>
+            </div>
+            <div class="detail-section">
+                <h3>Payment History</h3>
+                <div class="detail-grid">
+                    ${paymentHistory}
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 // Close modals when clicking outside

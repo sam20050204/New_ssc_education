@@ -36,47 +36,69 @@
         <div class="stat-card stat-card-enquiries">
             <div class="stat-card-topline">
                 <span class="stat-chip">Lead Flow</span>
-                <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
             </div>
-            <div class="stat-number">{{ enquiry_count }}</div>
-            <div class="stat-label">Total Enquiries</div>
-            <p class="stat-description">Fresh demand captured from prospects in the selected reporting window.</p>
-            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All years{% endif %}</div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">{{ enquiry_count }}</div>
+                    <div class="stat-label">Total Enquiries</div>
+                    <p class="stat-description">Fresh demand captured from prospects in the selected reporting window.</p>
+                    <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All years{% endif %}</div>
+                </div>
+                <div class="stat-visual stat-visual-enquiries">
+                    <img src="{% static 'logos/enquiries-logo.png' %}" alt="Enquiries" class="dashboard-logo dashboard-logo-enquiries">
+                </div>
+            </div>
         </div>
 
         <div class="stat-card stat-card-mscit">
             <div class="stat-card-topline">
                 <span class="stat-chip">Admissions</span>
-                <div class="stat-icon stat-icon-logo">
-                    <img src="{% static 'logos/mscit-logo.png' %}" alt="MSCIT" class="mscit-logo-img">
+            </div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">{{ mscit_count|add:klic_count|add:practice_count }}</div>
+                    <div class="stat-label">Total Admissions</div>
+                    <p class="stat-description">Combined student admissions across all active training programs.</p>
+                    <div class="stat-period">MSCIT {{ mscit_count }} | KLIC {{ klic_count }} | Practice {{ practice_count }}</div>
+                </div>
+                <div class="stat-visual stat-visual-mscit">
+                    <img src="{% static 'logos/mscit-logo.png' %}" alt="MS-CIT" class="dashboard-logo dashboard-logo-mscit">
                 </div>
             </div>
-            <div class="stat-number">{{ mscit_count|add:klic_count|add:practice_count }}</div>
-            <div class="stat-label">Total Admissions</div>
-            <p class="stat-description">Combined student admissions across all active training programs.</p>
-            <div class="stat-period">MSCIT {{ mscit_count }} | KLIC {{ klic_count }} | Practice {{ practice_count }}</div>
         </div>
 
         <div class="stat-card stat-card-klic">
             <div class="stat-card-topline">
                 <span class="stat-chip">Program Mix</span>
-                <div class="stat-icon"><i class="fa-solid fa-layer-group"></i></div>
             </div>
-            <div class="stat-number">{{ klic_count|default:0 }}</div>
-            <div class="stat-label">KLIC Students</div>
-            <p class="stat-description">Learners enrolled in KLIC and other advanced non-MSCIT tracks.</p>
-            <div class="stat-period">High-value upskilling programs</div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">{{ klic_count|default:0 }}</div>
+                    <div class="stat-label">KLIC Students</div>
+                    <p class="stat-description">Learners enrolled in KLIC and other advanced non-MSCIT tracks.</p>
+                    <div class="stat-period">High-value upskilling programs</div>
+                </div>
+                <div class="stat-visual stat-visual-klic">
+                    <img src="{% static 'logos/klic-logo.png' %}" alt="KLIC Courses" class="dashboard-logo dashboard-logo-klic">
+                </div>
+            </div>
         </div>
 
         <div class="stat-card stat-card-practice">
             <div class="stat-card-topline">
                 <span class="stat-chip">Practice</span>
-                <div class="stat-icon"><i class="fa-solid fa-laptop-code"></i></div>
             </div>
-            <div class="stat-number">{{ practice_count|default:0 }}</div>
-            <div class="stat-label">Practice Students</div>
-            <p class="stat-description">Students engaged in practice batches and lab-centered learning time.</p>
-            <div class="stat-period">Operational training pool</div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">{{ practice_count|default:0 }}</div>
+                    <div class="stat-label">Practice Students</div>
+                    <p class="stat-description">Students engaged in practice batches and lab-centered learning time.</p>
+                    <div class="stat-period">Operational training pool</div>
+                </div>
+                <div class="stat-visual stat-visual-practice">
+                    <img src="{% static 'logos/practice-logo.png' %}" alt="Practice" class="dashboard-logo dashboard-logo-practice">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -104,6 +126,56 @@
             </div>
             <div class="chart-canvas-wrap">
                 <canvas id="monthlyTotalChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-container">
+            <div class="chart-header">
+                <div>
+                    <h3>Recent Notifications</h3>
+                    <p class="chart-subtitle">Live operational alerts for admissions, finance, and staff follow-up.</p>
+                </div>
+                <a href="{% url 'notifications_page' %}" class="mini-link-btn">Open Center</a>
+            </div>
+            <div class="activity-list">
+                {% for item in topbar_recent_notifications %}
+                <div class="activity-card {% if not item.is_read %}activity-card-unread{% endif %}">
+                    <div class="activity-pill priority-{{ item.priority }}">{{ item.get_priority_display }}</div>
+                    <div class="activity-copy">
+                        <strong>{{ item.title }}</strong>
+                        <p>{{ item.message|truncatechars:140 }}</p>
+                        <div class="activity-meta">
+                            <span>{{ item.get_category_display }}</span>
+                            <span>{{ item.created_at|date:"d M Y, h:i A" }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="collaboration-empty">No notifications available.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <div>
+                    <h3>Comment Activity Feed</h3>
+                    <p class="chart-subtitle">Latest collaboration threads across student, inquiry, finance, and internal notes.</p>
+                </div>
+                <a href="{% url 'communications_page' %}" class="mini-link-btn">Open Hub</a>
+            </div>
+            <div class="thread-list">
+                {% for thread in topbar_recent_threads %}
+                <a href="{% url 'communications_page' %}?thread={{ thread.id }}" class="thread-card">
+                    <strong>{{ thread.title }}</strong>
+                    <p>{{ thread.get_scope_display }} · {{ thread.get_status_display }}</p>
+                    <small>{{ thread.last_activity_at|date:"d M Y, h:i A" }}</small>
+                </a>
+                {% empty %}
+                <div class="collaboration-empty">No communication activity available.</div>
+                {% endfor %}
             </div>
         </div>
     </div>

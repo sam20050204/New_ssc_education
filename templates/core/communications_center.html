@@ -1,0 +1,113 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Communications{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon"><i class="fa-regular fa-message"></i></div>
+            <div>
+                <h1 class="page-title">Communication Hub</h1>
+                <p class="page-subtitle">Student notes, inquiry follow-ups, internal collaboration, and timeline-based operational discussion.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="workspace-grid workspace-grid-communications" data-communication-app>
+    <aside class="workspace-panel">
+        <div class="workspace-head">
+            <div>
+                <h2>Threads</h2>
+                <p>Active conversations and follow-up streams.</p>
+            </div>
+        </div>
+        <form class="workspace-filters" data-thread-filter-form>
+            <input type="search" name="q" class="filter-input" placeholder="Search threads">
+            <select name="scope" class="filter-select">
+                <option value="">All scopes</option>
+                <option value="student">Student</option>
+                <option value="enquiry">Enquiry</option>
+                <option value="finance">Finance</option>
+                <option value="internal">Internal</option>
+            </select>
+            <select name="status" class="filter-select">
+                <option value="">All status</option>
+                <option value="open">Open</option>
+                <option value="pending">Pending</option>
+                <option value="resolved">Resolved</option>
+                <option value="archived">Archived</option>
+            </select>
+        </form>
+        <div class="thread-list" data-thread-list-panel>
+            {% for thread in communication_threads %}
+            <a href="?thread={{ thread.id }}" class="thread-card {% if selected_thread and selected_thread.id == thread.id %}active{% endif %}" data-thread-card data-thread-id="{{ thread.id }}">
+                <strong>{{ thread.title }}</strong>
+                <p>{{ thread.scope|title }} · {{ thread.get_status_display }}</p>
+                <small>{{ thread.last_activity_at|date:"d M Y, h:i A" }}</small>
+            </a>
+            {% empty %}
+            <div class="collaboration-empty">No threads yet.</div>
+            {% endfor %}
+        </div>
+    </aside>
+
+    <article class="workspace-panel thread-panel">
+        <div class="workspace-head">
+            <div>
+                <h2 data-thread-title>{% if selected_thread %}{{ selected_thread.title }}{% else %}Thread Detail{% endif %}</h2>
+                <p data-thread-meta>{% if selected_thread %}{{ selected_thread.get_scope_display }} · {{ selected_thread.get_status_display }}{% else %}Select a thread to review its communication history.{% endif %}</p>
+            </div>
+        </div>
+        <div class="comment-stream" data-thread-entries>
+            {% if not selected_thread %}
+            <div class="collaboration-empty">Pick a thread from the left, or create a new one below.</div>
+            {% endif %}
+        </div>
+        <form class="composer-form" data-comment-form enctype="multipart/form-data">
+            <input type="hidden" name="thread_id" value="{% if selected_thread %}{{ selected_thread.id }}{% endif %}" data-thread-id-input>
+            <div class="composer-grid">
+                <textarea name="body" class="filter-input composer-textarea" placeholder="Add a note, mention a teammate with @username, or post a status update..."></textarea>
+                <div class="composer-side">
+                    <select name="status_update" class="filter-select">
+                        <option value="none">No status update</option>
+                        <option value="follow_up">Follow-up</option>
+                        <option value="pending_docs">Pending Documents</option>
+                        <option value="fee_discussion">Fee Discussion</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                    <input type="file" name="attachment" class="filter-input">
+                    <button type="submit" class="action-btn primary">Post Comment</button>
+                </div>
+            </div>
+        </form>
+    </article>
+
+    <aside class="workspace-panel">
+        <div class="workspace-head">
+            <div>
+                <h2>New Thread</h2>
+                <p>Create a student, inquiry, finance, or internal discussion.</p>
+            </div>
+        </div>
+        <form class="composer-form" data-create-thread-form>
+            <input type="text" name="title" class="filter-input" placeholder="Thread title">
+            <select name="scope" class="filter-select">
+                <option value="student">Student</option>
+                <option value="enquiry">Enquiry</option>
+                <option value="finance">Finance</option>
+                <option value="internal">Internal</option>
+            </select>
+            <input type="number" name="object_id" class="filter-input" placeholder="Related object ID (optional)">
+            <input type="text" name="assigned_to" class="filter-input" placeholder="Assign to username (optional)">
+            <input type="text" name="tags" class="filter-input" placeholder="Tags separated by commas">
+            <input type="text" name="visibility" class="filter-input" placeholder="Visible groups: Admin,Counselor">
+            <textarea name="body" class="filter-input composer-textarea compact" placeholder="Opening note"></textarea>
+            <button type="submit" class="action-btn primary">Create Thread</button>
+        </form>
+    </aside>
+</section>
+{% endblock %}

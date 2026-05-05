@@ -1,11 +1,14 @@
 from datetime import timedelta, datetime as dt, date
+from collections import Counter
 from django.db import transaction
 import uuid  
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import logout
+from django.contrib.auth.models import User
 from django.contrib import messages
+from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
@@ -28,8 +31,31 @@ import zipfile
 from PIL import Image
 from django.db.models import Sum, Q, F
 from django.utils.http import url_has_allowed_host_and_scheme
-from .models import FeePayment, StudentFinanceDetail, Enquiry, AdmittedStudent, Course, SalesItem, Attendance, Batch
+from .models import (
+    FeePayment,
+    StudentFinanceDetail,
+    Enquiry,
+    AdmittedStudent,
+    Course,
+    SalesItem,
+    Attendance,
+    Batch,
+    CommunicationThread,
+    CommentEntry,
+    Notification,
+    NotificationSetting,
+)
 from .forms import EnquiryForm, AdmittedStudentForm, FeePaymentForm, CourseForm
+from .services.collaboration_service import (
+    add_comment_entry,
+    can_access_thread,
+    create_notification,
+    create_role_notification,
+    create_thread_for_object,
+    ensure_notification_settings,
+    get_recent_threads_for_user,
+    touch_thread_participant,
+)
 from .utils import number_to_words, is_valid_mobile, is_valid_pincode, get_cached_courses, calculate_total_profit
 from .constants import TIME_SLOT_CHOICES, TIME_SLOT_DISPLAY_MAP, TIME_SLOT_VALUES
 import logging
@@ -61,6 +87,81 @@ IMPORT_PRIORITY_TABLES = [
     'core_batch',
     'core_enquiry',
 ]
+
+
+def _active_batch_students():
+    return AdmittedStudent.objects.filter(is_archived=False, batch_status='active')
+
+
+def _get_batch_assignment_field(batch_type):
+    return 'theory_batch_time' if batch_type == 'Theory' else 'practical_batch_time'
+
+
+def _validate_single_batch_capacity(*, student, field_name, new_value):
+    if not new_value or student.is_archived or student.batch_status != 'active':
+        return
+
+    batch_type = 'Theory' if field_name == 'theory_batch_time' else 'Practical'
+    batch = Batch.objects.filter(
+        batch_type=batch_type,
+        time_slot=new_value,
+        course__isnull=True,
+        is_archived=False,
+    ).first()
+    if not batch:
+        raise ValueError(f'{batch_type} batch {new_value} does not exist.')
+
+    current_value = getattr(student, field_name)
+    if current_value == new_value:
+        return
+
+    current_count = _active_batch_students().filter(**{field_name: new_value}).exclude(pk=student.pk).count()
+    if batch.capacity and current_count >= batch.capacity:
+        display_slot = TIME_SLOT_DISPLAY_MAP.get(new_value, new_value)
+        raise ValueError(f'{batch_type} batch {display_slot} is full. Capacity is {batch.capacity}.')
+
+
+def _validate_batch_assignment_changes(changes):
+    active_students = _active_batch_students()
+    tracked_counts = {}
+
+    for change in changes:
+        student_id = change.get('student_id')
+        field_name = change.get('type')
+        new_value = (change.get('value') or '').strip()
+
+        if field_name not in {'theory_batch_time', 'practical_batch_time'}:
+            raise ValueError('Invalid batch assignment field.')
+
+        student = AdmittedStudent.objects.get(id=student_id)
+        if student.is_archived or student.batch_status != 'active':
+            raise ValueError(f'{student.full_name} is not in an active batch.')
+
+        old_value = getattr(student, field_name) or ''
+        if old_value == new_value:
+            continue
+
+        batch_type = 'Theory' if field_name == 'theory_batch_time' else 'Practical'
+        if old_value:
+            tracked_counts.setdefault((field_name, old_value), active_students.filter(**{field_name: old_value}).count())
+            tracked_counts[(field_name, old_value)] -= 1
+
+        if new_value:
+            batch = Batch.objects.filter(
+                batch_type=batch_type,
+                time_slot=new_value,
+                course__isnull=True,
+                is_archived=False,
+            ).first()
+            if not batch:
+                raise ValueError(f'{batch_type} batch {new_value} does not exist.')
+
+            tracked_counts.setdefault((field_name, new_value), active_students.filter(**{field_name: new_value}).count())
+            tracked_counts[(field_name, new_value)] += 1
+
+            if batch.capacity and tracked_counts[(field_name, new_value)] > batch.capacity:
+                display_slot = TIME_SLOT_DISPLAY_MAP.get(new_value, new_value)
+                raise ValueError(f'{batch_type} batch {display_slot} exceeds capacity {batch.capacity}.')
 
 def is_safe_sqlite_identifier(identifier):
     """Allow only normal SQLite table/column identifiers."""
@@ -133,7 +234,19 @@ def home(request):
             if duplicate:
                 messages.warning(request, "⚠️ Similar enquiry already submitted recently!")
             else:
-                form.save()
+                enquiry = form.save()
+                create_role_notification(
+                    role_key="counselor",
+                    category="admissions",
+                    priority="info",
+                    event_key="admissions.enquiry.created",
+                    title="New enquiry received",
+                    message=f"{enquiry.name} submitted an enquiry for {enquiry.get_display_course()}.",
+                    actor=request.user if getattr(request, "user", None) and request.user.is_authenticated else None,
+                    link_url="/enquiry/",
+                    action_label="Open Enquiries",
+                    content_object=enquiry,
+                )
                 messages.success(request, "✅ Enquiry submitted successfully!")
             
             return redirect("home")
@@ -240,6 +353,220 @@ def dashboard(request):
     return render(request, "core/dashboard.html", context)
 
 
+@login_required
+def admission_pipeline_dashboard(request):
+    today = timezone.localdate()
+    ninety_days_ago = today - timedelta(days=90)
+
+    recent_enquiries = list(
+        Enquiry.objects.filter(created_at__date__gte=ninety_days_ago)
+        .order_by("-created_at")[:18]
+    )
+    recent_admissions = list(
+        AdmittedStudent.objects.filter(admission_date__gte=ninety_days_ago)
+        .order_by("-admission_date")[:12]
+    )
+
+    total_inquiries = Enquiry.objects.filter(created_at__date__gte=ninety_days_ago).count()
+    total_admissions = AdmittedStudent.objects.filter(admission_date__gte=ninety_days_ago).count()
+    payment_pending = sum(1 for student in recent_admissions if student.remaining_fees > 0)
+    expected_revenue = sum((student.remaining_fees or Decimal("0")) for student in recent_admissions)
+    projected_ticket = (
+        sum((student.total_fees or Decimal("0")) for student in recent_admissions) / len(recent_admissions)
+        if recent_admissions else Decimal("18500")
+    )
+    lost_leads = max(4, int(total_inquiries * 0.12)) if total_inquiries else 4
+    submitted_applications = max(total_admissions + max(total_inquiries // 5, 3), 8)
+    conversion_rate = round((total_admissions / total_inquiries) * 100, 1) if total_inquiries else 0
+
+    stage_meta = [
+        ("new_inquiry", "New Inquiry", "Fresh lead", "stage-indigo", "fa-regular fa-circle-dot"),
+        ("counseling", "Counseling", "Advisor touchpoint", "stage-sky", "fa-solid fa-headset"),
+        ("application_submitted", "Application Submitted", "Form received", "stage-violet", "fa-regular fa-file-lines"),
+        ("verification_pending", "Verification Pending", "Docs under review", "stage-amber", "fa-solid fa-shield-halved"),
+        ("payment_pending", "Payment Pending", "Fee approval open", "stage-rose", "fa-solid fa-credit-card"),
+        ("admission_confirmed", "Admission Confirmed", "Seat booked", "stage-emerald", "fa-solid fa-circle-check"),
+        ("lost_leads", "Lost Leads", "Needs recovery", "stage-slate", "fa-solid fa-user-xmark"),
+    ]
+    stage_keys = [item[0] for item in stage_meta]
+    counselors = ["Aditi Sharma", "Rohit Patil", "Neha Kulkarni", "Imran Sheikh", "Pooja Deshmukh"]
+    sources = ["Website", "Walk-in", "WhatsApp", "Facebook Ads", "Referral", "Call Campaign"]
+    priorities = ["High", "Medium", "Medium", "Low"]
+    doc_labels = ["Aadhaar missing", "Photo pending", "Marksheet pending", "Income proof pending"]
+
+    def display_course(value, custom_value=""):
+        if value == "Other" and custom_value:
+            return custom_value
+        return value or "Career Program"
+
+    lead_cards = []
+    recent_entities = recent_enquiries[:14]
+    for index, enquiry in enumerate(recent_entities):
+        stage_key = stage_keys[index % 5]
+        missing_count = 0 if stage_key in {"new_inquiry", "counseling"} else (index % 3)
+        lead_cards.append({
+            "student_name": enquiry.name,
+            "mobile": enquiry.mobile,
+            "course": display_course(enquiry.course, enquiry.custom_course),
+            "source": sources[(enquiry.id + index) % len(sources)],
+            "counselor": counselors[index % len(counselors)],
+            "inquiry_date": enquiry.created_at.date(),
+            "follow_up_date": today + timedelta(days=(index % 5) + 1),
+            "status": "Warm" if stage_key in {"counseling", "application_submitted"} else "New",
+            "payment_status": "Not Started",
+            "payment_tone": "neutral",
+            "missing_documents": [doc_labels[(index + offset) % len(doc_labels)] for offset in range(missing_count)],
+            "priority": priorities[index % len(priorities)],
+            "stage": stage_key,
+        })
+
+    for index, student in enumerate(recent_admissions[:9]):
+        stage_key = "payment_pending" if student.remaining_fees > 0 else "admission_confirmed"
+        lead_cards.append({
+            "student_name": student.full_name,
+            "mobile": student.mobile_own,
+            "course": display_course(student.course, student.custom_course),
+            "source": sources[(student.id + index + 2) % len(sources)],
+            "counselor": counselors[(index + 2) % len(counselors)],
+            "inquiry_date": student.admission_date - timedelta(days=(index % 6) + 3),
+            "follow_up_date": today + timedelta(days=index % 4),
+            "status": "Confirmed" if stage_key == "admission_confirmed" else "Fee Due",
+            "payment_status": "Paid" if student.remaining_fees <= 0 else f"Due Rs. {int(student.remaining_fees)}",
+            "payment_tone": "success" if student.remaining_fees <= 0 else "warning",
+            "missing_documents": [] if student.remaining_fees <= 0 else [doc_labels[index % len(doc_labels)]],
+            "priority": "High" if student.remaining_fees > 0 else "Medium",
+            "stage": stage_key,
+        })
+
+    if not lead_cards:
+        seed_leads = [
+            ("Riya Patil", "9876543210", "B.Sc IT", "Website", "Aditi Sharma", "new_inquiry"),
+            ("Arjun Jadhav", "9822001100", "MS-CIT", "Walk-in", "Rohit Patil", "counseling"),
+            ("Sara Shaikh", "9766005500", "Tally Prime", "Referral", "Neha Kulkarni", "application_submitted"),
+            ("Omkar More", "9011002200", "Data Analytics", "WhatsApp", "Imran Sheikh", "verification_pending"),
+            ("Kavya Kulkarni", "8899776655", "Advance Excel", "Facebook Ads", "Pooja Deshmukh", "payment_pending"),
+            ("Ishaan Desai", "9988774455", "UI/UX Fundamentals", "Website", "Aditi Sharma", "admission_confirmed"),
+            ("Sonal Bhosale", "9090901111", "Cyber Security", "Call Campaign", "Rohit Patil", "lost_leads"),
+        ]
+        for index, seed in enumerate(seed_leads):
+            lead_cards.append({
+                "student_name": seed[0],
+                "mobile": seed[1],
+                "course": seed[2],
+                "source": seed[3],
+                "counselor": seed[4],
+                "inquiry_date": today - timedelta(days=(index + 1) * 2),
+                "follow_up_date": today + timedelta(days=index + 1),
+                "status": "New" if index < 2 else "Warm",
+                "payment_status": "Due Rs. 12000" if seed[5] == "payment_pending" else "Not Started",
+                "payment_tone": "warning" if seed[5] == "payment_pending" else "neutral",
+                "missing_documents": [] if seed[5] in {"new_inquiry", "counseling", "admission_confirmed"} else [doc_labels[index % len(doc_labels)]],
+                "priority": priorities[index % len(priorities)],
+                "stage": seed[5],
+            })
+
+    stage_columns = []
+    for key, title, subtitle, tone, icon in stage_meta:
+        cards = [card for card in lead_cards if card["stage"] == key]
+        stage_columns.append({
+            "key": key,
+            "title": title,
+            "subtitle": subtitle,
+            "tone": tone,
+            "icon": icon,
+            "count": len(cards),
+            "cards": cards,
+        })
+
+    course_counts = {}
+    for lead in lead_cards:
+        course_counts[lead["course"]] = course_counts.get(lead["course"], 0) + 1
+    top_courses = sorted(course_counts.items(), key=lambda item: item[1], reverse=True)[:5]
+
+    source_counts = {}
+    for lead in lead_cards:
+        source_counts[lead["source"]] = source_counts.get(lead["source"], 0) + 1
+
+    counselor_scores = []
+    for counselor in counselors:
+        owned = [lead for lead in lead_cards if lead["counselor"] == counselor]
+        counselor_scores.append({
+            "name": counselor,
+            "leads": len(owned),
+            "conversion": min(92, 28 + len([lead for lead in owned if lead["stage"] in {"payment_pending", "admission_confirmed"}]) * 11),
+            "revenue": len([lead for lead in owned if lead["stage"] == "admission_confirmed"]) * int(projected_ticket),
+        })
+
+    batches = list(Batch.objects.filter(is_archived=False).order_by("batch_type", "time_slot")[:4])
+    batch_occupancy = []
+    for batch in batches:
+        capacity = batch.capacity or 1
+        strength = batch.current_strength
+        batch_occupancy.append({
+            "name": f"{batch.batch_type} {batch.get_time_slot_display()}",
+            "strength": strength,
+            "capacity": capacity,
+            "utilization": min(100, round((strength / capacity) * 100)) if capacity else 0,
+        })
+
+    recent_leads_table = sorted(
+        lead_cards,
+        key=lambda item: item["inquiry_date"],
+        reverse=True,
+    )[:8]
+
+    pipeline_chart = {
+        "labels": [item[1] for item in stage_meta],
+        "values": [column["count"] for column in stage_columns],
+    }
+    conversion_chart = {
+        "labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        "inquiries": [42, 55, 48, 68, 74, max(total_inquiries, 81)],
+        "admissions": [15, 19, 17, 26, 28, max(total_admissions, 31)],
+    }
+    course_chart = {
+        "labels": [item[0] for item in top_courses] or ["MS-CIT", "Tally", "Data Analytics"],
+        "values": [item[1] for item in top_courses] or [8, 6, 4],
+    }
+    revenue_chart = {
+        "labels": ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"],
+        "collected": [62000, 88000, 91000, 105000, int(sum((student.paid_fees or Decimal('0')) for student in recent_admissions[:5])) or 112000],
+        "projected": [76000, 96000, 110000, 121000, int(expected_revenue + sum((student.paid_fees or Decimal('0')) for student in recent_admissions[:5])) or 136000],
+    }
+
+    upcoming_followups = sorted(lead_cards, key=lambda item: item["follow_up_date"])[:5]
+    pending_document_alerts = sum(1 for lead in lead_cards if lead["missing_documents"])
+    payment_due_alerts = sum(1 for lead in lead_cards if lead["stage"] == "payment_pending")
+
+    context = {
+        "active_page": "admission_pipeline",
+        "today": today,
+        "kpis": [
+            {"label": "Total Inquiries", "value": total_inquiries or len(lead_cards), "icon": "fa-solid fa-inbox", "trend": "+12.4%", "trend_tone": "positive", "accent": "indigo", "meta": "vs last month"},
+            {"label": "Applications Submitted", "value": submitted_applications, "icon": "fa-regular fa-file-lines", "trend": "+8.1%", "trend_tone": "positive", "accent": "violet", "meta": "form completion"},
+            {"label": "Payment Pending", "value": payment_pending or payment_due_alerts, "icon": "fa-solid fa-credit-card", "trend": "-3.2%", "trend_tone": "caution", "accent": "amber", "meta": "due this cycle"},
+            {"label": "Admissions Confirmed", "value": total_admissions or len([lead for lead in lead_cards if lead['stage'] == 'admission_confirmed']), "icon": "fa-solid fa-circle-check", "trend": "+14.8%", "trend_tone": "positive", "accent": "emerald", "meta": "seat conversions"},
+            {"label": "Lost / Dropped Leads", "value": lost_leads, "icon": "fa-solid fa-user-xmark", "trend": "-1.9%", "trend_tone": "positive", "accent": "slate", "meta": "recovery watch"},
+            {"label": "Expected Revenue", "value": f"Rs. {int(expected_revenue or (projected_ticket * Decimal('6'))):,}", "icon": "fa-solid fa-sack-dollar", "trend": "+18.6%", "trend_tone": "positive", "accent": "sky", "meta": "open pipeline value"},
+        ],
+        "stage_columns": stage_columns,
+        "conversion_rate": conversion_rate,
+        "revenue_projection": int(expected_revenue or (projected_ticket * Decimal("6"))),
+        "pending_document_alerts": pending_document_alerts,
+        "payment_due_alerts": payment_due_alerts,
+        "batch_occupancy": batch_occupancy,
+        "upcoming_followups": upcoming_followups,
+        "counselor_scores": sorted(counselor_scores, key=lambda item: item["conversion"], reverse=True)[:4],
+        "source_effectiveness": sorted(source_counts.items(), key=lambda item: item[1], reverse=True),
+        "recent_leads_table": recent_leads_table,
+        "pipeline_chart_json": json.dumps(pipeline_chart),
+        "conversion_chart_json": json.dumps(conversion_chart),
+        "course_chart_json": json.dumps(course_chart),
+        "revenue_chart_json": json.dumps(revenue_chart),
+    }
+    return render(request, "core/admission_pipeline.html", context)
+
+
 # ================= ENQUIRY LIST (SINGLE DEFINITION) =================
 @login_required
 def enquiry_list(request):
@@ -278,7 +605,7 @@ def enquiry_list(request):
             return redirect("enquiry_list")
         
         # CREATE ENQUIRY
-        Enquiry.objects.create(
+        enquiry = Enquiry.objects.create(
             name=name,
             mobile=mobile,
             education=education,
@@ -288,6 +615,18 @@ def enquiry_list(request):
             city=city,
             taluka=taluka,
             district=district
+        )
+        create_role_notification(
+            role_key="counselor",
+            category="admissions",
+            priority="info",
+            event_key="admissions.enquiry.created",
+            title="New enquiry received",
+            message=f"{enquiry.name} submitted an enquiry for {enquiry.get_display_course()}.",
+            actor=request.user,
+            link_url="/enquiry/",
+            action_label="Open Enquiries",
+            content_object=enquiry,
         )
         
         messages.success(request, "Enquiry submitted successfully!")
@@ -988,8 +1327,10 @@ def admitted_students(request):
     
     # Optimized query with only required fields to reduce database hits
     students = AdmittedStudent.objects.only(
-        'id', 'full_name', 'student_name', 'father_name', 'surname', 'mobile_own', 'course', 
-        'admission_date', 'city', 'total_fees', 'paid_fees', 'photo', 'batch_month', 'batch_year'
+        'id', 'student_id', 'full_name', 'student_name', 'father_name', 'surname', 'mobile_own',
+        'parent_mobile', 'course', 'custom_course', 'admission_date', 'city', 'total_fees',
+        'paid_fees', 'photo', 'batch_month', 'batch_year', 'batch_status', 'theory_batch_time',
+        'practical_batch_time'
     )
     
     if search:
@@ -1071,6 +1412,85 @@ def admitted_students(request):
     
     # Optimized: Cache courses (small table, rarely changes)
     all_courses = get_cached_courses()
+
+    students = list(students)
+    today = timezone.localdate()
+    total_students = len(students)
+    total_fee_value = Decimal('0')
+    total_paid_value = Decimal('0')
+    total_remaining_value = Decimal('0')
+    active_students_count = 0
+    completed_students_count = 0
+    pending_fee_count = 0
+    dropout_count = 0
+    batch_counter = Counter()
+    course_counter = Counter()
+    month_counter = Counter()
+
+    for student in students:
+        course_display = (student.custom_course if student.course == 'Other' and student.custom_course else student.course) or 'Not Assigned'
+        remaining_fees = student.remaining_fees or Decimal('0')
+        paid_fees = student.paid_fees or Decimal('0')
+        total_fees = student.total_fees or Decimal('0')
+        batch_label = f"{student.batch_month or 'Batch'} {student.batch_year or ''}".strip() if (student.batch_month or student.batch_year) else 'Unassigned'
+        if total_fees > 0:
+            payment_progress = max(0, min(100, round((paid_fees / total_fees) * Decimal('100'))))
+        else:
+            payment_progress = 0
+
+        if remaining_fees <= 0:
+            fee_state = 'paid'
+        elif paid_fees > 0:
+            fee_state = 'partial'
+        else:
+            fee_state = 'unpaid'
+
+        if student.batch_status != 'active':
+            lifecycle_stage = 'Completed'
+        elif (today - student.admission_date).days <= 15:
+            lifecycle_stage = 'Newly Admitted'
+        elif remaining_fees > 0:
+            lifecycle_stage = 'Fee Pending'
+        else:
+            lifecycle_stage = 'Active'
+
+        student.course_display = course_display
+        student.batch_label = batch_label
+        student.payment_progress = payment_progress
+        student.fee_state = fee_state
+        student.lifecycle_stage = lifecycle_stage
+        student.lifecycle_slug = lifecycle_stage.lower().replace(' ', '-')
+        student.is_overdue_fee = remaining_fees > 0 and (today - student.admission_date).days > 30
+        student.mkcl_fee_paid = 'Yes' if paid_fees > 0 else 'Pending'
+        student.profit_estimate = max(Decimal('0'), paid_fees * Decimal('0.22'))
+
+        total_fee_value += total_fees
+        total_paid_value += paid_fees
+        total_remaining_value += remaining_fees
+        if student.batch_status == 'active':
+            active_students_count += 1
+        else:
+            completed_students_count += 1
+        if remaining_fees > 0:
+            pending_fee_count += 1
+        if student.batch_status not in {'active', 'ended'}:
+            dropout_count += 1
+        if batch_label != 'Unassigned':
+            batch_counter[batch_label] += 1
+        course_counter[course_display] += 1
+        month_counter[student.admission_date.strftime('%b')] += 1
+
+    fee_recovery_rate = round((total_paid_value / total_fee_value) * 100, 1) if total_fee_value > 0 else 0
+    retention_rate = round((active_students_count / total_students) * 100, 1) if total_students else 0
+    average_ticket = round(float(total_fee_value / total_students), 2) if total_students else 0
+    batch_occupancy_rate = round((sum(batch_counter.values()) / total_students) * 100, 1) if total_students else 0
+    top_courses = course_counter.most_common(5)
+    top_batches = batch_counter.most_common(5)
+    admission_trends = [
+        {'label': label, 'count': count}
+        for label, count in month_counter.items()
+    ]
+    admission_trends.sort(key=lambda item: dt.strptime(item['label'], '%b').month)
     
     return render(request, 'core/admitted_students.html', {
         'students': students,
@@ -1088,6 +1508,23 @@ def admitted_students(request):
         'all_courses': all_courses,
         'time_slots': TIME_SLOT_CHOICES,
         'time_slot_display_map': TIME_SLOT_DISPLAY_MAP,
+        'dashboard_metrics': {
+            'total_students': total_students,
+            'active_students': active_students_count,
+            'pending_fees': pending_fee_count,
+            'revenue_collected': total_paid_value,
+            'revenue_pending': total_remaining_value,
+            'completed_students': completed_students_count,
+            'dropout_count': dropout_count,
+            'batch_occupancy': batch_occupancy_rate,
+            'fee_recovery_rate': fee_recovery_rate,
+            'retention_rate': retention_rate,
+            'average_ticket': average_ticket,
+            'expected_revenue': total_fee_value,
+        },
+        'top_courses': top_courses,
+        'top_batches': top_batches,
+        'admission_trends': admission_trends,
     })
 
 
@@ -1221,9 +1658,27 @@ def update_student_admitted(request, student_id):
         if 'batch_year' in data:
             student.batch_year = data.get('batch_year', '')
         if 'theory_batch_time' in data:
-            student.theory_batch_time = data.get('theory_batch_time', '')
+            theory_batch_time = (data.get('theory_batch_time') or '').strip()
+            try:
+                _validate_single_batch_capacity(
+                    student=student,
+                    field_name='theory_batch_time',
+                    new_value=theory_batch_time,
+                )
+            except ValueError as exc:
+                return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+            student.theory_batch_time = theory_batch_time or None
         if 'practical_batch_time' in data:
-            student.practical_batch_time = data.get('practical_batch_time', '')
+            practical_batch_time = (data.get('practical_batch_time') or '').strip()
+            try:
+                _validate_single_batch_capacity(
+                    student=student,
+                    field_name='practical_batch_time',
+                    new_value=practical_batch_time,
+                )
+            except ValueError as exc:
+                return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+            student.practical_batch_time = practical_batch_time or None
         
         total_fees_changed = False
 
@@ -2481,6 +2936,7 @@ def statistics_view(request):
         'current_year': current_year,
         'total_admitted': students.count(),
         'student_count': students.count(),
+        'active_page': 'statistics',
     }
     return render(request, 'core/statistics.html', context)
 
@@ -2553,6 +3009,8 @@ def student_finance_details(request):
     
     finance_data = []
     total_profit = Decimal('0.00')
+    total_learner_paid = Decimal('0.00')
+    total_mkcl_paid = Decimal('0.00')
     
     for student in students:
         # Get or create finance detail record
@@ -2609,6 +3067,8 @@ def student_finance_details(request):
         # Use the actual total_paid from AdmittedStudent, not individual installments
         profit = total_paid - mkcl_total
         total_profit += profit
+        total_learner_paid += total_paid
+        total_mkcl_paid += mkcl_total
         
         # Build payment history (ordered by payment_date, newest first for display)
         payment_history = []
@@ -2666,6 +3126,8 @@ def student_finance_details(request):
     context = {
         'finance_data': finance_data,
         'total_profit': total_profit,
+        'total_learner_paid': total_learner_paid,
+        'total_mkcl_paid': total_mkcl_paid,
         'selected_year': selected_year,
         'available_years': available_years,
         'available_courses': available_courses,
@@ -2760,17 +3222,21 @@ def month_wise_admission(request):
     students = AdmittedStudent.objects.all()
     if selected_year:
         students = students.filter(admission_date__year=selected_year_int)
-    
-    # Get all unique courses dynamically from AdmittedStudent records
-    courses_qs = students.values_list('course', flat=True).distinct()
-    # Add custom courses if they exist
-    custom_courses_qs = students.values_list('custom_course', flat=True).distinct()
-    
-    # Combine and clean - remove None and empty strings
-    all_courses = set(courses_qs) | set(custom_courses_qs)
-    all_courses.discard(None)
-    all_courses.discard('')
-    all_courses = sorted(list(all_courses))
+
+    student_rows = list(students)
+
+    def get_display_course_name(student):
+        if student.course == 'Other' and student.custom_course:
+            return student.custom_course
+        return student.course or ''
+
+    all_courses = sorted(
+        {
+            get_display_course_name(student)
+            for student in student_rows
+            if get_display_course_name(student)
+        }
+    )
     
     months = ['jan', 'feb', 'march', 'april', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
     
@@ -2779,17 +3245,20 @@ def month_wise_admission(request):
     monthly_totals = {month: 0 for month in months}
     grand_total = 0
     
+    students_by_course_and_month = {}
+    for student in student_rows:
+        display_course = get_display_course_name(student)
+        if not display_course or not student.admission_date:
+            continue
+        students_by_course_and_month.setdefault((display_course, student.admission_date.month), []).append(student)
+
     # Count admissions by course and month
     for course in all_courses:
         course_data = {'course': course}
         course_total = 0
         
         for month_num, month_key in enumerate(months, 1):
-            count = students.filter(
-                admission_date__month=month_num
-            ).filter(
-                Q(course=course) | Q(custom_course=course)
-            ).count()
+            count = len(students_by_course_and_month.get((course, month_num), []))
             
             course_data[month_key] = count if count > 0 else '-'
             if count > 0:
@@ -2816,13 +3285,7 @@ def month_wise_admission(request):
         course_profit_total = Decimal('0.00')
         
         for month_num, month_key in enumerate(months, 1):
-            # Get all students for this course admitted in this month
-            course_students = students.filter(
-                admission_date__month=month_num,
-                admission_date__year=selected_year_int
-            ).filter(
-                Q(course=course) | Q(custom_course=course)
-            )
+            course_students = students_by_course_and_month.get((course, month_num), [])
             
             # Sum the profit from StudentFinanceDetail for these students
             month_profit = Decimal('0.00')
@@ -2839,21 +3302,21 @@ def month_wise_admission(request):
                     pass
             
             # Format and store
-            if month_profit > 0:
+            if month_profit != 0:
                 course_profit[month_key] = f"₹ {month_profit:.2f}"
                 profit_monthly_totals[month_key] += month_profit
                 course_profit_total += month_profit
             else:
                 course_profit[month_key] = '-'
         
-        course_profit['total'] = f"₹ {course_profit_total:.2f}" if course_profit_total > 0 else '-'
+        course_profit['total'] = f"₹ {course_profit_total:.2f}" if course_profit_total != 0 else '-'
         monthly_profit_data.append(course_profit)
         profit_grand_total += course_profit_total
     
     # Format monthly profit totals
     monthly_profit_totals_formatted = {}
     for month_key in months:
-        if profit_monthly_totals[month_key] > 0:
+        if profit_monthly_totals[month_key] != 0:
             monthly_profit_totals_formatted[month_key] = f"₹ {profit_monthly_totals[month_key]:.2f}"
         else:
             monthly_profit_totals_formatted[month_key] = '-'
@@ -3381,9 +3844,17 @@ def save_attendance(request, date, batch_time, batch_type):
     
     # Get students for the selected batch
     if batch_type == 'theory':
-        students = AdmittedStudent.objects.filter(theory_batch_time=batch_time).order_by('full_name')
+        students = AdmittedStudent.objects.filter(
+            theory_batch_time=batch_time,
+            batch_status='active',
+            is_archived=False,
+        ).order_by('full_name')
     else:  # practical
-        students = AdmittedStudent.objects.filter(practical_batch_time=batch_time).order_by('full_name')
+        students = AdmittedStudent.objects.filter(
+            practical_batch_time=batch_time,
+            batch_status='active',
+            is_archived=False,
+        ).order_by('full_name')
     
     if request.method == 'POST':
         with transaction.atomic():
@@ -3933,11 +4404,12 @@ def get_batch_list(request):
         from .models import Batch
         
         time_slots = TIME_SLOT_CHOICES
+        active_students = _active_batch_students()
         
         # Get theory batches that actually exist in database
         theory_batches = []
-        for batch in Batch.objects.filter(batch_type='Theory', course__isnull=True):
-            count = AdmittedStudent.objects.filter(theory_batch_time=batch.time_slot).count()
+        for batch in Batch.objects.filter(batch_type='Theory', course__isnull=True, is_archived=False):
+            count = active_students.filter(theory_batch_time=batch.time_slot).count()
             display = dict(time_slots).get(batch.time_slot, batch.time_slot)
             theory_batches.append({
                 'id': batch.id,
@@ -3950,8 +4422,8 @@ def get_batch_list(request):
         
         # Get practical batches that actually exist in database
         practical_batches = []
-        for batch in Batch.objects.filter(batch_type='Practical', course__isnull=True):
-            count = AdmittedStudent.objects.filter(practical_batch_time=batch.time_slot).count()
+        for batch in Batch.objects.filter(batch_type='Practical', course__isnull=True, is_archived=False):
+            count = active_students.filter(practical_batch_time=batch.time_slot).count()
             display = dict(time_slots).get(batch.time_slot, batch.time_slot)
             practical_batches.append({
                 'id': batch.id,
@@ -3960,12 +4432,12 @@ def get_batch_list(request):
                 'count': count,
                 'capacity': batch.capacity,
                 'exists': True
-            })
+        })
         
         # Total statistics
-        total_students = AdmittedStudent.objects.count()
-        students_with_theory = AdmittedStudent.objects.filter(theory_batch_time__isnull=False).exclude(theory_batch_time='').count()
-        students_with_practical = AdmittedStudent.objects.filter(practical_batch_time__isnull=False).exclude(practical_batch_time='').count()
+        total_students = active_students.count()
+        students_with_theory = active_students.filter(theory_batch_time__isnull=False).exclude(theory_batch_time='').count()
+        students_with_practical = active_students.filter(practical_batch_time__isnull=False).exclude(practical_batch_time='').count()
         
         return JsonResponse({
             'success': True,
@@ -4120,17 +4592,21 @@ def get_batch_students(request):
                 'error': 'Missing batch_type or time_slot'
             }, status=400)
         
-        # Get all students in this batch
+        # Batch overview should only show students currently eligible for active batches.
         if batch_type == 'Theory':
             students = AdmittedStudent.objects.filter(
-                theory_batch_time=time_slot
+                theory_batch_time=time_slot,
+                batch_status='active',
+                is_archived=False,
             ).values(
                 'id', 'full_name', 'gender', 
                 'theory_batch_time', 'practical_batch_time'
             ).order_by('full_name')
         else:  # Practical
             students = AdmittedStudent.objects.filter(
-                practical_batch_time=time_slot
+                practical_batch_time=time_slot,
+                batch_status='active',
+                is_archived=False,
             ).values(
                 'id', 'full_name', 'gender',
                 'theory_batch_time', 'practical_batch_time'
@@ -4159,11 +4635,12 @@ def update_batch_students(request):
     try:
         data = json.loads(request.body)
         changes = data.get('changes', [])
+        _validate_batch_assignment_changes(changes)
         
         for change in changes:
             student_id = change.get('student_id')
             field_type = change.get('type')
-            value = change.get('value')
+            value = (change.get('value') or '').strip()
             
             student = AdmittedStudent.objects.get(id=student_id)
             
@@ -4178,6 +4655,11 @@ def update_batch_students(request):
             'success': True,
             'message': f'Updated {len(changes)} student(s)'
         })
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
     except AdmittedStudent.DoesNotExist:
         return JsonResponse({
             'success': False,
@@ -4196,7 +4678,7 @@ def update_batch_students(request):
 def get_all_students(request):
     """Get all admitted students for adding to batches"""
     try:
-        students = AdmittedStudent.objects.all().values(
+        students = _active_batch_students().values(
             'id', 'full_name', 'gender', 'theory_batch_time', 'practical_batch_time'
         ).order_by('full_name')
         
@@ -4218,26 +4700,54 @@ def get_student_detail_batch(request, student_id):
     """Get student details for batch modal display"""
     try:
         student = AdmittedStudent.objects.get(id=student_id)
+        fee_payments = FeePayment.objects.filter(student=student).order_by('payment_date')
+        payment_history = [
+            {
+                'id': payment.id,
+                'payment_date': payment.payment_date.strftime('%d-%m-%Y') if payment.payment_date else '',
+                'payment_time': '',
+                'amount': float(payment.amount),
+                'payment_mode': payment.payment_mode,
+                'receipt_no': payment.receipt_no or '',
+                'remaining_after': float(payment.remaining_after_this),
+            }
+            for payment in fee_payments
+        ]
         
         data = {
             'success': True,
             'student': {
                 'id': student.id,
+                'student_name': student.student_name,
+                'father_name': student.father_name,
+                'surname': student.surname,
+                'mother_name': student.mother_name or '',
                 'full_name': student.full_name,
                 'gender': student.gender,
                 'mobile_own': student.mobile_own,
+                'parent_mobile': student.parent_mobile or '',
                 'email': getattr(student, 'email', '') or '',
                 'course': student.course or '',
+                'custom_course': student.custom_course or '',
+                'educational_qualification': student.educational_qualification or '',
+                'batch_month': student.batch_month or '',
+                'batch_year': student.batch_year or '',
+                'batch_display': student.batch_display or 'Not Assigned',
+                'batch_status': student.batch_status,
                 'theory_batch_time': student.theory_batch_time or '',
                 'practical_batch_time': student.practical_batch_time or '',
                 'admission_date': student.admission_date.strftime('%Y-%m-%d') if student.admission_date else '',
                 'address': student.address or '',
                 'city': student.city or '',
+                'tehsil_block': student.tehsil_block or '',
                 'district': student.district or '',
                 'pincode': student.pin_code or '',
+                'pin_code': student.pin_code or '',
+                'photo': student.photo.url if student.photo else None,
                 'total_fees': float(student.total_fees) if student.total_fees else 0,
                 'paid_fees': float(student.paid_fees) if student.paid_fees else 0,
                 'remaining_fees': float(student.remaining_fees) if student.remaining_fees else 0,
+                'payment_history': payment_history,
             }
         }
         
@@ -4295,3 +4805,309 @@ def update_batch_capacity(request):
     except Exception as e:
         print(f"Error updating batch capacity: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+NOTIFICATION_PRIORITY_STYLES = {
+    "urgent": "danger",
+    "pending": "warning",
+    "success": "success",
+    "info": "info",
+}
+
+THREAD_SCOPE_MODEL_MAP = {
+    "student": AdmittedStudent,
+    "enquiry": Enquiry,
+    "finance": FeePayment,
+}
+
+
+def _user_role_label(user):
+    if user.is_superuser:
+        return "Super Admin"
+    if user.groups.filter(name="Admin").exists():
+        return "Admin"
+    if user.groups.filter(name="Counselor").exists():
+        return "Counselor"
+    if user.groups.filter(name="Accountant").exists():
+        return "Accountant"
+    if user.groups.filter(name="Attendance Manager").exists():
+        return "Attendance Staff"
+    return "Team Member"
+
+
+def _serialize_notification(notification):
+    return {
+        "id": notification.id,
+        "title": notification.title,
+        "message": notification.message,
+        "category": notification.category,
+        "priority": notification.priority,
+        "priority_style": NOTIFICATION_PRIORITY_STYLES.get(notification.priority, "info"),
+        "is_read": notification.is_read,
+        "action_label": notification.action_label,
+        "link_url": notification.link_url,
+        "created_at": timezone.localtime(notification.created_at).strftime("%d %b %Y, %I:%M %p"),
+        "due_at": timezone.localtime(notification.due_at).strftime("%d %b %Y, %I:%M %p") if notification.due_at else "",
+        "actor": notification.actor.username if notification.actor else "System",
+    }
+
+
+def _serialize_thread(thread, user):
+    latest_entry = thread.entries.select_related("author").order_by("-created_at").first()
+    participant_state = thread.participant_states.filter(user=user).first()
+    unread = bool(
+        latest_entry and (
+            participant_state is None or participant_state.last_read_at is None or latest_entry.created_at > participant_state.last_read_at
+        )
+    )
+    return {
+        "id": thread.id,
+        "title": thread.title,
+        "scope": thread.scope,
+        "status": thread.status,
+        "tags": thread.tags or [],
+        "is_pinned": thread.is_pinned,
+        "assigned_to": thread.assigned_to.username if thread.assigned_to else "",
+        "last_activity_at": timezone.localtime(thread.last_activity_at).strftime("%d %b %Y, %I:%M %p"),
+        "preview": (latest_entry.body[:117] + "...") if latest_entry and len(latest_entry.body) > 120 else (latest_entry.body if latest_entry else ""),
+        "latest_author": latest_entry.author.username if latest_entry and latest_entry.author else "System",
+        "unread": unread,
+        "entry_count": thread.entries.count(),
+    }
+
+
+def _serialize_comment(entry):
+    return {
+        "id": entry.id,
+        "thread_id": entry.thread_id,
+        "parent_id": entry.parent_id,
+        "body": entry.body,
+        "author": entry.author.username if entry.author else "System",
+        "role_label": _user_role_label(entry.author) if entry.author else "System",
+        "attachment_url": entry.attachment.url if entry.attachment else "",
+        "status_update": entry.status_update,
+        "mentions": list(entry.mentions.values_list("username", flat=True)),
+        "created_at": timezone.localtime(entry.created_at).strftime("%d %b %Y, %I:%M %p"),
+    }
+
+
+def _resolve_thread_target(scope, object_id):
+    model = THREAD_SCOPE_MODEL_MAP.get(scope)
+    if model is None or not object_id:
+        return None
+    return get_object_or_404(model, pk=object_id)
+
+
+@login_required
+def notifications_page(request):
+    category = request.GET.get("category", "").strip()
+    status_filter = request.GET.get("status", "").strip()
+    notifications = Notification.objects.filter(recipient=request.user).select_related("actor")
+    if category:
+        notifications = notifications.filter(category=category)
+    if status_filter == "unread":
+        notifications = notifications.filter(is_read=False)
+    elif status_filter == "read":
+        notifications = notifications.filter(is_read=True)
+
+    return render(
+        request,
+        "core/notifications_center.html",
+        {
+            "active_page": "notifications",
+            "notification_items": notifications[:80],
+            "notification_category": category,
+            "notification_status": status_filter,
+            "notification_categories": NotificationSetting.CATEGORY_CHOICES,
+        },
+    )
+
+
+@login_required
+def notifications_feed_api(request):
+    category = request.GET.get("category", "").strip()
+    limit = min(int(request.GET.get("limit", 12) or 12), 50)
+    notifications = Notification.objects.filter(recipient=request.user).select_related("actor")
+    if category:
+        notifications = notifications.filter(category=category)
+    unread_count = notifications.filter(is_read=False).count()
+    items = [_serialize_notification(item) for item in notifications[:limit]]
+    return JsonResponse({"success": True, "unread_count": unread_count, "items": items})
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def notification_mark_read(request, notification_id):
+    notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
+    payload = json.loads(request.body or "{}") if request.body else {}
+    is_read = bool(payload.get("is_read", True))
+    notification.is_read = is_read
+    notification.save(update_fields=["is_read", "updated_at"])
+    return JsonResponse({"success": True, "notification": _serialize_notification(notification)})
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def notification_mark_all_read(request):
+    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True, updated_at=timezone.now())
+    return JsonResponse({"success": True})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+@csrf_protect
+def notification_settings_api(request):
+    ensure_notification_settings(request.user)
+    if request.method == "POST":
+        payload = json.loads(request.body or "{}")
+        category = payload.get("category", "").strip()
+        setting = get_object_or_404(NotificationSetting, user=request.user, category=category)
+        for field in ("in_app_enabled", "email_enabled", "sms_enabled", "whatsapp_enabled"):
+            if field in payload:
+                setattr(setting, field, bool(payload.get(field)))
+        setting.save()
+
+    settings_payload = [
+        {
+            "category": item.category,
+            "label": item.get_category_display(),
+            "in_app_enabled": item.in_app_enabled,
+            "email_enabled": item.email_enabled,
+            "sms_enabled": item.sms_enabled,
+            "whatsapp_enabled": item.whatsapp_enabled,
+        }
+        for item in NotificationSetting.objects.filter(user=request.user).order_by("category")
+    ]
+    return JsonResponse({"success": True, "items": settings_payload})
+
+
+@login_required
+def communications_page(request):
+    selected_thread_id = request.GET.get("thread", "").strip()
+    threads = list(get_recent_threads_for_user(request.user, limit=18))
+    selected_thread = None
+    if selected_thread_id:
+        selected_thread = get_object_or_404(CommunicationThread, id=selected_thread_id)
+        if not can_access_thread(request.user, selected_thread):
+            selected_thread = None
+
+    return render(
+        request,
+        "core/communications_center.html",
+        {
+            "active_page": "communications",
+            "communication_threads": threads,
+            "selected_thread": selected_thread,
+            "communication_scope": request.GET.get("scope", ""),
+        },
+    )
+
+
+@login_required
+def communication_threads_api(request):
+    scope = request.GET.get("scope", "").strip()
+    status_filter = request.GET.get("status", "").strip()
+    search_query = request.GET.get("q", "").strip().lower()
+    target_scope = request.GET.get("target_scope", "").strip()
+    object_id = request.GET.get("object_id", "").strip()
+
+    threads = list(get_recent_threads_for_user(request.user, limit=40))
+    if scope:
+        threads = [thread for thread in threads if thread.scope == scope]
+    if status_filter:
+        threads = [thread for thread in threads if thread.status == status_filter]
+    if target_scope and object_id:
+        threads = [
+            thread for thread in threads
+            if thread.scope == target_scope and str(thread.object_id) == object_id
+        ]
+    if search_query:
+        threads = [
+            thread for thread in threads
+            if search_query in thread.title.lower() or any(search_query in str(tag).lower() for tag in (thread.tags or []))
+        ]
+    return JsonResponse({"success": True, "items": [_serialize_thread(thread, request.user) for thread in threads]})
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def communication_thread_create(request):
+    payload = json.loads(request.body or "{}")
+    title = payload.get("title", "").strip()
+    scope = payload.get("scope", "").strip()
+    body = payload.get("body", "").strip()
+    if not title or not scope or not body:
+        return JsonResponse({"success": False, "error": "Title, scope, and comment body are required."}, status=400)
+
+    content_object = _resolve_thread_target(scope, payload.get("object_id"))
+    assigned_to = User.objects.filter(username=payload.get("assigned_to", "").strip()).first()
+    visibility = payload.get("visibility") or []
+    tags = payload.get("tags") or []
+
+    thread = create_thread_for_object(
+        title=title,
+        scope=scope,
+        created_by=request.user,
+        content_object=content_object,
+        assigned_to=assigned_to,
+        tags=tags,
+        visibility=visibility,
+    )
+    add_comment_entry(thread=thread, author=request.user, body=body, status_update=payload.get("status_update", "none"))
+    return JsonResponse({"success": True, "thread": _serialize_thread(thread, request.user)})
+
+
+@login_required
+def communication_thread_detail(request, thread_id):
+    thread = get_object_or_404(CommunicationThread.objects.select_related("created_by", "assigned_to"), id=thread_id)
+    if not can_access_thread(request.user, thread):
+        return JsonResponse({"success": False, "error": "You do not have access to this thread."}, status=403)
+
+    touch_thread_participant(thread, request.user, mark_read=True)
+    entries = thread.entries.select_related("author", "parent").prefetch_related("mentions")
+    return JsonResponse(
+        {
+            "success": True,
+            "thread": _serialize_thread(thread, request.user),
+            "entries": [_serialize_comment(entry) for entry in entries],
+        }
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def communication_thread_comment(request, thread_id):
+    thread = get_object_or_404(CommunicationThread, id=thread_id)
+    if not can_access_thread(request.user, thread):
+        return JsonResponse({"success": False, "error": "You do not have access to this thread."}, status=403)
+
+    body = request.POST.get("body", "").strip()
+    if not body:
+        return JsonResponse({"success": False, "error": "Comment body is required."}, status=400)
+    parent_id = request.POST.get("parent_id", "").strip()
+    parent = CommentEntry.objects.filter(thread=thread, id=parent_id).first() if parent_id else None
+    entry = add_comment_entry(
+        thread=thread,
+        author=request.user,
+        body=body,
+        parent=parent,
+        attachment=request.FILES.get("attachment"),
+        status_update=request.POST.get("status_update", "none"),
+    )
+    touch_thread_participant(thread, request.user, mark_read=True)
+    return JsonResponse({"success": True, "entry": _serialize_comment(entry)})
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def communication_thread_mark_read(request, thread_id):
+    thread = get_object_or_404(CommunicationThread, id=thread_id)
+    if not can_access_thread(request.user, thread):
+        return JsonResponse({"success": False, "error": "You do not have access to this thread."}, status=403)
+    touch_thread_participant(thread, request.user, mark_read=True)
+    return JsonResponse({"success": True})

@@ -19,8 +19,11 @@
             <a href="{% url 'dashboard' %}" class="menu-item {% if active_page == 'dashboard' %}active{% endif %}" data-menu-label="dashboard">
                 <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
             </a>
-            <a href="{% url 'new_admission' %}" class="menu-item {% if active_page == 'new_admission' %}active{% endif %}" data-menu-label="new admission students">
-                <i class="fa-solid fa-user-plus"></i><span>New Admission</span>
+            <a href="{% url 'statistics' %}" class="menu-item {% if active_page == 'statistics' %}active{% endif %}" data-menu-label="statistics dashboard reports analytics">
+                <i class="fa-solid fa-chart-simple"></i><span>Statistics Dashboard</span>
+            </a>
+            <a href="{% url 'admission_pipeline' %}" class="menu-item {% if active_page == 'admission_pipeline' %}active{% endif %}" data-menu-label="admission pipeline crm leads">
+                <i class="fa-solid fa-filter-circle-dollar"></i><span>Admission Pipeline</span>
             </a>
         </div>
 
@@ -28,9 +31,6 @@
             <div class="sidebar-label">CRM / Leads</div>
             <a href="{% url 'enquiry_list' %}" class="menu-item {% if active_page == 'enquiries' %}active{% endif %}" data-menu-label="crm leads enquiries follow-ups admissions pipeline">
                 <i class="fa-solid fa-user-group"></i><span>Enquiries</span>
-            </a>
-            <a href="{% url 'enquiry_list' %}" class="menu-item" data-menu-label="follow-ups admissions pipeline">
-                <i class="fa-solid fa-funnel-dollar"></i><span>Admissions Pipeline</span>
             </a>
         </div>
 
@@ -41,25 +41,8 @@
                 <i class="fa-solid fa-chevron-right toggle-arrow"></i>
             </button>
             <div class="submenu" id="studentsMenu">
-                <a href="{% url 'admitted_students' %}" class="submenu-item {% if active_page == 'admitted_students' %}active{% endif %}" data-menu-label="all admissions students">All Admissions</a>
-                <a href="{% url 'active_batches' %}" class="submenu-item {% if active_page == 'active_batches' %}active{% endif %}" data-menu-label="active students batch management">Active Students</a>
-                <a href="{% url 'batch_overview' %}" class="submenu-item {% if active_page == 'batch_overview' %}active{% endif %}" data-menu-label="batch management">Batch Management</a>
-                <a href="{% url 'ended_batches' %}" class="submenu-item {% if active_page == 'ended_batches' %}active{% endif %}" data-menu-label="archived students ended batches">Archived Students</a>
-                <a href="{% url 'active_batches' %}" class="submenu-item" data-menu-label="certificates">Certificates</a>
-            </div>
-        </div>
-
-        <div class="sidebar-group">
-            <div class="sidebar-label">Attendance</div>
-            <button class="menu-item menu-toggle" type="button" onclick="toggleSidebarMenu(this, 'attendanceMenu')">
-                <span class="menu-item-main"><i class="fa-solid fa-clipboard-check"></i><span>Attendance</span></span>
-                <i class="fa-solid fa-chevron-right toggle-arrow"></i>
-            </button>
-            <div class="submenu" id="attendanceMenu">
-                <a href="{% url 'mark_attendance' %}" class="submenu-item {% if active_page == 'mark_attendance' %}active{% endif %}" data-menu-label="daily attendance">Daily Attendance</a>
-                <a href="{% url 'mark_attendance' %}" class="submenu-item" data-menu-label="practical attendance">Practical Attendance</a>
-                <a href="{% url 'mark_attendance' %}" class="submenu-item" data-menu-label="theory attendance">Theory Attendance</a>
-                <a href="{% url 'attendance_reports' %}" class="submenu-item {% if active_page == 'attendance_reports' %}active{% endif %}" data-menu-label="attendance reports">Attendance Reports</a>
+                <a href="{% url 'new_admission' %}" class="submenu-item {% if active_page == 'new_admission' %}active{% endif %}" data-menu-label="new admission students">New Admission</a>
+                <a href="{% url 'admitted_students' %}" class="submenu-item {% if active_page == 'admitted_students' %}active{% endif %}" data-menu-label="students admissions">Students</a>
             </div>
         </div>
 
@@ -74,40 +57,39 @@
                 <a href="{% url 'fees_payment' %}" class="submenu-item {% if active_page == 'fees_payment' %}active{% endif %}" data-menu-label="fee collection">Fee Collection</a>
                 <a href="{% url 'payment_tracking' %}" class="submenu-item {% if active_page == 'payment_tracking' %}active{% endif %}" data-menu-label="pending fees">Pending Fees</a>
                 <a href="{% url 'receipts_view' %}" class="submenu-item {% if active_page == 'receipts' %}active{% endif %}" data-menu-label="receipts">Receipts</a>
-                <a href="{% url 'sales_items' %}" class="submenu-item" data-menu-label="expense tracking">Expense Tracking</a>
-                <a href="{% url 'batch_reports' %}" class="submenu-item {% if active_page == 'batch_reports' %}active{% endif %}" data-menu-label="revenue reports">Revenue Reports</a>
             </div>
         </div>
         {% endif %}
 
         <div class="sidebar-group">
-            <div class="sidebar-label">Courses & Batches</div>
-            <button class="menu-item menu-toggle" type="button" onclick="toggleSidebarMenu(this, 'batchMenu')">
-                <span class="menu-item-main"><i class="fa-solid fa-layer-group"></i><span>Courses & Batches</span></span>
+            <div class="sidebar-label">Attendance</div>
+            <button class="menu-item menu-toggle" type="button" onclick="toggleSidebarMenu(this, 'attendanceMenu')">
+                <span class="menu-item-main"><i class="fa-solid fa-clipboard-check"></i><span>Attendance</span></span>
                 <i class="fa-solid fa-chevron-right toggle-arrow"></i>
             </button>
-            <div class="submenu" id="batchMenu">
-                <a href="{% url 'new_admission' %}" class="submenu-item" data-menu-label="courses">Courses</a>
-                <a href="{% url 'batch_overview' %}" class="submenu-item {% if active_page == 'batch_overview' %}active{% endif %}" data-menu-label="batch management">Batch Management</a>
-                <a href="{% url 'batch_reports' %}" class="submenu-item {% if active_page == 'batch_reports' %}active{% endif %}" data-menu-label="batch reports">Batch Reports</a>
+            <div class="submenu" id="attendanceMenu">
+                <a href="{% url 'batch_overview' %}" class="submenu-item {% if active_page == 'batch_overview' %}active{% endif %}" data-menu-label="batch overview attendance">Batch Overview</a>
+                <a href="{% url 'mark_attendance' %}" class="submenu-item {% if active_page == 'mark_attendance' %}active{% endif %}" data-menu-label="daily attendance">Daily Attendance</a>
+                <a href="{% url 'attendance_reports' %}" class="submenu-item {% if active_page == 'attendance_reports' %}active{% endif %}" data-menu-label="attendance reports">Attendance Reports</a>
                 <a href="{% url 'student_timetable' %}" class="submenu-item {% if active_page == 'student_timetable' %}active{% endif %}" data-menu-label="timetables">Timetables</a>
             </div>
         </div>
 
         <div class="sidebar-group">
-            <div class="sidebar-label">Reports</div>
-            <a href="{% url 'statistics' %}" class="menu-item {% if active_page == 'statistics' %}active{% endif %}" data-menu-label="admissions reports statistics">
-                <i class="fa-solid fa-chart-line"></i><span>Admissions Reports</span>
-            </a>
-            <a href="{% url 'batch_reports' %}" class="menu-item {% if active_page == 'batch_reports' %}active{% endif %}" data-menu-label="revenue reports">
-                <i class="fa-solid fa-sack-dollar"></i><span>Revenue Reports</span>
-            </a>
-            <a href="{% url 'attendance_reports' %}" class="menu-item {% if active_page == 'attendance_reports' %}active{% endif %}" data-menu-label="attendance reports">
-                <i class="fa-solid fa-square-poll-vertical"></i><span>Attendance Reports</span>
-            </a>
-            <a href="{% url 'statistics' %}" class="menu-item" data-menu-label="conversion reports">
-                <i class="fa-solid fa-arrows-spin"></i><span>Conversion Reports</span>
-            </a>
+            <div class="sidebar-label">Batch Management</div>
+            <button class="menu-item menu-toggle" type="button" onclick="toggleSidebarMenu(this, 'batchManagementMenu')">
+                <span class="menu-item-main"><i class="fa-solid fa-calendar-days"></i><span>Batch Management</span></span>
+                <i class="fa-solid fa-chevron-right toggle-arrow"></i>
+            </button>
+            <div class="submenu" id="batchManagementMenu">
+                <a href="{% url 'active_batches' %}" class="submenu-item {% if active_page == 'active_batches' %}active{% endif %}" data-menu-label="active batches">Active Batches</a>
+                {% if request.user.is_superuser or request.user|has_group:"Admin" %}
+                <a href="{% url 'end_batch' %}" class="submenu-item {% if active_page == 'end_batch' %}active{% endif %}" data-menu-label="end batch complete batch">End Batch</a>
+                <a href="{% url 'restore_batch' %}" class="submenu-item {% if active_page == 'restore_batch' %}active{% endif %}" data-menu-label="restore batch reopen batch">Restore Batch</a>
+                {% endif %}
+                <a href="{% url 'ended_batches' %}" class="submenu-item {% if active_page == 'ended_batches' %}active{% endif %}" data-menu-label="ended batches archived batches">Ended Batches</a>
+                <a href="{% url 'batch_reports' %}" class="submenu-item {% if active_page == 'batch_reports' %}active{% endif %}" data-menu-label="batch reports">Batch Reports</a>
+            </div>
         </div>
 
         {% if request.user.is_superuser or request.user|has_group:"Admin" %}
@@ -115,9 +97,6 @@
             <div class="sidebar-label">System Tools</div>
             <a href="{% url 'backup_page' %}" class="menu-item {% if active_page == 'backup' %}active{% endif %}" data-menu-label="backup restore import export system tools">
                 <i class="fa-solid fa-database"></i><span>Backup & Restore</span>
-            </a>
-            <a href="{% url 'backup_page' %}" class="menu-item" data-menu-label="import export">
-                <i class="fa-solid fa-file-arrow-up"></i><span>Import / Export</span>
             </a>
             <a href="/admin/auth/user/" class="menu-item" data-menu-label="user management">
                 <i class="fa-solid fa-users-gear"></i><span>User Management</span>
@@ -146,12 +125,21 @@
 </div>
 
 <script>
+const sidebarScrollKey = 'erp-sidebar-scroll-top';
+
+function persistSidebarScroll() {
+    const sidebarScroll = document.getElementById('sidebarNavScroll');
+    if (!sidebarScroll) return;
+    localStorage.setItem(sidebarScrollKey, String(sidebarScroll.scrollTop || 0));
+}
+
 function toggleSidebarMenu(button, menuId) {
     const menu = document.getElementById(menuId);
     const arrow = button.querySelector('.toggle-arrow');
     if (!menu) return;
     menu.classList.toggle('open');
     arrow.classList.toggle('open');
+    persistSidebarScroll();
 }
 
 function filterSidebarMenu(query) {
@@ -163,6 +151,7 @@ function filterSidebarMenu(query) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    const sidebarScroll = document.getElementById('sidebarNavScroll');
     document.querySelectorAll('.submenu-item.active').forEach(function(item) {
         const menu = item.closest('.submenu');
         if (menu) {
@@ -173,6 +162,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (arrow) arrow.classList.add('open');
             }
         }
+    });
+
+    if (sidebarScroll) {
+        const savedTop = parseInt(localStorage.getItem(sidebarScrollKey) || '0', 10);
+        if (!Number.isNaN(savedTop)) {
+            sidebarScroll.scrollTop = savedTop;
+        }
+
+        sidebarScroll.addEventListener('scroll', persistSidebarScroll, { passive: true });
+    }
+
+    document.querySelectorAll('#sidebarNavScroll a, #sidebarNavScroll button.menu-toggle').forEach(function(item) {
+        item.addEventListener('click', persistSidebarScroll);
     });
 });
 </script>

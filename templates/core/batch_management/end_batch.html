@@ -32,12 +32,18 @@
                     <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
                 {% endfor %}
             </select>
+            <select name="course" required class="filter-select">
+                <option value="">Select Course</option>
+                {% for course in filter_courses %}
+                    <option value="{{ course }}" {% if selected_course == course %}selected{% endif %}>{{ course }}</option>
+                {% endfor %}
+            </select>
             <button type="submit" class="btn btn-primary">Load Summary</button>
         </form>
 
         {% if preview %}
         <div class="preview-card">
-            <h3>{{ preview.batch_month }} {{ preview.batch_year }}</h3>
+            <h3>{{ preview.batch_month }} {{ preview.batch_year }} - {{ preview.course }}</h3>
             <div class="preview-grid">
                 <div><span>Total Students</span><strong>{{ preview.student_count }}</strong></div>
                 <div><span>Active Students</span><strong>{{ preview.active_count }}</strong></div>
@@ -57,6 +63,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="batch_month" value="{{ preview.batch_month }}">
                 <input type="hidden" name="batch_year" value="{{ preview.batch_year }}">
+                <input type="hidden" name="course" value="{{ preview.course }}">
                 <textarea name="remarks" rows="3" class="filter-input full-width" placeholder="Remarks for audit log"></textarea>
                 <label class="checkbox-line">
                     <input type="checkbox" name="admin_override">

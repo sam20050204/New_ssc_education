@@ -230,6 +230,291 @@ class ERPFoundationTests(TestCase):
         )
         self.assertTrue(BatchActionLog.objects.filter(batch_month="February", batch_year="2026", action_type="restored").exists())
 
+    def test_batch_students_endpoint_excludes_ended_students(self):
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+        self.client.force_login(self.user)
+
+        active_student = AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Active",
+            father_name="Student",
+            surname="Batch",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776601",
+            parent_mobile="9988776602",
+            gender="Male",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            batch_month="March",
+            batch_year="2026",
+            theory_batch_time="08:00-09:00",
+        )
+        AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Ended",
+            father_name="Student",
+            surname="Batch",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776603",
+            parent_mobile="9988776604",
+            gender="Female",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            batch_month="March",
+            batch_year="2026",
+            batch_status="completed",
+            theory_batch_time="08:00-09:00",
+        )
+
+        response = self.client.get(
+            reverse("get_batch_students"),
+            {"batch_type": "Theory", "time_slot": "08:00-09:00"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(len(payload["students"]), 1)
+        self.assertEqual(payload["students"][0]["id"], active_student.id)
+
+    def test_batch_list_endpoint_counts_only_active_students(self):
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+        self.client.force_login(self.user)
+
+        Batch.objects.create(batch_type="Theory", time_slot="08:00-09:00", capacity=1)
+        AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Active",
+            father_name="Student",
+            surname="One",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776610",
+            parent_mobile="9988776611",
+            gender="Male",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            theory_batch_time="08:00-09:00",
+        )
+        AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Ended",
+            father_name="Student",
+            surname="Two",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776612",
+            parent_mobile="9988776613",
+            gender="Female",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            batch_status="completed",
+            theory_batch_time="08:00-09:00",
+        )
+
+        response = self.client.get(reverse("get_batch_list"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["total_students"], 1)
+        self.assertEqual(payload["students_with_theory"], 1)
+        self.assertEqual(payload["theory_batches"][0]["count"], 1)
+
+    def test_batch_assignment_rejects_over_capacity(self):
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+        self.client.force_login(self.user)
+
+        Batch.objects.create(batch_type="Theory", time_slot="08:00-09:00", capacity=1)
+        AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Existing",
+            father_name="Student",
+            surname="One",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776620",
+            parent_mobile="9988776621",
+            gender="Male",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            theory_batch_time="08:00-09:00",
+        )
+        candidate = AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Candidate",
+            father_name="Student",
+            surname="Two",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776622",
+            parent_mobile="9988776623",
+            gender="Female",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+        )
+
+        response = self.client.post(
+            reverse("update_student_admitted", args=[candidate.id]),
+            data='{"theory_batch_time":"08:00-09:00"}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertFalse(payload["success"])
+        self.assertIn("full", payload["error"].lower())
+        candidate.refresh_from_db()
+        self.assertFalse(candidate.theory_batch_time)
+
+    def test_end_batch_page_does_not_preview_already_completed_batch(self):
+        admin_group = Group.objects.get(name=ROLE_ADMIN)
+        self.user.groups.add(admin_group)
+        self.client.force_login(self.user)
+
+        AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Completed",
+            father_name="Student",
+            surname="Batch",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776630",
+            parent_mobile="9988776631",
+            gender="Male",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            batch_month="April",
+            batch_year="2026",
+            batch_status="completed",
+        )
+
+        response = self.client.get(
+            reverse("end_batch"),
+            {"batch_month": "April", "batch_year": "2026", "course": "MS-CIT"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No students found for the selected batch.")
+        self.assertNotContains(response, "Active Students")
+
+    def test_month_wise_profit_does_not_double_count_custom_course_students(self):
+        self.client.force_login(self.user)
+
+        student = AdmittedStudent.objects.create(
+            course="Other",
+            custom_course="Tally Prime",
+            student_name="Custom",
+            father_name="Student",
+            surname="Profit",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776640",
+            parent_mobile="9988776641",
+            gender="Male",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            paid_fees="5000.00",
+            total_fees="6000.00",
+            admission_date=date(2026, 1, 15),
+        )
+        StudentFinanceDetail.objects.create(
+            student=student,
+            fees_paid_to_mkcl_1="1000.00",
+            fees_paid_to_mkcl_2="500.00",
+            fees_paid_to_mkcl_3="0.00",
+        )
+
+        response = self.client.get(reverse("month_wise_admission"), {"year": "2026"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["profit_grand_total"], "₹ 3500.00")
+        self.assertEqual(len(response.context["monthly_profit_data"]), 1)
+        self.assertEqual(response.context["monthly_profit_data"][0]["course"], "Tally Prime")
+        self.assertEqual(response.context["monthly_profit_data"][0]["jan"], "₹ 3500.00")
+
+    def test_month_wise_profit_includes_negative_course_totals(self):
+        self.client.force_login(self.user)
+
+        student = AdmittedStudent.objects.create(
+            course="Marketing 101",
+            student_name="Negative",
+            father_name="Profit",
+            surname="Case",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776650",
+            parent_mobile="9988776651",
+            gender="Male",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            paid_fees="0.00",
+            total_fees="5000.00",
+            admission_date=date(2026, 4, 10),
+        )
+        StudentFinanceDetail.objects.create(
+            student=student,
+            fees_paid_to_mkcl_1="700.00",
+        )
+
+        response = self.client.get(reverse("month_wise_admission"), {"year": "2026"})
+
+        self.assertEqual(response.status_code, 200)
+        negative_row = next(item for item in response.context["monthly_profit_data"] if item["course"] == "Marketing 101")
+        self.assertEqual(negative_row["april"], "₹ -700.00")
+        self.assertEqual(negative_row["total"], "₹ -700.00")
+
     def test_unauthorized_user_cannot_end_batch(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("end_batch"))

@@ -1,67 +1,41 @@
-<nav class="sidebar">
-    <div class="sidebar-header">
-        <button id="sidebar-toggle" class="sidebar-toggle-btn" title="Toggle sidebar visibility">
-            <span class="sidebar-icon">☰</span>
-        </button>
+<div class="sidebar-shell">
+    <div class="sidebar-brand">
+        <div class="sidebar-brand-mark">ST</div>
+        <div class="sidebar-brand-copy">
+            <strong>Statistics</strong>
+            <span>Analytics workspace</span>
+        </div>
     </div>
 
-    <!-- Dashboard Link -->
-    <a href="{% url 'dashboard' %}"
-       class="menu-item">
-        📊 Dashboard
-    </a>
+    <div class="sidebar-scroll" id="statisticsSidebarScroll">
+        <div class="sidebar-group">
+            <div class="sidebar-label">Navigation</div>
+            <a href="{% url 'dashboard' %}" class="menu-item {% if active_page == 'dashboard' %}active{% endif %}" data-menu-label="dashboard home">
+                <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
+            </a>
+            <a href="{% url 'statistics' %}" class="menu-item {% if active_page == 'statistics' %}active{% endif %}" data-menu-label="statistics analytics reports">
+                <i class="fa-solid fa-chart-simple"></i><span>Statistics Dashboard</span>
+            </a>
+        </div>
 
-    <hr class="sidebar-divider">
+        <div class="sidebar-group">
+            <div class="sidebar-label">Reports</div>
+            <a href="{% url 'student_finance_details' %}" class="menu-item {% if active_page == 'student_finance_details' %}active{% endif %}" data-menu-label="student finance profit fees">
+                <i class="fa-solid fa-wallet"></i><span>Student Finance Details</span>
+            </a>
+            <a href="{% url 'month_wise_admission' %}" class="menu-item {% if active_page == 'month_wise_admission' %}active{% endif %}" data-menu-label="month wise admissions yearly admissions">
+                <i class="fa-solid fa-calendar-days"></i><span>Month Wise Admission</span>
+            </a>
+        </div>
 
-    <!-- Student Finance Details -->
-    <a href="{% url 'student_finance_details' %}"
-       class="menu-item {% if active_page == 'student_finance_details' %}active{% endif %}">
-        💰 Student Finance Details
-    </a>
-
-    <!-- Month Wise Admission -->
-    <a href="{% url 'month_wise_admission' %}"
-       class="menu-item {% if active_page == 'month_wise_admission' %}active{% endif %}">
-        📅 Month Wise Admission
-    </a>
-
-    <!-- Course Analytics (Coming Soon) -->
-    <a href="#"
-       class="menu-item disabled"
-       style="opacity: 0.5; cursor: not-allowed;"
-       title="Coming Soon">
-        📊 Course Analytics
-    </a>
-
-    <hr class="sidebar-divider">
-
-    <!-- Logout as a form to handle POST request properly -->
-    <form method="post" action="{% url 'logout' %}" style="margin: 0;">
-        {% csrf_token %}
-        <button type="submit" class="menu-item logout-item">
-            🚪 Logout
-        </button>
-    </form>
-</nav>
-
-<style>
-    .sidebar-divider {
-        border: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        margin: 10px 0;
-    }
-
-    .section-header {
-        padding: 10px 15px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: rgba(255, 255, 255, 0.6);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-top: 5px;
-    }
-
-    .menu-item.disabled {
-        color: rgba(255, 255, 255, 0.4);
-    }
-</style>
+        <div class="sidebar-group">
+            <div class="sidebar-label">Account</div>
+            <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="menu-item menu-item-button" data-menu-label="logout sign out">
+                    <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

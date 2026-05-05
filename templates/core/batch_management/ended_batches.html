@@ -18,6 +18,6 @@
 
 {% block content %}
 <div class="container-fluid">
-    {% include 'core/batch_management/_batch_cards.html' with reset_url='/batch/ended/' %}
+    {% include 'core/batch_management/_batch_cards.html' with reset_url='/batch/ended/' card_actions='core/batch_management/restore_actions.html' %}
 </div>
 {% endblock %}

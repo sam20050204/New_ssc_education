@@ -105,6 +105,7 @@ function viewEnquiry(enquiryId) {
                 </div>
 
                 <div class="modal-actions" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e8e8e8;">
+                    <a href="/communications/?target_scope=enquiry&object_id=${enquiryId}" class="btn-submit" style="text-decoration:none;">Open Comments</a>
                     <a href="/enquiries/convert/${enquiryId}/" class="btn-submit">
                         🎓 Convert to Admission
                     </a>

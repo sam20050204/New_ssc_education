@@ -1,0 +1,426 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Admission Pipeline{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/admission_pipeline.css' %}?v={{ STATIC_VERSION }}">
+{% endblock %}
+
+{% block page_heading %}
+<section class="pipeline-hero">
+    <div class="pipeline-hero-copy">
+        <div class="pipeline-breadcrumbs">
+            <span>Dashboard</span>
+            <i class="fa-solid fa-chevron-right"></i>
+            <span>Admissions CRM</span>
+            <i class="fa-solid fa-chevron-right"></i>
+            <strong>Admission Pipeline</strong>
+        </div>
+        <div class="pipeline-title-row">
+            <div class="pipeline-title-block">
+                <div class="pipeline-icon-wrap">
+                    <i class="fa-solid fa-filter-circle-dollar"></i>
+                </div>
+                <div>
+                    <h1 class="pipeline-title">Admission Pipeline</h1>
+                    <p class="pipeline-subtitle">Counselor operations, fee conversion, and application flow in one premium admissions workspace.</p>
+                </div>
+            </div>
+            <a href="{% url 'new_admission' %}" class="pipeline-cta">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Add New Lead</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="pipeline-toolbar glass-panel">
+        <div class="toolbar-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" placeholder="Search student, mobile, counselor, course">
+        </div>
+        <div class="toolbar-filters">
+            <label>
+                <span>Date Filter</span>
+                <select>
+                    <option>Last 30 Days</option>
+                    <option>Last 90 Days</option>
+                    <option>This Quarter</option>
+                </select>
+            </label>
+            <label>
+                <span>Counselor</span>
+                <select>
+                    <option>All Counselors</option>
+                    <option>Aditi Sharma</option>
+                    <option>Rohit Patil</option>
+                    <option>Neha Kulkarni</option>
+                </select>
+            </label>
+            <label>
+                <span>Course Filter</span>
+                <select>
+                    <option>All Courses</option>
+                    <option>MS-CIT</option>
+                    <option>Tally Prime</option>
+                    <option>Data Analytics</option>
+                </select>
+            </label>
+            <label>
+                <span>Source Filter</span>
+                <select>
+                    <option>All Sources</option>
+                    <option>Website</option>
+                    <option>WhatsApp</option>
+                    <option>Referral</option>
+                </select>
+            </label>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="pipeline-dashboard">
+    <div class="kpi-grid">
+        {% for item in kpis %}
+        <article class="kpi-card accent-{{ item.accent }}">
+            <div class="kpi-head">
+                <div class="kpi-icon">
+                    <i class="{{ item.icon }}"></i>
+                </div>
+                <span class="kpi-trend kpi-trend-{{ item.trend_tone }}">
+                    <i class="fa-solid fa-arrow-trend-up"></i> {{ item.trend }}
+                </span>
+            </div>
+            <div class="kpi-value">{{ item.value }}</div>
+            <div class="kpi-label">{{ item.label }}</div>
+            <div class="kpi-meta">{{ item.meta }}</div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="insight-ribbon">
+        <div class="insight-card glass-panel">
+            <span class="insight-label">Conversion %</span>
+            <strong>{{ conversion_rate }}%</strong>
+            <p>Lead to confirmed admission rate across the current active funnel.</p>
+        </div>
+        <div class="insight-card glass-panel">
+            <span class="insight-label">Revenue Projection</span>
+            <strong>Rs. {{ revenue_projection }}</strong>
+            <p>Outstanding and near-close opportunities expected from the current pipeline.</p>
+        </div>
+        <div class="insight-card glass-panel">
+            <span class="insight-label">Pending Documents</span>
+            <strong>{{ pending_document_alerts }}</strong>
+            <p>Students blocked on KYC, marksheet, photo, or proof submissions.</p>
+        </div>
+        <div class="insight-card glass-panel">
+            <span class="insight-label">Payment Due Alerts</span>
+            <strong>{{ payment_due_alerts }}</strong>
+            <p>Leads waiting on first installment, finance approval, or confirmation receipt.</p>
+        </div>
+    </div>
+
+    <section class="board-shell glass-panel">
+        <div class="section-head">
+            <div>
+                <h2>Admission Pipeline Board</h2>
+                <p>Stage-by-stage visibility for new inquiries, applications, fee closure, and confirmed admissions.</p>
+            </div>
+            <div class="section-pill">
+                <i class="fa-solid fa-wave-square"></i>
+                <span>Live Funnel</span>
+            </div>
+        </div>
+
+        <div class="kanban-board">
+            {% for stage in stage_columns %}
+            <div class="kanban-column {{ stage.tone }}">
+                <div class="kanban-header">
+                    <div class="kanban-title-wrap">
+                        <span class="kanban-icon"><i class="{{ stage.icon }}"></i></span>
+                        <div>
+                            <h3>{{ stage.title }}</h3>
+                            <p>{{ stage.subtitle }}</p>
+                        </div>
+                    </div>
+                    <span class="kanban-count">{{ stage.count }}</span>
+                </div>
+
+                <div class="kanban-cards">
+                    {% for lead in stage.cards %}
+                    <article class="lead-card">
+                        <div class="lead-topline">
+                            <div class="lead-identity">
+                                <div class="lead-avatar">{{ lead.student_name|first|upper }}</div>
+                                <div>
+                                    <h4>{{ lead.student_name }}</h4>
+                                    <span>{{ lead.mobile }}</span>
+                                </div>
+                            </div>
+                            <button class="lead-menu" type="button" aria-label="Lead actions">
+                                <i class="fa-solid fa-ellipsis"></i>
+                            </button>
+                        </div>
+
+                        <div class="lead-chips">
+                            <span class="badge badge-course">{{ lead.course }}</span>
+                            <span class="badge badge-source">{{ lead.source }}</span>
+                        </div>
+
+                        <dl class="lead-meta">
+                            <div>
+                                <dt>Counselor</dt>
+                                <dd>{{ lead.counselor }}</dd>
+                            </div>
+                            <div>
+                                <dt>Follow-up</dt>
+                                <dd>{{ lead.follow_up_date|date:"d M Y" }}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="lead-status-row">
+                            <span class="status-dot">{{ lead.status }}</span>
+                            <span class="payment-pill payment-{{ lead.payment_tone }}">{{ lead.payment_status }}</span>
+                        </div>
+
+                        <div class="lead-footer">
+                            <span class="priority priority-{{ lead.priority|lower }}">{{ lead.priority }} Priority</span>
+                            {% if lead.missing_documents %}
+                            <span class="doc-alert">
+                                <i class="fa-regular fa-folder-open"></i>
+                                {{ lead.missing_documents|length }} missing
+                            </span>
+                            {% else %}
+                            <span class="doc-ok">
+                                <i class="fa-solid fa-circle-check"></i>
+                                Documents OK
+                            </span>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% empty %}
+                    <div class="empty-stage">
+                        <i class="fa-regular fa-face-smile"></i>
+                        <span>No active leads</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="analytics-grid">
+        <article class="analytics-card glass-panel">
+            <div class="section-head compact">
+                <div>
+                    <h2>Pipeline Funnel</h2>
+                    <p>Lead count per stage with drop-off visibility.</p>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="pipelineFunnelChart"></canvas>
+            </div>
+        </article>
+
+        <article class="analytics-card glass-panel">
+            <div class="section-head compact">
+                <div>
+                    <h2>Conversion Trends</h2>
+                    <p>Inquiry to admission momentum across recent cycles.</p>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="conversionTrendChart"></canvas>
+            </div>
+        </article>
+
+        <article class="analytics-card glass-panel">
+            <div class="section-head compact">
+                <div>
+                    <h2>Course Popularity</h2>
+                    <p>Program preference share across active leads.</p>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="coursePopularityChart"></canvas>
+            </div>
+        </article>
+
+        <article class="analytics-card glass-panel">
+            <div class="section-head compact">
+                <div>
+                    <h2>Revenue Tracking</h2>
+                    <p>Collected vs projected intake value for the active window.</p>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="revenueTrackingChart"></canvas>
+            </div>
+        </article>
+    </section>
+
+    <section class="ops-grid">
+        <article class="ops-card glass-panel">
+            <div class="section-head compact">
+                <div>
+                    <h2>Upcoming Follow-ups</h2>
+                    <p>Next counselor actions that need immediate attention.</p>
+                </div>
+            </div>
+            <div class="followup-list">
+                {% for lead in upcoming_followups %}
+                <div class="followup-item">
+                    <div>
+                        <strong>{{ lead.student_name }}</strong>
+                        <span>{{ lead.course }} • {{ lead.counselor }}</span>
+                    </div>
+                    <span>{{ lead.follow_up_date|date:"d M" }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="ops-card glass-panel">
+            <div class="section-head compact">
+                <div>
+                    <h2>Counselor Performance</h2>
+                    <p>Ownership, conversion rate, and revenue influence by counselor.</p>
+                </div>
+            </div>
+            <div class="performance-list">
+                {% for counselor in counselor_scores %}
+                <div class="performance-item">
+                    <div class="performance-title">
+                        <strong>{{ counselor.name }}</strong>
+                        <span>{{ counselor.leads }} active leads</span>
+                    </div>
+                    <div class="performance-bars">
+                        <div class="performance-bar">
+                            <div class="performance-fill" style="width: {{ counselor.conversion }}%;"></div>
+                        </div>
+                        <div class="performance-metric">{{ counselor.conversion }}% conversion</div>
+                    </div>
+                    <div class="performance-revenue">Rs. {{ counselor.revenue }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="ops-card glass-panel">
+            <div class="section-head compact">
+                <div>
+                    <h2>Lead Source Effectiveness</h2>
+                    <p>Channel quality benchmark for the current admissions funnel.</p>
+                </div>
+            </div>
+            <div class="source-list">
+                {% for source, count in source_effectiveness %}
+                <div class="source-item">
+                    <span>{{ source }}</span>
+                    <strong>{{ count }} leads</strong>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="ops-card glass-panel">
+            <div class="section-head compact">
+                <div>
+                    <h2>Batch Occupancy Indicators</h2>
+                    <p>Capacity watch for theory and practical batches.</p>
+                </div>
+            </div>
+            <div class="occupancy-list">
+                {% for batch in batch_occupancy %}
+                <div class="occupancy-item">
+                    <div class="occupancy-topline">
+                        <strong>{{ batch.name }}</strong>
+                        <span>{{ batch.strength }}/{{ batch.capacity }}</span>
+                    </div>
+                    <div class="occupancy-bar">
+                        <div class="occupancy-fill" style="width: {{ batch.utilization }}%;"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-stage empty-inline">
+                    <i class="fa-regular fa-calendar"></i>
+                    <span>No active batch data available</span>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+
+    <section class="table-panel glass-panel">
+        <div class="section-head">
+            <div>
+                <h2>Recent Leads Table</h2>
+                <p>Compact operational view for inquiry date, course interest, counselor ownership, priority, and next action.</p>
+            </div>
+            <div class="section-pill muted">
+                <i class="fa-solid fa-table-list"></i>
+                <span>{{ recent_leads_table|length }} recent leads</span>
+            </div>
+        </div>
+
+        <div class="table-scroll">
+            <table class="pipeline-table">
+                <thead>
+                    <tr>
+                        <th>Inquiry Date</th>
+                        <th>Student Name</th>
+                        <th>Mobile</th>
+                        <th>Course</th>
+                        <th>Source</th>
+                        <th>Counselor</th>
+                        <th>Current Stage</th>
+                        <th>Follow-up Date</th>
+                        <th>Priority</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in recent_leads_table %}
+                    <tr>
+                        <td>{{ lead.inquiry_date|date:"d M Y" }}</td>
+                        <td>{{ lead.student_name }}</td>
+                        <td>{{ lead.mobile }}</td>
+                        <td>{{ lead.course }}</td>
+                        <td>{{ lead.source }}</td>
+                        <td>{{ lead.counselor }}</td>
+                        <td><span class="status-dot">{{ lead.status }}</span></td>
+                        <td>{{ lead.follow_up_date|date:"d M Y" }}</td>
+                        <td><span class="priority priority-{{ lead.priority|lower }}">{{ lead.priority }}</span></td>
+                        <td>
+                            <div class="table-actions">
+                                <button type="button"><i class="fa-regular fa-eye"></i></button>
+                                <button type="button"><i class="fa-regular fa-pen-to-square"></i></button>
+                                <button type="button"><i class="fa-solid fa-phone"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
+
+<script>
+window.admissionPipelineCharts = {
+    pipeline: {{ pipeline_chart_json|safe }},
+    conversion: {{ conversion_chart_json|safe }},
+    course: {{ course_chart_json|safe }},
+    revenue: {{ revenue_chart_json|safe }}
+};
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.2/chart.umd.min.js"></script>
+<script src="{% static 'core/admission_pipeline.js' %}?v={{ STATIC_VERSION }}"></script>
+{% endblock %}

@@ -1,4 +1,3 @@
-from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
@@ -75,38 +74,35 @@ def get_batch_lifecycle_queryset(*, statuses=None, month="", year="", course="",
 
 def _summarize_grouped_batches(queryset):
     rows = (
-        queryset.values("batch_month", "batch_year", "batch_status")
+        queryset.values("batch_month", "batch_year", "batch_status", "course")
         .annotate(
             student_count=Count("id"),
             total_fees=Sum("total_fees"),
             paid_fees=Sum("paid_fees"),
             admission_count=Count("id"),
         )
-        .order_by("-batch_year", "batch_month", "batch_status")
+        .order_by("-batch_year", "batch_month", "course", "batch_status")
     )
-
-    courses_by_batch = defaultdict(list)
-    for row in queryset.values("batch_month", "batch_year", "course").annotate(course_count=Count("id")).order_by("course"):
-        key = (row["batch_month"], row["batch_year"])
-        courses_by_batch[key].append({"name": row["course"], "count": row["course_count"]})
 
     summaries = []
     for row in rows:
-        key = (row["batch_month"], row["batch_year"])
         total_fees = row["total_fees"] or Decimal("0.00")
         paid_fees = row["paid_fees"] or Decimal("0.00")
+        course_name = row["course"] or "No course assigned"
         summaries.append(
             {
                 "batch_month": row["batch_month"],
                 "batch_year": row["batch_year"],
                 "batch_status": row["batch_status"],
+                "course": row["course"] or "",
+                "course_name": course_name,
                 "student_count": row["student_count"],
                 "admission_count": row["admission_count"],
                 "total_fees": total_fees,
                 "paid_fees": paid_fees,
                 "pending_fees": total_fees - paid_fees,
-                "courses": courses_by_batch.get(key, []),
-                "course_names": ", ".join(course["name"] for course in courses_by_batch.get(key, [])),
+                "courses": [{"name": course_name, "count": row["student_count"]}],
+                "course_names": course_name,
             }
         )
     return summaries
@@ -122,8 +118,8 @@ def get_ended_batch_summaries(*, month="", year="", course="", search=""):
     return _summarize_grouped_batches(queryset)
 
 
-def get_batch_transition_preview(*, batch_month, batch_year):
-    queryset = get_batch_lifecycle_queryset(statuses=None, month=batch_month, year=batch_year)
+def get_batch_transition_preview(*, batch_month, batch_year, course="", statuses=None):
+    queryset = get_batch_lifecycle_queryset(statuses=statuses, month=batch_month, year=batch_year, course=course)
     students = queryset.select_related("batch_ended_by", "batch_restored_by")
     if not students.exists():
         raise ValueError("No students found for the selected batch.")
@@ -138,6 +134,7 @@ def get_batch_transition_preview(*, batch_month, batch_year):
     return {
         "batch_month": batch_month,
         "batch_year": batch_year,
+        "course": course,
         "student_count": total_students,
         "active_count": active_count,
         "courses": list(students.values_list("course", flat=True).distinct().order_by("course")),
@@ -163,20 +160,24 @@ def _validate_transition(students, transition_key):
 
 
 @transaction.atomic
-def update_batch_lifecycle(*, batch_month, batch_year, action, actor=None, request=None, remarks="", override=False):
+def update_batch_lifecycle(*, batch_month, batch_year, course="", action, actor=None, request=None, remarks="", override=False):
     if action not in ADMIN_MUTATION_STATUSES:
         raise ValueError("Unsupported batch lifecycle action.")
+    if not course:
+        raise ValueError("Please select a course for this batch action.")
 
     students = AdmittedStudent.objects.select_for_update().filter(
         is_archived=False,
         batch_month=batch_month,
         batch_year=batch_year,
     )
+    if course:
+        students = students.filter(course=course)
     if not students.exists():
         raise ValueError("No students found for the selected batch.")
 
     _validate_transition(students, action)
-    preview = get_batch_transition_preview(batch_month=batch_month, batch_year=batch_year)
+    preview = get_batch_transition_preview(batch_month=batch_month, batch_year=batch_year, course=course)
 
     if action == "end" and preview["pending_fees"] > 0 and not override:
         raise ValueError("Pending fees exist for this batch. Use admin override to complete the batch.")
@@ -218,6 +219,7 @@ def update_batch_lifecycle(*, batch_month, batch_year, action, actor=None, reque
         metadata={
             "batch_month": batch_month,
             "batch_year": batch_year,
+            "course": course,
             "affected_students_count": affected,
             "override": override,
             "remarks": remarks or "",

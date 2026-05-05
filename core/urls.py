@@ -13,6 +13,9 @@ urlpatterns = [
     
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('admission-pipeline/', views.admission_pipeline_dashboard, name='admission_pipeline'),
+    path('notifications/', views.notifications_page, name='notifications_page'),
+    path('communications/', views.communications_page, name='communications_page'),
     
     # Enquiry URLs
     path('enquiry/', views.enquiry_list, name='enquiry_list'),
@@ -99,4 +102,13 @@ urlpatterns = [
     path('export/timetable/', views.export_timetable_excel, name='export_timetable'),
     path('export/attendance/', views.export_attendance_report_excel, name='export_attendance_report'),
     path('health/', report_views.healthcheck, name='healthcheck'),
+    path('api/notifications/', views.notifications_feed_api, name='notifications_feed_api'),
+    path('api/notifications/settings/', views.notification_settings_api, name='notification_settings_api'),
+    path('api/notifications/mark-all-read/', views.notification_mark_all_read, name='notification_mark_all_read'),
+    path('api/notifications/<int:notification_id>/read/', views.notification_mark_read, name='notification_mark_read'),
+    path('api/communications/threads/', views.communication_threads_api, name='communication_threads_api'),
+    path('api/communications/threads/create/', views.communication_thread_create, name='communication_thread_create'),
+    path('api/communications/threads/<int:thread_id>/', views.communication_thread_detail, name='communication_thread_detail'),
+    path('api/communications/threads/<int:thread_id>/comment/', views.communication_thread_comment, name='communication_thread_comment'),
+    path('api/communications/threads/<int:thread_id>/read/', views.communication_thread_mark_read, name='communication_thread_mark_read'),
 ]

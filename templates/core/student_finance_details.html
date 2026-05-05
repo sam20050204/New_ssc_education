@@ -26,8 +26,12 @@
         <div class="header-right-section">
             <!-- Total Profit Display -->
             <div class="total-profit-box" id="totalProfitBox">
-                <h3>Total Profit</h3>
+                <h3>Profit Summary</h3>
                 <p class="amount" id="totalProfitAmount">₹ {{ total_profit|floatformat:2 }}</p>
+                <div class="profit-breakdown">
+                    <p><span>Learners</span><strong id="totalLearnerPaidAmount">₹ {{ total_learner_paid|default:0|floatformat:2 }}</strong></p>
+                    <p><span>MKCL</span><strong id="totalMkclPaidAmount">₹ {{ total_mkcl_paid|default:0|floatformat:2 }}</strong></p>
+                </div>
             </div>
             
             <button class="export-button" onclick="exportToExcel()" title="Export to CSV (Ctrl+E)">

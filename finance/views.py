@@ -10,6 +10,7 @@ from django.views.decorators.http import require_http_methods
 
 from core.forms import FeePaymentForm
 from core.models import AdmittedStudent
+from core.services.collaboration_service import create_role_notification
 from core.services.fee_service import record_fee_payment
 
 
@@ -79,6 +80,33 @@ def submit_fee_payment(request):
         return JsonResponse({"success": False, "error": "Student not found."}, status=404)
     except ValueError as exc:
         return JsonResponse({"success": False, "error": str(exc)}, status=400)
+
+    create_role_notification(
+        role_key="accountant",
+        category="financial",
+        priority="success",
+        event_key="financial.payment.recorded",
+        title="Payment recorded",
+        message=f"{payment.student.full_name} paid Rs. {payment.amount} via {payment.payment_mode}.",
+        actor=request.user,
+        link_url="/receipts/",
+        action_label="Open Receipt",
+        content_object=payment,
+    )
+    if payment.remaining_after_this and payment.remaining_after_this > 0:
+        create_role_notification(
+            role_key="counselor",
+            category="financial",
+            priority="pending",
+            event_key="financial.balance.pending",
+            title="Student still has pending balance",
+            message=f"{payment.student.full_name} has Rs. {payment.remaining_after_this} pending after the latest payment.",
+            actor=request.user,
+            link_url="/payment-tracking/",
+            action_label="Follow Up",
+            content_object=payment.student,
+            dedupe_window_hours=24,
+        )
 
     return JsonResponse(
         {

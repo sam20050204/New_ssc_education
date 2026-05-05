@@ -253,6 +253,10 @@ function openStudentModal(studentId) {
         document.getElementById('totalFees').value = data.total_fees || 5000;
         document.getElementById('paidFees').value = data.paid_fees || 0;
         calculateRemainingFees();
+        const communicationLink = document.getElementById('studentCommunicationLink');
+        if (communicationLink) {
+            communicationLink.href = `/communications/?target_scope=student&object_id=${data.id}`;
+        }
         
         // ✅ FIXED: Display payment history
         currentPaymentHistory = Array.isArray(data.payment_history) ? data.payment_history : [];

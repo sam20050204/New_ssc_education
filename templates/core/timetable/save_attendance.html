@@ -45,12 +45,15 @@
                 </thead>
                 <tbody>
                     {% for student in students %}
-                    <tr data-student-id="{{ student.id }}">
+                    <tr data-student-id="{{ student.id }}" class="{% if student.remaining_fees > 0 %}student-row-balance{% endif %}">
                         <td class="sn-col">{{ forloop.counter }}</td>
                         <td class="name-col">
-                            <strong>{{ student.full_name }}</strong>
+                            <button type="button" class="student-name-btn" onclick="viewStudentDetail({{ student.id }})">{{ student.full_name }}</button>
                             {% if student.mobile_own %}
                                 <br><small style="color: #999;">{{ student.mobile_own }}</small>
+                            {% endif %}
+                            {% if student.remaining_fees > 0 %}
+                                <br><small class="fee-due-text">Fees due: ₹{{ student.remaining_fees|floatformat:2 }}</small>
                             {% endif %}
                         </td>
                         <td class="attendance-col">
@@ -100,6 +103,16 @@
         </div>
         {% endif %}
     </form>
+</div>
+
+<div id="studentDetailModal" class="student-detail-modal">
+    <div class="student-detail-dialog">
+        <div class="student-detail-header">
+            <h3>Student Details</h3>
+            <button type="button" class="student-detail-close" onclick="closeStudentDetailModal()">&times;</button>
+        </div>
+        <div class="student-detail-body" id="student-detail-content"></div>
+    </div>
 </div>
 
 <style>
@@ -178,6 +191,16 @@
         background: #f8f9fa;
     }
 
+    .attendance-table tbody tr.student-row-balance {
+        background: #fff4f1;
+        box-shadow: inset 0 0 0 1px rgba(198, 73, 57, 0.14), inset 0 0 22px rgba(198, 73, 57, 0.12);
+    }
+
+    .attendance-table tbody tr.student-row-balance:hover {
+        background: #ffe8e1;
+        box-shadow: inset 0 0 0 1px rgba(198, 73, 57, 0.18), inset 0 0 30px rgba(198, 73, 57, 0.18);
+    }
+
     .sn-col {
         width: 50px;
         text-align: center;
@@ -186,6 +209,25 @@
     .name-col {
         width: 200px;
         font-weight: 500;
+    }
+
+    .student-name-btn {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #0b63ce;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .student-name-btn:hover {
+        text-decoration: underline;
+    }
+
+    .fee-due-text {
+        color: #b54735;
+        font-weight: 700;
     }
 
     .attendance-col {
@@ -324,6 +366,93 @@
         margin-bottom: 20px;
     }
 
+    .student-detail-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(17, 24, 39, 0.55);
+        z-index: 1100;
+        padding: 24px;
+    }
+
+    .student-detail-modal.active {
+        display: flex;
+    }
+
+    .student-detail-dialog {
+        width: min(960px, 100%);
+        max-height: 90vh;
+        overflow: auto;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+    }
+
+    .student-detail-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 22px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .student-detail-close {
+        border: 0;
+        background: transparent;
+        font-size: 28px;
+        line-height: 1;
+        cursor: pointer;
+        color: #475569;
+    }
+
+    .student-detail-body {
+        padding: 22px;
+    }
+
+    .student-detail-container {
+        display: grid;
+        gap: 18px;
+    }
+
+    .detail-section {
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 16px;
+        background: #fbfdff;
+    }
+
+    .detail-section h3 {
+        margin: 0 0 12px;
+        font-size: 16px;
+        color: #0f172a;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+    }
+
+    .detail-item {
+        display: grid;
+        gap: 4px;
+    }
+
+    .detail-item label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .detail-item span {
+        color: #0f172a;
+        word-break: break-word;
+    }
+
     @media (max-width: 1024px) {
         .attendance-col {
             min-width: 280px;
@@ -388,6 +517,105 @@
 </style>
 
 <script>
+    function getTimeSlotDisplay(slot) {
+        const slots = {
+            '08:00-09:00': '8:00 AM - 9:00 AM',
+            '09:00-10:00': '9:00 AM - 10:00 AM',
+            '10:00-11:00': '10:00 AM - 11:00 AM',
+            '11:00-12:00': '11:00 AM - 12:00 PM',
+            '12:00-13:00': '12:00 PM - 1:00 PM',
+            '13:00-14:00': '1:00 PM - 2:00 PM',
+            '14:00-15:00': '2:00 PM - 3:00 PM',
+            '15:00-16:00': '3:00 PM - 4:00 PM',
+            '16:00-17:00': '4:00 PM - 5:00 PM',
+            '17:00-18:00': '5:00 PM - 6:00 PM',
+            '18:00-19:00': '6:00 PM - 7:00 PM',
+        };
+        return slots[slot] || slot || 'Not assigned';
+    }
+
+    function renderStudentDetail(student) {
+        const batchDisplay = student.batch_display || [student.batch_month, student.batch_year].filter(Boolean).join(' ') || 'Not assigned';
+        const paymentHistory = Array.isArray(student.payment_history) && student.payment_history.length
+            ? student.payment_history.map(payment => `
+                <div class="detail-item">
+                    <label>${payment.payment_date || '-'}</label>
+                    <span>₹ ${payment.amount || 0} via ${payment.payment_mode || '-'}${payment.receipt_no ? ` (${payment.receipt_no})` : ''}</span>
+                </div>
+            `).join('')
+            : '<div class="detail-item"><span>No payment history available</span></div>';
+
+        return `
+            <div class="student-detail-container">
+                <div class="detail-section">
+                    <h3>Personal Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item"><label>Name</label><span>${student.full_name || '-'}</span></div>
+                        <div class="detail-item"><label>Student Name</label><span>${student.student_name || '-'}</span></div>
+                        <div class="detail-item"><label>Father Name</label><span>${student.father_name || '-'}</span></div>
+                        <div class="detail-item"><label>Mother Name</label><span>${student.mother_name || '-'}</span></div>
+                        <div class="detail-item"><label>Mobile</label><span>${student.mobile_own || '-'}</span></div>
+                        <div class="detail-item"><label>Parent Mobile</label><span>${student.parent_mobile || '-'}</span></div>
+                        <div class="detail-item"><label>Gender</label><span>${student.gender || '-'}</span></div>
+                        <div class="detail-item"><label>Qualification</label><span>${student.educational_qualification || '-'}</span></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Course & Batch</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item"><label>Course</label><span>${student.course || '-'}</span></div>
+                        <div class="detail-item"><label>Batch</label><span>${batchDisplay}</span></div>
+                        <div class="detail-item"><label>Batch Status</label><span>${student.batch_status || '-'}</span></div>
+                        <div class="detail-item"><label>Theory Batch</label><span>${getTimeSlotDisplay(student.theory_batch_time)}</span></div>
+                        <div class="detail-item"><label>Practical Batch</label><span>${getTimeSlotDisplay(student.practical_batch_time)}</span></div>
+                        <div class="detail-item"><label>Admission Date</label><span>${student.admission_date || '-'}</span></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Address</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item"><label>Address</label><span>${student.address || '-'}</span></div>
+                        <div class="detail-item"><label>City</label><span>${student.city || '-'}</span></div>
+                        <div class="detail-item"><label>Taluka / Block</label><span>${student.tehsil_block || '-'}</span></div>
+                        <div class="detail-item"><label>District</label><span>${student.district || '-'}</span></div>
+                        <div class="detail-item"><label>Pincode</label><span>${student.pin_code || '-'}</span></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Fees</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item"><label>Total Fees</label><span>₹ ${student.total_fees || 0}</span></div>
+                        <div class="detail-item"><label>Paid Fees</label><span>₹ ${student.paid_fees || 0}</span></div>
+                        <div class="detail-item"><label>Remaining Fees</label><span>₹ ${student.remaining_fees || 0}</span></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Payment History</h3>
+                    <div class="detail-grid">${paymentHistory}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    async function viewStudentDetail(studentId) {
+        try {
+            const response = await fetch(`/admission/${studentId}/batch-detail/`);
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to load student details');
+            }
+
+            document.getElementById('student-detail-content').innerHTML = renderStudentDetail(data.student);
+            document.getElementById('studentDetailModal').classList.add('active');
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    function closeStudentDetailModal() {
+        document.getElementById('studentDetailModal').classList.remove('active');
+    }
+
     function markAllPresent() {
         document.querySelectorAll('input[name^="attendance_"]').forEach(input => {
             if (input.value === 'P') {
@@ -403,5 +631,12 @@
             }
         });
     }
+
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('studentDetailModal');
+        if (event.target === modal) {
+            closeStudentDetailModal();
+        }
+    });
 </script>
 {% endblock %}
