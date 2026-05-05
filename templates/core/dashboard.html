@@ -7,23 +7,21 @@
 <div class="page-header dashboard-page-header">
     <div class="page-header-content">
         <div class="page-title-wrapper">
-            <div class="page-icon dashboard-page-icon">DB</div>
+            <div class="page-icon dashboard-page-icon">ED</div>
             <div>
-                <h1 class="page-title">Dashboard Overview</h1>
+                <h1 class="page-title">Education ERP Dashboard</h1>
+                <p class="page-subtitle">Admissions, course demand, and operational visibility for your institute team.</p>
             </div>
         </div>
         <div class="page-filters">
             <form method="get" class="year-filter-form">
                 <label for="year-select">
-                    <span class="filter-icon">Year</span>
-                    <span class="filter-label">Select Year:</span>
+                    <span class="filter-label">Reporting Year</span>
                 </label>
                 <select name="year" id="year-select" class="year-select" onchange="this.form.submit()">
                     <option value="">All Years</option>
                     {% for year in available_years %}
-                        <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>
-                            {{ year }}
-                        </option>
+                        <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year }}</option>
                     {% endfor %}
                 </select>
             </form>
@@ -37,13 +35,13 @@
     <div class="stats-grid dashboard-stats-grid">
         <div class="stat-card stat-card-enquiries">
             <div class="stat-card-topline">
-                <span class="stat-chip">Enquiries</span>
-                <div class="stat-icon">ENQ</div>
+                <span class="stat-chip">Lead Flow</span>
+                <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
             </div>
             <div class="stat-number">{{ enquiry_count }}</div>
             <div class="stat-label">Total Enquiries</div>
-            <p class="stat-description">Fresh interest and leads collected in the selected period.</p>
-            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All recorded years{% endif %}</div>
+            <p class="stat-description">Fresh demand captured from prospects in the selected reporting window.</p>
+            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All years{% endif %}</div>
         </div>
 
         <div class="stat-card stat-card-mscit">
@@ -53,32 +51,32 @@
                     <img src="{% static 'logos/mscit-logo.png' %}" alt="MSCIT" class="mscit-logo-img">
                 </div>
             </div>
-            <div class="stat-number">{{ mscit_count|default:0 }}</div>
-            <div class="stat-label">MSCIT Students</div>
-            <p class="stat-description">Students enrolled in the main MSCIT program.</p>
-            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All recorded years{% endif %}</div>
+            <div class="stat-number">{{ mscit_count|add:klic_count|add:practice_count }}</div>
+            <div class="stat-label">Total Admissions</div>
+            <p class="stat-description">Combined student admissions across all active training programs.</p>
+            <div class="stat-period">MSCIT {{ mscit_count }} | KLIC {{ klic_count }} | Practice {{ practice_count }}</div>
         </div>
 
         <div class="stat-card stat-card-klic">
             <div class="stat-card-topline">
-                <span class="stat-chip">Programs</span>
-                <div class="stat-icon">KLIC</div>
+                <span class="stat-chip">Program Mix</span>
+                <div class="stat-icon"><i class="fa-solid fa-layer-group"></i></div>
             </div>
             <div class="stat-number">{{ klic_count|default:0 }}</div>
             <div class="stat-label">KLIC Students</div>
-            <p class="stat-description">Students enrolled in KLIC and other non-MSCIT, non-Practice courses.</p>
-            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All recorded years{% endif %}</div>
+            <p class="stat-description">Learners enrolled in KLIC and other advanced non-MSCIT tracks.</p>
+            <div class="stat-period">High-value upskilling programs</div>
         </div>
 
         <div class="stat-card stat-card-practice">
             <div class="stat-card-topline">
                 <span class="stat-chip">Practice</span>
-                <div class="stat-icon">PR</div>
+                <div class="stat-icon"><i class="fa-solid fa-laptop-code"></i></div>
             </div>
             <div class="stat-number">{{ practice_count|default:0 }}</div>
             <div class="stat-label">Practice Students</div>
-            <p class="stat-description">Students admitted in the Practice course only.</p>
-            <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All recorded years{% endif %}</div>
+            <p class="stat-description">Students engaged in practice batches and lab-centered learning time.</p>
+            <div class="stat-period">Operational training pool</div>
         </div>
     </div>
 
@@ -86,9 +84,10 @@
         <div class="chart-container dashboard-chart-card">
             <div class="chart-header">
                 <div>
-                    <h3>Student Admissions by Course</h3>
-                    <p class="chart-subtitle">Monthly comparison across the visible courses.</p>
+                    <h3>Admissions Growth</h3>
+                    <p class="chart-subtitle">Monthly course-wise admission patterns for management review.</p>
                 </div>
+                <span class="status-badge status-active">Live</span>
             </div>
             <div class="chart-canvas-wrap">
                 <canvas id="clusteredBarChart"></canvas>
@@ -98,12 +97,59 @@
         <div class="chart-container dashboard-chart-card">
             <div class="chart-header">
                 <div>
-                    <h3>Total Monthly Admissions</h3>
-                    <p class="chart-subtitle">Overall admission movement month by month.</p>
+                    <h3>Revenue-Ready Intake Trend</h3>
+                    <p class="chart-subtitle">Overall admissions curve showing growth momentum over the year.</p>
                 </div>
+                <span class="status-badge status-completed">Trend</span>
             </div>
             <div class="chart-canvas-wrap">
                 <canvas id="monthlyTotalChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-container">
+            <div class="chart-header">
+                <div>
+                    <h3>Operations Snapshot</h3>
+                    <p class="chart-subtitle">Quick visibility for coordinators and counselors.</p>
+                </div>
+            </div>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td>Lead to Admission Pool</td>
+                        <td><strong>{{ enquiry_count }}</strong> enquiries vs <strong>{{ mscit_count|add:klic_count|add:practice_count }}</strong> admissions</td>
+                    </tr>
+                    <tr>
+                        <td>MSCIT Share</td>
+                        <td><strong>{{ mscit_count }}</strong> students in the flagship course</td>
+                    </tr>
+                    <tr>
+                        <td>KLIC Demand</td>
+                        <td><strong>{{ klic_count }}</strong> enrollments in value-added tracks</td>
+                    </tr>
+                    <tr>
+                        <td>Practice Capacity</td>
+                        <td><strong>{{ practice_count }}</strong> learners in practice-oriented batches</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <div>
+                    <h3>Admin Shortcuts</h3>
+                    <p class="chart-subtitle">Frequent operational actions for institute staff.</p>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'new_admission' %}" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> New Admission</a>
+                <a href="{% url 'fees_payment' %}" class="btn btn-success"><i class="fa-solid fa-wallet"></i> Fee Collection</a>
+                <a href="{% url 'mark_attendance' %}" class="btn btn-info"><i class="fa-solid fa-clipboard-check"></i> Mark Attendance</a>
+                <a href="{% url 'batch_reports' %}" class="btn btn-secondary"><i class="fa-solid fa-chart-line"></i> Batch Reports</a>
             </div>
         </div>
     </div>

@@ -1,189 +1,190 @@
-{% load static %}
+{% load static custom_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Dashboard{% endblock %}</title>
+    <title>{% block title %}ERP Dashboard{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Base CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="{% static 'core/dashboard.css' %}?v={{ STATIC_VERSION }}">
     <link rel="stylesheet" href="{% static 'core/dark-mode.css' %}?v={{ STATIC_VERSION }}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-
-<!-- 🔹 TOP NAVBAR -->
-<header class="top-header">
-    <div class="header-title-section">
-        <h1>🖥️ Shri Samarth Computer Education</h1>
-        <div class="module-buttons">
-            <a href="{% url 'sales_services_dashboard' %}" class="module-btn sales-btn">🛒 Sales and Services</a>
-        </div>
-    </div>
-
-    <div class="user-info">
-        <span>Welcome, {{ request.user.username|default:"Admin" }}</span>
-        <button id="theme-toggle" class="theme-toggle-btn" title="Toggle dark/light theme">
-            <span class="theme-icon">🌙</span>
-        </button>
-        <a href="{% url 'logout' %}" class="logout-btn" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
-        <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
-            {% csrf_token %}
-        </form>
-    </div>
-</header>
-
-<!-- 🔹 MESSAGES -->
-{% if messages %}
-<div class="messages">
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
-            {{ message }}
-        </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-<!-- 🔹 MAIN LAYOUT (SIDEBAR + CONTENT) -->
-<div class="layout">
-
-    <!-- SIDEBAR -->
-    {% block sidebar %}
-        {% include 'includes/sidebar.html' %}
-    {% endblock %}
-
-    <!-- PAGE CONTENT -->
-    <main class="main-content">
-
-        {% block page_heading %}
-        <!-- Page heading goes here -->
+<div class="app-shell">
+    <aside class="sidebar" id="erpSidebar">
+        {% block sidebar %}
+            {% include 'includes/sidebar.html' %}
         {% endblock %}
+    </aside>
 
-        <div class="content-wrapper">
-            {% block content %}
-            <!-- Page content goes here -->
-            {% endblock %}
-        </div>
+    <div class="app-stage">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button id="sidebar-toggle" class="icon-btn mobile-toggle" type="button" aria-label="Toggle navigation">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="brand-block">
+                    <div class="brand-mark">SE</div>
+                    <div class="brand-copy">
+                        <strong>Shri Samarth Education ERP</strong>
+                        <span>Institute operations console</span>
+                    </div>
+                </div>
+            </div>
 
-    </main>
+            <div class="topbar-center">
+                <form action="{% url 'admitted_students' %}" method="get" class="global-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" name="search" placeholder="Search students, admissions, mobile..." aria-label="Global search">
+                </form>
+            </div>
 
+            <div class="topbar-right">
+                <div class="topbar-date" id="liveDate">Loading date...</div>
+                <button id="theme-toggle" class="icon-btn" type="button" title="Toggle theme">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <button class="icon-btn" type="button" title="Notifications">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="icon-badge">4</span>
+                </button>
+                <button class="icon-btn" type="button" title="Messages">
+                    <i class="fa-regular fa-message"></i>
+                    <span class="icon-badge icon-badge-alt">2</span>
+                </button>
+                <div class="quick-actions dropdown-shell">
+                    <button class="quick-action-btn" type="button" data-dropdown-target="quickActionsMenu">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Quick Actions</span>
+                    </button>
+                    <div class="dropdown-panel" id="quickActionsMenu">
+                        <a href="{% url 'new_admission' %}"><i class="fa-solid fa-user-plus"></i> New Admission</a>
+                        <a href="{% url 'fees_payment' %}"><i class="fa-solid fa-wallet"></i> Fee Collection</a>
+                        <a href="{% url 'mark_attendance' %}"><i class="fa-solid fa-clipboard-check"></i> Mark Attendance</a>
+                        <a href="{% url 'backup_page' %}"><i class="fa-solid fa-database"></i> Backup</a>
+                    </div>
+                </div>
+                <div class="user-menu dropdown-shell">
+                    <button class="user-chip" type="button" data-dropdown-target="userMenuPanel">
+                        <span class="user-avatar">{{ request.user.username|default:"A"|first|upper }}</span>
+                        <span class="user-meta">
+                            <strong>{{ request.user.username|default:"Admin" }}</strong>
+                            <small>
+                                {% if request.user.is_superuser %}Super Admin{% elif request.user|has_group:"Admin" %}Admin{% elif request.user|has_group:"Counselor" %}Counselor{% elif request.user|has_group:"Accountant" %}Accountant{% elif request.user|has_group:"Attendance Manager" %}Attendance Staff{% else %}Team Member{% endif %}
+                            </small>
+                        </span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-panel dropdown-panel-right" id="userMenuPanel">
+                        <a href="{% url 'dashboard' %}"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+                        <a href="/admin/"><i class="fa-solid fa-shield-halved"></i> Django Admin</a>
+                        <button type="button" onclick="document.getElementById('logout-form').submit();"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                    </div>
+                </div>
+                <form id="logout-form" action="{% url 'logout' %}" method="post" style="display:none;">
+                    {% csrf_token %}
+                </form>
+            </div>
+        </header>
+
+        {% include 'includes/messages.html' %}
+
+        <main class="main-content">
+            {% block page_heading %}{% endblock %}
+            <div class="content-wrapper">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
 </div>
 
 {% block extra_js %}{% endblock %}
 
 <script>
-// ===================== SIDEBAR TOGGLE FUNCTIONALITY =====================
 (function() {
-    const sidebarToggleBtn = document.getElementById('sidebar-toggle');
-    const layout = document.querySelector('.layout');
-    const storageKey = 'sidebar-visibility';
-    
-    // Function to hide sidebar
-    function hideSidebar() {
-        layout.classList.add('sidebar-hidden');
-        localStorage.setItem(storageKey, 'hidden');
-    }
-    
-    // Function to show sidebar
-    function showSidebar() {
-        layout.classList.remove('sidebar-hidden');
-        localStorage.setItem(storageKey, 'visible');
-    }
-    
-    // Initialize sidebar state from localStorage
-    function initializeSidebar() {
-        const savedState = localStorage.getItem(storageKey);
-        
-        // Default to visible on dashboard, hidden on other pages
-        const isDashboard = window.location.pathname.includes('/dashboard/') || window.location.pathname === '/';
-        const defaultState = isDashboard ? 'visible' : 'visible'; // Show by default
-        
-        const state = savedState || defaultState;
-        
-        if (state === 'hidden') {
-            hideSidebar();
-        } else {
-            showSidebar();
+    const body = document.body;
+    const sidebar = document.getElementById('erpSidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const themeToggle = document.getElementById('theme-toggle');
+    const dateBox = document.getElementById('liveDate');
+    const themeIcon = themeToggle ? themeToggle.querySelector('i') : null;
+    const storageKeySidebar = 'erp-sidebar-collapsed';
+    const storageKeyTheme = 'erp-theme';
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        body.classList.toggle('dark-mode', theme === 'dark');
+        body.classList.toggle('light-mode', theme !== 'dark');
+        if (themeIcon) {
+            themeIcon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
         }
+        localStorage.setItem(storageKeyTheme, theme);
     }
-    
-    // Handle sidebar toggle button click
-    if (sidebarToggleBtn) {
-        sidebarToggleBtn.addEventListener('click', function() {
-            if (layout.classList.contains('sidebar-hidden')) {
-                showSidebar();
+
+    function setDate() {
+        if (!dateBox) return;
+        const now = new Date();
+        dateBox.textContent = now.toLocaleDateString(undefined, {
+            weekday: 'short',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    }
+
+    function setSidebarState(collapsed) {
+        body.classList.toggle('sidebar-collapsed', collapsed);
+        localStorage.setItem(storageKeySidebar, collapsed ? '1' : '0');
+    }
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', function() {
+            if (window.innerWidth <= 1080) {
+                body.classList.toggle('sidebar-open');
             } else {
-                hideSidebar();
+                setSidebarState(!body.classList.contains('sidebar-collapsed'));
             }
         });
     }
-    
-    // Initialize on page load
-    initializeSidebar();
-})();
-</script>
 
-<!-- Theme Switcher Script -->
-<script>
-(function() {
-    const themeToggleBtn = document.getElementById('theme-toggle');
-    const themeIcon = document.querySelector('.theme-icon');
-    const htmlElement = document.documentElement;
-    const storageKey = 'app-theme-mode';
-
-    // Function to apply theme
-    function applyTheme(theme) {
-        if (theme === 'dark') {
-            htmlElement.setAttribute('data-theme', 'dark');
-            document.body.classList.add('dark-mode');
-            document.body.classList.remove('light-mode');
-            themeIcon.textContent = '☀️'; // Sun icon for switching to light
-            localStorage.setItem(storageKey, 'dark');
-        } else {
-            htmlElement.setAttribute('data-theme', 'light');
-            document.body.classList.add('light-mode');
-            document.body.classList.remove('dark-mode');
-            themeIcon.textContent = '🌙'; // Moon icon for switching to dark
-            localStorage.setItem(storageKey, 'light');
-        }
-    }
-
-    // Function to get system preference
-    function getSystemTheme() {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-
-    // Initialize theme on page load
-    function initializeTheme() {
-        let theme = localStorage.getItem(storageKey);
-        
-        if (!theme) {
-            // Use system preference if not set
-            theme = getSystemTheme();
-        }
-        
-        applyTheme(theme);
-    }
-
-    // Handle theme toggle button click
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', function() {
-            const currentTheme = htmlElement.getAttribute('data-theme') || 'light';
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            applyTheme(newTheme);
+    if (themeToggle) {
+        themeToggle.addEventListener('click', function() {
+            applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
     }
 
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-        if (!localStorage.getItem(storageKey)) {
-            applyTheme(e.matches ? 'dark' : 'light');
+    document.querySelectorAll('[data-dropdown-target]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            event.stopPropagation();
+            const targetId = button.getAttribute('data-dropdown-target');
+            document.querySelectorAll('.dropdown-panel').forEach(panel => {
+                panel.classList.toggle('open', panel.id === targetId ? !panel.classList.contains('open') : false);
+            });
+        });
+    });
+
+    document.addEventListener('click', function() {
+        document.querySelectorAll('.dropdown-panel').forEach(panel => panel.classList.remove('open'));
+        if (window.innerWidth <= 1080) {
+            body.classList.remove('sidebar-open');
         }
     });
 
-    // Initialize on page load
-    initializeTheme();
+    if (sidebar) {
+        sidebar.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+    }
+
+    const savedTheme = localStorage.getItem(storageKeyTheme) || 'light';
+    const savedCollapsed = localStorage.getItem(storageKeySidebar) === '1';
+    applyTheme(savedTheme);
+    setSidebarState(savedCollapsed);
+    setDate();
 })();
 </script>
 </body>
