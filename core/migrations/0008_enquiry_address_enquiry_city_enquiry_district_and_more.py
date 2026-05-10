@@ -6,28 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0007_admittedstudent_paid_fees_admittedstudent_total_fees'),
+        ("core", "0007_admittedstudent_paid_fees_admittedstudent_total_fees"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='enquiry',
-            name='address',
+            model_name="enquiry",
+            name="address",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='enquiry',
-            name='city',
+            model_name="enquiry",
+            name="city",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
         migrations.AddField(
-            model_name='enquiry',
-            name='district',
+            model_name="enquiry",
+            name="district",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
         migrations.AddField(
-            model_name='enquiry',
-            name='taluka',
+            model_name="enquiry",
+            name="taluka",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
     ]

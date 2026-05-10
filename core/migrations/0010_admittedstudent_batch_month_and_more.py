@@ -6,18 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0009_enquiry_custom_course'),
+        ("core", "0009_enquiry_custom_course"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='admittedstudent',
-            name='batch_month',
-            field=models.CharField(blank=True, help_text='Month of batch (e.g., January, February)', max_length=20, null=True),
+            model_name="admittedstudent",
+            name="batch_month",
+            field=models.CharField(
+                blank=True, help_text="Month of batch (e.g., January, February)", max_length=20, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='admittedstudent',
-            name='batch_year',
-            field=models.CharField(blank=True, help_text='Year of batch (e.g., 2024, 2025)', max_length=4, null=True),
+            model_name="admittedstudent",
+            name="batch_year",
+            field=models.CharField(blank=True, help_text="Year of batch (e.g., 2024, 2025)", max_length=4, null=True),
         ),
     ]

@@ -7,13 +7,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0011_studentfinancedetail'),
+        ("core", "0011_studentfinancedetail"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='studentfinancedetail',
-            name='student',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='finance_detail', to='core.admittedstudent'),
+            model_name="studentfinancedetail",
+            name="student",
+            field=models.OneToOneField(
+                on_delete=django.db.models.deletion.CASCADE, related_name="finance_detail", to="core.admittedstudent"
+            ),
         ),
     ]

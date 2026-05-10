@@ -16,6 +16,14 @@ function getCookie(name) {
     return cookieValue;
 }
 
+function getCsrfToken() {
+    const formToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (formToken && formToken.value) {
+        return formToken.value;
+    }
+    return getCookie('csrftoken');
+}
+
 // ===================== SORTING FUNCTION =====================
 function applySorting() {
     const sortValue = document.getElementById('sort').value;
@@ -810,13 +818,25 @@ function deleteSelectedStudents() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({
             student_ids: studentIds
         })
     })
-    .then(response => response.json())
+    .then(async response => {
+        const contentType = response.headers.get('content-type') || '';
+        const payload = contentType.includes('application/json')
+            ? await response.json()
+            : { success: false, error: `Request failed with status ${response.status}` };
+
+        if (!response.ok) {
+            throw new Error(payload.error || `Request failed with status ${response.status}`);
+        }
+
+        return payload;
+    })
     .then(data => {
         if (data.success) {
             showNotification(`✅ Successfully deleted ${data.deleted_count} student${data.deleted_count > 1 ? 's' : ''}!`, 'success');
@@ -832,7 +852,7 @@ function deleteSelectedStudents() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('❌ Error deleting students. Please try again.');
+        alert('❌ Error deleting students: ' + error.message);
         deleteBtn.innerHTML = originalText;
         deleteBtn.disabled = false;
     });

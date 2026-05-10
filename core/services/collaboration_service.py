@@ -1,7 +1,7 @@
 import re
 from datetime import timedelta
 
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import F, Q
@@ -16,7 +16,6 @@ from core.models import (
     NotificationSetting,
     ThreadParticipantState,
 )
-
 
 MENTION_RE = re.compile(r"@([A-Za-z0-9_.-]+)")
 
@@ -38,10 +37,7 @@ def get_role_users(role_key):
 
 
 def ensure_notification_settings(user):
-    settings_by_category = {
-        item.category: item
-        for item in NotificationSetting.objects.filter(user=user)
-    }
+    settings_by_category = {item.category: item for item in NotificationSetting.objects.filter(user=user)}
     for category, _label in NotificationSetting.CATEGORY_CHOICES:
         if category not in settings_by_category:
             NotificationSetting.objects.create(user=user, category=category)

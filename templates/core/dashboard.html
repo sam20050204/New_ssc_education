@@ -56,10 +56,10 @@
             </div>
             <div class="stat-card-main">
                 <div class="stat-copy">
-                    <div class="stat-number">{{ mscit_count|add:klic_count|add:practice_count }}</div>
-                    <div class="stat-label">Total Admissions</div>
-                    <p class="stat-description">Combined student admissions across all active training programs.</p>
-                    <div class="stat-period">MSCIT {{ mscit_count }} | KLIC {{ klic_count }} | Practice {{ practice_count }}</div>
+                    <div class="stat-number">{{ mscit_count }}</div>
+                    <div class="stat-label">MS-CIT Admissions</div>
+                    <p class="stat-description">Primary certification program for digital literacy and computer skills.</p>
+                    <div class="stat-period">Total: {{ total_admissions }} | KLIC {{ klic_count }} | Practice {{ practice_count }}</div>
                 </div>
                 <div class="stat-visual stat-visual-mscit">
                     <img src="{% static 'logos/mscit-logo.png' %}" alt="MS-CIT" class="dashboard-logo dashboard-logo-mscit">
@@ -228,8 +228,8 @@
 </section>
 
 <script>
-    const courseDistribution = {{ course_distribution|safe }};
-    const monthlyByCourse = {{ monthly_by_course|safe }};
+    const courseDistribution = JSON.parse('{{ course_distribution|escapejs }}');
+    const monthlyByCourse = JSON.parse('{{ monthly_by_course|escapejs }}');
     const selectedYear = "{{ selected_year|default:'' }}";
 </script>
 {% endblock %}

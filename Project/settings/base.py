@@ -55,6 +55,7 @@ def get_local_secret_key():
 SECRET_KEY = get_local_secret_key()
 DEBUG = parse_bool(config('DEBUG', default='false'), default=False)
 ALLOWED_HOSTS = parse_csv(config('ALLOWED_HOSTS', default='localhost,127.0.0.1'))
+ADMIN_URL = config('ADMIN_URL', default='secure-admin/')
 
 # ==================== INSTALLED APPS ====================
 INSTALLED_APPS = [

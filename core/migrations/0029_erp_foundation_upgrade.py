@@ -1,7 +1,7 @@
-from django.conf import settings
-from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
+from django.conf import settings
+from django.db import migrations, models
 
 
 def populate_student_ids(apps, schema_editor):
@@ -83,8 +83,25 @@ class Migration(migrations.Migration):
                 ("metadata", models.JSONField(blank=True, default=dict)),
                 ("ip_address", models.GenericIPAddressField(blank=True, null=True)),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
-                ("actor", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="audit_logs", to=settings.AUTH_USER_MODEL)),
-                ("content_type", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to="contenttypes.contenttype")),
+                (
+                    "actor",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="audit_logs",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "content_type",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="contenttypes.contenttype",
+                    ),
+                ),
             ],
             options={
                 "ordering": ["-created_at"],
@@ -98,7 +115,16 @@ class Migration(migrations.Migration):
                 ("ip_address", models.GenericIPAddressField(blank=True, null=True)),
                 ("successful", models.BooleanField(db_index=True, default=False)),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
-                ("user", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="login_attempts", to=settings.AUTH_USER_MODEL)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="login_attempts",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
                 "ordering": ["-created_at"],

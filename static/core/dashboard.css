@@ -59,6 +59,7 @@ textarea {
     display: grid;
     grid-template-columns: 310px minmax(0, 1fr);
     background: transparent;
+    transition: grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar {
@@ -69,7 +70,7 @@ textarea {
     color: var(--sidebar-text);
     border-right: 1px solid rgba(255, 255, 255, 0.06);
     overflow: hidden;
-    transition: width 0.25s ease, transform 0.25s ease;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 30;
 }
 
@@ -88,6 +89,34 @@ textarea {
     padding: 8px 10px 18px;
 }
 
+.sidebar-brand-toggle {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.sidebar-brand-toggle:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-brand-toggle i {
+    margin-left: auto;
+    font-size: 16px;
+    color: rgba(203, 213, 225, 0.6);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), color 0.35s cubic-bezier(0.4, 0, 0.2, 1), margin 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-brand-toggle:hover i {
+    color: rgba(203, 213, 225, 0.8);
+}
+
 .sidebar-brand-mark,
 .brand-mark,
 .page-icon {
@@ -104,6 +133,11 @@ textarea {
     color: #eff6ff;
     background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
     box-shadow: 0 16px 26px rgba(37, 99, 235, 0.28);
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-brand-copy {
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-brand-copy strong,
@@ -111,6 +145,7 @@ textarea {
     display: block;
     color: #f8fbff;
     font-size: 15px;
+    transition: color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-brand-copy span,
@@ -119,6 +154,7 @@ textarea {
     margin-top: 4px;
     font-size: 12px;
     color: rgba(203, 213, 225, 0.74);
+    transition: color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-search,
@@ -130,11 +166,13 @@ textarea {
     padding: 12px 14px;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-search i,
 .global-search i {
     color: rgba(226, 232, 240, 0.72);
+    transition: color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-search input,
@@ -149,6 +187,7 @@ textarea {
     outline: 0;
     background: transparent;
     color: inherit;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-scroll {
@@ -184,7 +223,7 @@ textarea {
     background: transparent;
     color: var(--sidebar-text);
     cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    transition: background 0.35s cubic-bezier(0.4, 0, 0.2, 1), color 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .menu-item:hover,
@@ -205,12 +244,14 @@ textarea {
 .menu-item i {
     width: 18px;
     text-align: center;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .menu-item-main {
     display: flex;
     align-items: center;
     gap: 12px;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .menu-toggle {
@@ -218,7 +259,7 @@ textarea {
 }
 
 .toggle-arrow {
-    transition: transform 0.2s ease;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toggle-arrow.open {
@@ -248,6 +289,7 @@ textarea {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .topbar {
@@ -257,6 +299,7 @@ textarea {
     display: grid;
     grid-template-columns: auto minmax(260px, 1fr) auto;
     align-items: center;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     gap: 18px;
     padding: 12px 22px;
     margin: 20px 20px 0;
@@ -1279,6 +1322,7 @@ body.sidebar-collapsed .menu-item span,
 body.sidebar-collapsed .submenu,
 body.sidebar-collapsed .sidebar-search {
     display: none;
+    opacity: 0;
 }
 
 body.sidebar-collapsed .menu-item,
@@ -1286,8 +1330,39 @@ body.sidebar-collapsed .sidebar-brand {
     justify-content: center;
 }
 
+body.sidebar-collapsed .sidebar-brand-toggle {
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+}
+
+body.sidebar-collapsed .sidebar-brand-toggle i {
+    margin-left: 0;
+    font-size: 18px;
+    margin-top: 8px;
+    transform: rotate(0deg);
+}
+
 body.sidebar-collapsed .menu-item i {
     margin: 0;
+}
+
+/* Sidebar Placeholder Styling */
+.sidebar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: rgba(203, 213, 225, 0.5);
+    text-align: center;
+    font-size: 14px;
+    padding: 20px;
+}
+
+.sidebar-placeholder p {
+    margin: 0;
+    line-height: 1.5;
 }
 
 @media (max-width: 1280px) {

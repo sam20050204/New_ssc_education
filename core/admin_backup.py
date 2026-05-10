@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment, StudentFinanceDetail
+
+from .models import (
+    AdmittedStudent,
+    Course,
+    Enquiry,
+    FeePayment,
+    Student,
+    StudentFinanceDetail,
+)
 
 
 @admin.register(Enquiry)

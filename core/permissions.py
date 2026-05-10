@@ -105,7 +105,9 @@ class RoleRequiredMixin(UserPassesTestMixin):
     def test_func(self):
         if not self.required_role:
             raise ValueError("required_role must be defined in view")
-        required_roles = self.required_role if isinstance(self.required_role, (list, tuple, set)) else [self.required_role]
+        required_roles = (
+            self.required_role if isinstance(self.required_role, (list, tuple, set)) else [self.required_role]
+        )
         return user_has_role(self.request.user, *required_roles)
 
     def handle_no_permission(self):

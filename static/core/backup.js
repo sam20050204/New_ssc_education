@@ -2,6 +2,56 @@
 
 let selectedFile = null;
 
+function extractHtmlErrorMessage(htmlText, fallbackMessage) {
+    if (!htmlText) {
+        return fallbackMessage;
+    }
+
+    const titleMatch = htmlText.match(/<title>(.*?)<\/title>/i);
+    if (titleMatch && titleMatch[1]) {
+        return titleMatch[1].trim();
+    }
+
+    const headingMatch = htmlText.match(/<h1[^>]*>(.*?)<\/h1>/i);
+    if (headingMatch && headingMatch[1]) {
+        return headingMatch[1].replace(/<[^>]+>/g, '').trim();
+    }
+
+    return fallbackMessage;
+}
+
+async function parseResponsePayload(response, defaultMessage) {
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || data.message || defaultMessage || `HTTP ${response.status}`);
+        }
+        return data;
+    }
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+        if (response.redirected || contentType.includes('text/html')) {
+            throw new Error(extractHtmlErrorMessage(responseText, 'The server returned an HTML error page. Check login or CSRF/session status.'));
+        }
+        throw new Error(responseText.trim() || defaultMessage || `HTTP ${response.status}`);
+    }
+
+    throw new Error(defaultMessage || 'Unexpected non-JSON response from server.');
+}
+
+function getCsrfToken() {
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput && csrfInput.value) {
+        return csrfInput.value;
+    }
+
+    return getCookie('csrftoken');
+}
+
 // ==================== EXPORT DATABASE ====================
 function exportDatabase() {
     const exportBtn = document.getElementById('exportBtn');
@@ -222,22 +272,24 @@ function proceedImport() {
     // Create FormData for file upload
     const formData = new FormData();
     formData.append('database_file', selectedFile);
-    formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
     
     fetch(IMPORT_URL, {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfToken(),
+            'Accept': 'application/json',
         },
         body: formData
     })
-    .then(response => response.json())
+    .then(response => parseResponsePayload(response, 'Import failed'))
     .then(data => {
         if (data.success) {
             // Show success message
             importStatus.classList.remove('loading');
             importStatus.classList.add('success');
-            importStatus.textContent = '✅ Database imported successfully! The page will refresh in 3 seconds.';
+            importStatus.textContent = `✅ ${data.message || 'Database imported successfully! The page will refresh in 3 seconds.'}`;
             
             // Clear file selection
             clearFileSelection();

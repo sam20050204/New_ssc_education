@@ -1,6 +1,7 @@
 """
 Context Processors - Pass global variables to templates
 """
+
 from django.conf import settings
 
 from core.models import Notification
@@ -16,9 +17,7 @@ def static_version(request):
     Add static file version to all templates for cache busting.
     Usage in templates: {{ STATIC_VERSION }}
     """
-    return {
-        'STATIC_VERSION': getattr(settings, 'STATIC_VERSION', '1.0.0')
-    }
+    return {"STATIC_VERSION": getattr(settings, "STATIC_VERSION", "1.0.0")}
 
 
 def collaboration_context(request):
@@ -42,7 +41,9 @@ def collaboration_context(request):
     for thread in recent_threads:
         state = next((item for item in thread.participant_states.all() if item.user_id == user.id), None)
         latest_entry = thread.entries.order_by("-created_at").first()
-        if latest_entry and (state is None or state.last_read_at is None or latest_entry.created_at > state.last_read_at):
+        if latest_entry and (
+            state is None or state.last_read_at is None or latest_entry.created_at > state.last_read_at
+        ):
             unread_threads += 1
 
     return {

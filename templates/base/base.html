@@ -120,16 +120,10 @@
                     </div>
                 </div>
                 <div class="quick-actions dropdown-shell">
-                    <button class="quick-action-btn" type="button" data-dropdown-target="quickActionsMenu">
-                        <i class="fa-solid fa-bolt"></i>
-                        <span>Quick Actions</span>
-                    </button>
-                    <div class="dropdown-panel" id="quickActionsMenu">
-                        <a href="{% url 'new_admission' %}"><i class="fa-solid fa-user-plus"></i> New Admission</a>
-                        <a href="{% url 'fees_payment' %}"><i class="fa-solid fa-wallet"></i> Fee Collection</a>
-                        <a href="{% url 'mark_attendance' %}"><i class="fa-solid fa-clipboard-check"></i> Mark Attendance</a>
-                        <a href="{% url 'backup_page' %}"><i class="fa-solid fa-database"></i> Backup</a>
-                    </div>
+                    <a href="{% url 'sales_services_dashboard' %}" class="quick-action-btn" title="Sales and Services">
+                        <i class="fa-solid fa-store"></i>
+                        <span>Sales & Services</span>
+                    </a>
                 </div>
                 <div class="user-menu dropdown-shell">
                     <button class="user-chip" type="button" data-dropdown-target="userMenuPanel">
@@ -144,7 +138,7 @@
                     </button>
                     <div class="dropdown-panel dropdown-panel-right" id="userMenuPanel">
                         <a href="{% url 'dashboard' %}"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
-                        <a href="/admin/"><i class="fa-solid fa-shield-halved"></i> Django Admin</a>
+                        <a href="{% url 'admin:index' %}"><i class="fa-solid fa-shield-halved"></i> Django Admin</a>
                         <button type="button" onclick="document.getElementById('logout-form').submit();"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
                     </div>
                 </div>
@@ -174,6 +168,7 @@
     const body = document.body;
     const sidebar = document.getElementById('erpSidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarCollapseToggle = document.getElementById('sidebar-collapse-toggle');
     const themeToggle = document.getElementById('theme-toggle');
     const dateBox = document.getElementById('liveDate');
     const themeIcon = themeToggle ? themeToggle.querySelector('i') : null;
@@ -204,6 +199,15 @@
     function setSidebarState(collapsed) {
         body.classList.toggle('sidebar-collapsed', collapsed);
         localStorage.setItem(storageKeySidebar, collapsed ? '1' : '0');
+        
+        // Update the collapse button icon and title
+        if (sidebarCollapseToggle) {
+            const icon = sidebarCollapseToggle.querySelector('i');
+            if (icon) {
+                icon.className = collapsed ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left';
+            }
+            sidebarCollapseToggle.title = collapsed ? 'Show sidebar' : 'Hide sidebar';
+        }
     }
 
     if (sidebarToggle) {
@@ -212,6 +216,18 @@
                 body.classList.toggle('sidebar-open');
             } else {
                 setSidebarState(!body.classList.contains('sidebar-collapsed'));
+            }
+        });
+    }
+
+    if (sidebarCollapseToggle) {
+        sidebarCollapseToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.innerWidth > 1080) {
+                setSidebarState(!body.classList.contains('sidebar-collapsed'));
+            } else {
+                body.classList.toggle('sidebar-open');
             }
         });
     }
@@ -249,7 +265,47 @@
     const savedCollapsed = localStorage.getItem(storageKeySidebar) === '1';
     applyTheme(savedTheme);
     setSidebarState(savedCollapsed);
+    setSidebarState(savedCollapsed);
     setDate();
+
+    function inferControlLabel(element) {
+        const id = element.getAttribute('id');
+        if (id) {
+            const explicitLabel = document.querySelector(`label[for="${id}"]`);
+            if (explicitLabel) {
+                return explicitLabel.textContent.trim();
+            }
+        }
+
+        if (element.getAttribute('placeholder')) {
+            return element.getAttribute('placeholder').trim();
+        }
+
+        if (element.tagName === 'BUTTON') {
+            return element.textContent.trim() || element.getAttribute('title') || element.getAttribute('name');
+        }
+
+        return element.getAttribute('title') || element.getAttribute('name') || id || 'Form field';
+    }
+
+    document.querySelectorAll('form input:not([type="hidden"]), form button').forEach(function(element) {
+        if (!element.getAttribute('aria-label')) {
+            element.setAttribute('aria-label', inferControlLabel(element));
+        }
+    });
+
+    document.querySelectorAll('table').forEach(function(table) {
+        if (!table.closest('.table-responsive')) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'table-responsive';
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+        }
+    });
+
+    document.querySelectorAll('img:not([alt])').forEach(function(image) {
+        image.setAttribute('alt', '');
+    });
 })();
 </script>
 </body>

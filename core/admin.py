@@ -1,14 +1,28 @@
 from django.contrib import admin
-from .models import Enquiry, AdmittedStudent, Course, Student, FeePayment, StudentFinanceDetail, SalesItem, Attendance, Batch, AuditLog, LoginAttempt, BatchActionLog
+
 from .admin_customization import (
-    CustomAdminSite,
-    EnquiryAdmin,
     AdmittedStudentAdmin,
     CourseAdmin,
-    StudentAdmin,
+    CustomAdminSite,
+    EnquiryAdmin,
     FeePaymentAdmin,
-    StudentFinanceDetailAdmin,
     SalesItemAdmin,
+    StudentAdmin,
+    StudentFinanceDetailAdmin,
+)
+from .models import (
+    AdmittedStudent,
+    Attendance,
+    AuditLog,
+    Batch,
+    BatchActionLog,
+    Course,
+    Enquiry,
+    FeePayment,
+    LoginAttempt,
+    SalesItem,
+    Student,
+    StudentFinanceDetail,
 )
 
 # Register custom admin site
@@ -29,36 +43,31 @@ admin.site.register(SalesItem, SalesItemAdmin)
 
 class AttendanceAdmin(admin.ModelAdmin):
     """Admin interface for Student Attendance Records"""
-    
-    list_display = ['student', 'date', 'theory_status', 'practical_status', 'marked_by', 'created_at']
-    list_filter = ['date', 'theory_attendance', 'practical_attendance', 'created_at']
-    search_fields = ['student__full_name', 'student__student_name', 'student__mobile_own']
-    readonly_fields = ['created_at', 'updated_at']
-    raw_id_fields = ['student', 'marked_by']
-    
+
+    list_display = ["student", "date", "theory_status", "practical_status", "marked_by", "created_at"]
+    list_filter = ["date", "theory_attendance", "practical_attendance", "created_at"]
+    search_fields = ["student__full_name", "student__student_name", "student__mobile_own"]
+    readonly_fields = ["created_at", "updated_at"]
+    raw_id_fields = ["student", "marked_by"]
+
     fieldsets = (
-        ('Student Information', {
-            'fields': ('student', 'date')
-        }),
-        ('Attendance Details', {
-            'fields': ('theory_attendance', 'practical_attendance', 'remarks')
-        }),
-        ('Tracking Information', {
-            'fields': ('marked_by', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
+        ("Student Information", {"fields": ("student", "date")}),
+        ("Attendance Details", {"fields": ("theory_attendance", "practical_attendance", "remarks")}),
+        ("Tracking Information", {"fields": ("marked_by", "created_at", "updated_at"), "classes": ("collapse",)}),
     )
-    
+
     def theory_status(self, obj):
         """Display theory attendance status with color"""
         return obj.get_theory_attendance_display()
-    theory_status.short_description = 'Theory'
-    
+
+    theory_status.short_description = "Theory"
+
     def practical_status(self, obj):
         """Display practical attendance status with color"""
         return obj.get_practical_attendance_display()
-    practical_status.short_description = 'Practical'
-    
+
+    practical_status.short_description = "Practical"
+
     def save_model(self, request, obj, form, change):
         """Auto-fill marked_by with current user"""
         if not obj.marked_by:
@@ -68,23 +77,16 @@ class AttendanceAdmin(admin.ModelAdmin):
 
 class BatchAdmin(admin.ModelAdmin):
     """Admin interface for Batch Management"""
-    
-    list_display = ['batch_type', 'time_slot', 'course', 'capacity', 'current_strength']
-    list_filter = ['batch_type', 'time_slot', 'course']
-    search_fields = ['course__name']
-    readonly_fields = ['created_at', 'updated_at']
-    
+
+    list_display = ["batch_type", "time_slot", "course", "capacity", "current_strength"]
+    list_filter = ["batch_type", "time_slot", "course"]
+    search_fields = ["course__name"]
+    readonly_fields = ["created_at", "updated_at"]
+
     fieldsets = (
-        ('Batch Information', {
-            'fields': ('batch_type', 'time_slot', 'course')
-        }),
-        ('Capacity', {
-            'fields': ('capacity',)
-        }),
-        ('Metadata', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
+        ("Batch Information", {"fields": ("batch_type", "time_slot", "course")}),
+        ("Capacity", {"fields": ("capacity",)}),
+        ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
 
 
@@ -97,7 +99,16 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_display = ["created_at", "action", "actor", "target_repr", "ip_address"]
     list_filter = ["action", "created_at"]
     search_fields = ["action", "target_repr", "actor__username", "object_id"]
-    readonly_fields = ["created_at", "action", "actor", "content_type", "object_id", "target_repr", "metadata", "ip_address"]
+    readonly_fields = [
+        "created_at",
+        "action",
+        "actor",
+        "content_type",
+        "object_id",
+        "target_repr",
+        "metadata",
+        "ip_address",
+    ]
 
     def has_add_permission(self, request):
         return False
@@ -122,7 +133,15 @@ class BatchActionLogAdmin(admin.ModelAdmin):
     list_display = ["batch_month", "batch_year", "action_type", "action_by", "action_date", "affected_students_count"]
     list_filter = ["action_type", "batch_year", "action_date"]
     search_fields = ["batch_month", "batch_year", "remarks", "action_by__username"]
-    readonly_fields = ["batch_month", "batch_year", "action_type", "action_by", "action_date", "affected_students_count", "remarks"]
+    readonly_fields = [
+        "batch_month",
+        "batch_year",
+        "action_type",
+        "action_by",
+        "action_date",
+        "affected_students_count",
+        "remarks",
+    ]
 
     def has_add_permission(self, request):
         return False

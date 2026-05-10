@@ -243,6 +243,20 @@
             </div>
         </div>
     </div>
+
+    {% if page_obj and page_obj.has_other_pages %}
+    <div class="pagination-container">
+        {% if page_obj.has_previous %}
+        <a class="btn" href="?page=1&year={{ selected_year }}&search={{ search_query }}&course={{ course_filter }}&batch={{ batch_filter }}&sort={{ sort_by }}">First</a>
+        <a class="btn" href="?page={{ page_obj.previous_page_number }}&year={{ selected_year }}&search={{ search_query }}&course={{ course_filter }}&batch={{ batch_filter }}&sort={{ sort_by }}">Previous</a>
+        {% endif %}
+        <span class="summary-tag">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a class="btn" href="?page={{ page_obj.next_page_number }}&year={{ selected_year }}&search={{ search_query }}&course={{ course_filter }}&batch={{ batch_filter }}&sort={{ sort_by }}">Next</a>
+        <a class="btn" href="?page={{ page_obj.paginator.num_pages }}&year={{ selected_year }}&search={{ search_query }}&course={{ course_filter }}&batch={{ batch_filter }}&sort={{ sort_by }}">Last</a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <div id="financeStudentModal" class="finance-student-modal" aria-hidden="true">

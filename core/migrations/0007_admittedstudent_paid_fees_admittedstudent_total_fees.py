@@ -7,18 +7,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0006_feepayment'),
+        ("core", "0006_feepayment"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='admittedstudent',
-            name='paid_fees',
-            field=models.DecimalField(decimal_places=2, default=0, max_digits=10, validators=[django.core.validators.MinValueValidator(0)]),
+            model_name="admittedstudent",
+            name="paid_fees",
+            field=models.DecimalField(
+                decimal_places=2, default=0, max_digits=10, validators=[django.core.validators.MinValueValidator(0)]
+            ),
         ),
         migrations.AddField(
-            model_name='admittedstudent',
-            name='total_fees',
-            field=models.DecimalField(decimal_places=2, default=5000, max_digits=10, validators=[django.core.validators.MinValueValidator(0)]),
+            model_name="admittedstudent",
+            name="total_fees",
+            field=models.DecimalField(
+                decimal_places=2, default=5000, max_digits=10, validators=[django.core.validators.MinValueValidator(0)]
+            ),
         ),
     ]

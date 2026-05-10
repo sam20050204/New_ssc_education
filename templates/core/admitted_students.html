@@ -478,6 +478,20 @@
         </div>
     </div>
 
+    {% if page_obj and page_obj.has_other_pages %}
+    <div class="pagination-container">
+        {% if page_obj.has_previous %}
+        <a class="filter-btn secondary" href="?page=1&search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}">First</a>
+        <a class="filter-btn secondary" href="?page={{ page_obj.previous_page_number }}&search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}">Previous</a>
+        {% endif %}
+        <span class="summary-tag">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a class="filter-btn secondary" href="?page={{ page_obj.next_page_number }}&search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}">Next</a>
+        <a class="filter-btn secondary" href="?page={{ page_obj.paginator.num_pages }}&search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}">Last</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div id="studentModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>

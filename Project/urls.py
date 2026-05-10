@@ -6,7 +6,7 @@ from core import views as core_views
 from core import security_views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
 
     path('login/', security_views.custom_login, name='login'),
 

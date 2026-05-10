@@ -4,7 +4,16 @@ from django.contrib.auth.models import Group, User
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from core.models import AdmittedStudent, Attendance, AuditLog, Batch, BatchActionLog, FeePayment, LoginAttempt, StudentFinanceDetail
+from core.models import (
+    AdmittedStudent,
+    Attendance,
+    AuditLog,
+    Batch,
+    BatchActionLog,
+    FeePayment,
+    LoginAttempt,
+    StudentFinanceDetail,
+)
 from core.permissions import ROLE_ADMIN, ROLE_ATTENDANCE_MANAGER, ensure_role_groups
 
 
@@ -155,7 +164,9 @@ class ERPFoundationTests(TestCase):
             paid_before_this="0.00",
             remaining_after_this="0.00",
         )
-        Attendance.objects.create(student=student, date=date(2026, 2, 1), theory_attendance="P", practical_attendance="A", marked_by=self.user)
+        Attendance.objects.create(
+            student=student, date=date(2026, 2, 1), theory_attendance="P", practical_attendance="A", marked_by=self.user
+        )
 
         response = self.client.post(
             reverse("end_batch_confirm"),
@@ -175,9 +186,13 @@ class ERPFoundationTests(TestCase):
         self.assertTrue(Attendance.objects.filter(student=student).exists())
         self.assertTrue(AdmittedStudent.objects.filter(pk=student.pk).exists())
         self.assertFalse(
-            AdmittedStudent.objects.filter(batch_status="active", theory_batch_time="08:00-09:00", pk=student.pk).exists()
+            AdmittedStudent.objects.filter(
+                batch_status="active", theory_batch_time="08:00-09:00", pk=student.pk
+            ).exists()
         )
-        self.assertTrue(BatchActionLog.objects.filter(batch_month="January", batch_year="2026", action_type="ended").exists())
+        self.assertTrue(
+            BatchActionLog.objects.filter(batch_month="January", batch_year="2026", action_type="ended").exists()
+        )
 
     def test_restore_batch_returns_students_to_attendance_eligibility(self):
         admin_group = Group.objects.get(name=ROLE_ADMIN)
@@ -226,9 +241,13 @@ class ERPFoundationTests(TestCase):
         self.assertEqual(student.batch_status, "active")
         self.assertIsNotNone(student.batch_restored_date)
         self.assertTrue(
-            AdmittedStudent.objects.filter(batch_status="active", theory_batch_time="08:00-09:00", pk=student.pk).exists()
+            AdmittedStudent.objects.filter(
+                batch_status="active", theory_batch_time="08:00-09:00", pk=student.pk
+            ).exists()
         )
-        self.assertTrue(BatchActionLog.objects.filter(batch_month="February", batch_year="2026", action_type="restored").exists())
+        self.assertTrue(
+            BatchActionLog.objects.filter(batch_month="February", batch_year="2026", action_type="restored").exists()
+        )
 
     def test_batch_students_endpoint_excludes_ended_students(self):
         self.user.is_staff = True
@@ -511,7 +530,9 @@ class ERPFoundationTests(TestCase):
         response = self.client.get(reverse("month_wise_admission"), {"year": "2026"})
 
         self.assertEqual(response.status_code, 200)
-        negative_row = next(item for item in response.context["monthly_profit_data"] if item["course"] == "Marketing 101")
+        negative_row = next(
+            item for item in response.context["monthly_profit_data"] if item["course"] == "Marketing 101"
+        )
         self.assertEqual(negative_row["april"], "₹ -700.00")
         self.assertEqual(negative_row["total"], "₹ -700.00")
 

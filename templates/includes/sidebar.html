@@ -1,11 +1,14 @@
 {% load custom_filters %}
 <div class="sidebar-shell">
     <div class="sidebar-brand">
-        <div class="sidebar-brand-mark">ERP</div>
-        <div class="sidebar-brand-copy">
-            <strong>Education Suite</strong>
-            <span>Multi-admin workspace</span>
-        </div>
+        <button id="sidebar-collapse-toggle" class="sidebar-brand-toggle" type="button" aria-label="Toggle sidebar" title="Hide sidebar">
+            <div class="sidebar-brand-mark">ERP</div>
+            <div class="sidebar-brand-copy">
+                <strong>Education Suite</strong>
+                <span>Multi-admin workspace</span>
+            </div>
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
     </div>
 
     <div class="sidebar-search">
@@ -98,10 +101,10 @@
             <a href="{% url 'backup_page' %}" class="menu-item {% if active_page == 'backup' %}active{% endif %}" data-menu-label="backup restore import export system tools">
                 <i class="fa-solid fa-database"></i><span>Backup & Restore</span>
             </a>
-            <a href="/admin/auth/user/" class="menu-item" data-menu-label="user management">
+            <a href="{% url 'admin:auth_user_changelist' %}" class="menu-item" data-menu-label="user management">
                 <i class="fa-solid fa-users-gear"></i><span>User Management</span>
             </a>
-            <a href="/admin/core/auditlog/" class="menu-item" data-menu-label="audit logs">
+            <a href="{% url 'admin:core_auditlog_changelist' %}" class="menu-item" data-menu-label="audit logs">
                 <i class="fa-solid fa-shield-halved"></i><span>Audit Logs</span>
             </a>
         </div>
@@ -110,10 +113,10 @@
         {% if request.user.is_superuser or request.user|has_group:"Admin" %}
         <div class="sidebar-group">
             <div class="sidebar-label">Settings</div>
-            <a href="/admin/" class="menu-item" data-menu-label="institute settings">
+            <a href="{% url 'admin:index' %}" class="menu-item" data-menu-label="institute settings">
                 <i class="fa-solid fa-building"></i><span>Institute Settings</span>
             </a>
-            <a href="/admin/auth/group/" class="menu-item" data-menu-label="roles permissions">
+            <a href="{% url 'admin:auth_group_changelist' %}" class="menu-item" data-menu-label="roles permissions">
                 <i class="fa-solid fa-id-badge"></i><span>Roles & Permissions</span>
             </a>
             <a href="{% url 'dashboard' %}" class="menu-item" data-menu-label="notifications">

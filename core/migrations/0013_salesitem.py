@@ -7,26 +7,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0012_alter_studentfinancedetail_student'),
+        ("core", "0012_alter_studentfinancedetail_student"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SalesItem',
+            name="SalesItem",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('item_name', models.CharField(max_length=200)),
-                ('quantity', models.PositiveIntegerField()),
-                ('purchase_rate', models.DecimalField(decimal_places=2, max_digits=10, validators=[django.core.validators.MinValueValidator(0)])),
-                ('purchased_from', models.CharField(max_length=200)),
-                ('total_amount', models.DecimalField(decimal_places=2, max_digits=10, validators=[django.core.validators.MinValueValidator(0)])),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("item_name", models.CharField(max_length=200)),
+                ("quantity", models.PositiveIntegerField()),
+                (
+                    "purchase_rate",
+                    models.DecimalField(
+                        decimal_places=2, max_digits=10, validators=[django.core.validators.MinValueValidator(0)]
+                    ),
+                ),
+                ("purchased_from", models.CharField(max_length=200)),
+                (
+                    "total_amount",
+                    models.DecimalField(
+                        decimal_places=2, max_digits=10, validators=[django.core.validators.MinValueValidator(0)]
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'verbose_name': 'Sales Item',
-                'verbose_name_plural': 'Sales Items',
-                'ordering': ['-created_at'],
+                "verbose_name": "Sales Item",
+                "verbose_name_plural": "Sales Items",
+                "ordering": ["-created_at"],
             },
         ),
     ]

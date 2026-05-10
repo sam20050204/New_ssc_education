@@ -8,19 +8,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0024_batch_admittedstudent_practical_batch_time_and_more'),
+        ("core", "0024_batch_admittedstudent_practical_batch_time_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='attendance',
-            name='marked_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='marked_attendances', to=settings.AUTH_USER_MODEL),
+            model_name="attendance",
+            name="marked_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="marked_attendances",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='attendance',
-            name='updated_at',
+            model_name="attendance",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True),
         ),
     ]

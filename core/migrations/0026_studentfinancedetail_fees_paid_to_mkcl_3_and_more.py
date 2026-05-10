@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0025_attendance_marked_by_and_more'),
+        ("core", "0025_attendance_marked_by_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='studentfinancedetail',
-            name='fees_paid_to_mkcl_3',
+            model_name="studentfinancedetail",
+            name="fees_paid_to_mkcl_3",
             field=models.DecimalField(blank=True, decimal_places=2, default=0.0, max_digits=10, null=True),
         ),
         migrations.AlterField(
-            model_name='admittedstudent',
-            name='course',
+            model_name="admittedstudent",
+            name="course",
             field=models.CharField(max_length=50),
         ),
     ]

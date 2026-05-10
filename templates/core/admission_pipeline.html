@@ -412,10 +412,10 @@
 
 <script>
 window.admissionPipelineCharts = {
-    pipeline: {{ pipeline_chart_json|safe }},
-    conversion: {{ conversion_chart_json|safe }},
-    course: {{ course_chart_json|safe }},
-    revenue: {{ revenue_chart_json|safe }}
+    pipeline: JSON.parse('{{ pipeline_chart_json|escapejs }}'),
+    conversion: JSON.parse('{{ conversion_chart_json|escapejs }}'),
+    course: JSON.parse('{{ course_chart_json|escapejs }}'),
+    revenue: JSON.parse('{{ revenue_chart_json|escapejs }}')
 };
 </script>
 {% endblock %}

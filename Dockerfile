@@ -42,7 +42,7 @@ EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/login/')"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"
 
 # Run application
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "Project.wsgi:application"]

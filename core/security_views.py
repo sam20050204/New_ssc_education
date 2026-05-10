@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login as auth_login, logout
+from django.contrib.auth import authenticate
+from django.contrib.auth import login as auth_login
+from django.contrib.auth import logout
 from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -49,7 +51,9 @@ def custom_login(request):
         LoginAttempt.objects.create(username=username, ip_address=ip_address, successful=True, user=user)
         log_audit_event(action="auth.login", actor=user, request=request, metadata={"username": username})
         next_url = request.GET.get("next", "dashboard")
-        if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        if not url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+        ):
             next_url = "dashboard"
         return redirect(next_url)
 

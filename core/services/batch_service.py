@@ -9,7 +9,6 @@ from core.audit_logs import log_audit_event
 from core.models import AdmittedStudent, Batch, BatchActionLog, FeePayment
 from core.utils import get_time_slot_display
 
-
 ACTIVE_BATCH_STATUSES = ("active",)
 ENDED_BATCH_STATUSES = ("completed", "archived", "cancelled")
 ADMIN_MUTATION_STATUSES = {
@@ -20,17 +19,23 @@ ADMIN_MUTATION_STATUSES = {
 
 def get_batch_dashboard_data():
     theory_batches = []
-    for batch in Batch.objects.filter(batch_type="Theory", course__isnull=True, is_archived=False).order_by("time_slot"):
+    for batch in Batch.objects.filter(batch_type="Theory", course__isnull=True, is_archived=False).order_by(
+        "time_slot"
+    ):
         theory_batches.append(_serialize_batch(batch))
 
     practical_batches = []
-    for batch in Batch.objects.filter(batch_type="Practical", course__isnull=True, is_archived=False).order_by("time_slot"):
+    for batch in Batch.objects.filter(batch_type="Practical", course__isnull=True, is_archived=False).order_by(
+        "time_slot"
+    ):
         practical_batches.append(_serialize_batch(batch))
 
     active_students = AdmittedStudent.objects.filter(is_archived=False, batch_status="active")
     total_students = active_students.count()
     students_with_theory = active_students.filter(theory_batch_time__isnull=False).exclude(theory_batch_time="").count()
-    students_with_practical = active_students.filter(practical_batch_time__isnull=False).exclude(practical_batch_time="").count()
+    students_with_practical = (
+        active_students.filter(practical_batch_time__isnull=False).exclude(practical_batch_time="").count()
+    )
 
     return {
         "theory_batches": theory_batches,
@@ -43,7 +48,11 @@ def get_batch_dashboard_data():
 
 
 def _serialize_batch(batch):
-    count_filter = {"theory_batch_time": batch.time_slot} if batch.batch_type == "Theory" else {"practical_batch_time": batch.time_slot}
+    count_filter = (
+        {"theory_batch_time": batch.time_slot}
+        if batch.batch_type == "Theory"
+        else {"practical_batch_time": batch.time_slot}
+    )
     count = AdmittedStudent.objects.filter(is_archived=False, batch_status="active", **count_filter).count()
     return {
         "id": batch.id,
@@ -56,7 +65,13 @@ def _serialize_batch(batch):
 
 
 def get_batch_lifecycle_queryset(*, statuses=None, month="", year="", course="", search=""):
-    queryset = AdmittedStudent.objects.filter(is_archived=False).exclude(batch_month__isnull=True).exclude(batch_month="").exclude(batch_year__isnull=True).exclude(batch_year="")
+    queryset = (
+        AdmittedStudent.objects.filter(is_archived=False)
+        .exclude(batch_month__isnull=True)
+        .exclude(batch_month="")
+        .exclude(batch_year__isnull=True)
+        .exclude(batch_year="")
+    )
 
     if statuses:
         queryset = queryset.filter(batch_status__in=statuses)
@@ -67,7 +82,9 @@ def get_batch_lifecycle_queryset(*, statuses=None, month="", year="", course="",
     if course:
         queryset = queryset.filter(course=course)
     if search:
-        queryset = queryset.filter(Q(batch_month__icontains=search) | Q(batch_year__icontains=search) | Q(course__icontains=search))
+        queryset = queryset.filter(
+            Q(batch_month__icontains=search) | Q(batch_year__icontains=search) | Q(course__icontains=search)
+        )
 
     return queryset
 
@@ -109,12 +126,16 @@ def _summarize_grouped_batches(queryset):
 
 
 def get_active_batch_summaries(*, month="", year="", course="", search=""):
-    queryset = get_batch_lifecycle_queryset(statuses=ACTIVE_BATCH_STATUSES, month=month, year=year, course=course, search=search)
+    queryset = get_batch_lifecycle_queryset(
+        statuses=ACTIVE_BATCH_STATUSES, month=month, year=year, course=course, search=search
+    )
     return _summarize_grouped_batches(queryset)
 
 
 def get_ended_batch_summaries(*, month="", year="", course="", search=""):
-    queryset = get_batch_lifecycle_queryset(statuses=ENDED_BATCH_STATUSES, month=month, year=year, course=course, search=search)
+    queryset = get_batch_lifecycle_queryset(
+        statuses=ENDED_BATCH_STATUSES, month=month, year=year, course=course, search=search
+    )
     return _summarize_grouped_batches(queryset)
 
 
@@ -145,8 +166,7 @@ def get_batch_transition_preview(*, batch_month, batch_year, course="", statuses
         "last_admission_date": latest_admission,
         "attendance_marked_students": attendance_taken,
         "status_breakdown": {
-            row["batch_status"]: row["count"]
-            for row in students.values("batch_status").annotate(count=Count("id"))
+            row["batch_status"]: row["count"] for row in students.values("batch_status").annotate(count=Count("id"))
         },
     }
 
@@ -160,11 +180,11 @@ def _validate_transition(students, transition_key):
 
 
 @transaction.atomic
-def update_batch_lifecycle(*, batch_month, batch_year, course="", action, actor=None, request=None, remarks="", override=False):
+def update_batch_lifecycle(
+    *, batch_month, batch_year, course="", action, actor=None, request=None, remarks="", override=False
+):
     if action not in ADMIN_MUTATION_STATUSES:
         raise ValueError("Unsupported batch lifecycle action.")
-    if not course:
-        raise ValueError("Please select a course for this batch action.")
 
     students = AdmittedStudent.objects.select_for_update().filter(
         is_archived=False,
@@ -200,6 +220,7 @@ def update_batch_lifecycle(*, batch_month, batch_year, course="", action, actor=
             {
                 "batch_restored_date": today,
                 "batch_restored_by_id": actor.pk if getattr(actor, "is_authenticated", False) else None,
+                "batch_end_date": None,
             }
         )
 
@@ -251,7 +272,9 @@ def get_batch_report_data(*, month="", year="", course="", status=""):
     completed_students = queryset.filter(batch_status="completed").count()
     cancelled_students = queryset.filter(batch_status="cancelled").count()
     archived_students = queryset.filter(batch_status="archived").count()
-    fee_revenue = FeePayment.objects.filter(student__in=queryset).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    fee_revenue = FeePayment.objects.filter(student__in=queryset).aggregate(total=Sum("amount"))["total"] or Decimal(
+        "0.00"
+    )
 
     return {
         "summaries": summaries,
@@ -289,9 +312,13 @@ def create_batch(*, batch_type, time_slot, capacity=50, actor=None, request=None
 @transaction.atomic
 def archive_batch(*, batch, actor=None, request=None):
     if batch.batch_type == "Theory":
-        AdmittedStudent.objects.filter(theory_batch_time=batch.time_slot, is_archived=False, batch_status="active").update(theory_batch_time=None)
+        AdmittedStudent.objects.filter(
+            theory_batch_time=batch.time_slot, is_archived=False, batch_status="active"
+        ).update(theory_batch_time=None)
     else:
-        AdmittedStudent.objects.filter(practical_batch_time=batch.time_slot, is_archived=False, batch_status="active").update(practical_batch_time=None)
+        AdmittedStudent.objects.filter(
+            practical_batch_time=batch.time_slot, is_archived=False, batch_status="active"
+        ).update(practical_batch_time=None)
 
     batch.is_archived = True
     batch.save(update_fields=["is_archived", "updated_at"])

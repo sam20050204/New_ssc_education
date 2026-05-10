@@ -1,7 +1,7 @@
 {% if messages %}
 <div class="toast-stack" id="toastStack">
     {% for message in messages %}
-        <div class="erp-toast erp-toast-{{ message.tags|default:'info' }}">
+        <div class="erp-toast erp-toast-{{ message.tags|default:'info' }}" role="alert" aria-live="polite">
             <div class="toast-icon">
                 {% if message.tags == 'success' %}
                     <i class="fa-solid fa-circle-check"></i>
