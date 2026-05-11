@@ -1,0 +1,179 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Add Supplier{% endblock %}
+
+{% block content %}
+{{ block.super }}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="form-section">
+            <h2>Add New Supplier/Vendor</h2>
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- Basic Information -->
+                <h5 class="form-section-title">Basic Information</h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            Supplier Name <span class="text-danger">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.contact_person.id_for_label }}" class="form-label">
+                            Contact Person
+                        </label>
+                        {{ form.contact_person }}
+                    </div>
+                </div>
+
+                <!-- Contact Details -->
+                <h5 class="form-section-title">Contact Details</h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">
+                            Email
+                        </label>
+                        {{ form.email }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.phone.id_for_label }}" class="form-label">
+                            Phone
+                        </label>
+                        {{ form.phone }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ form.alternate_phone.id_for_label }}" class="form-label">
+                            Alternate Phone
+                        </label>
+                        {{ form.alternate_phone }}
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <h5 class="form-section-title">Address</h5>
+
+                <div class="mb-3">
+                    <label for="{{ form.address.id_for_label }}" class="form-label">
+                        Address
+                    </label>
+                    {{ form.address }}
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="{{ form.city.id_for_label }}" class="form-label">
+                            City
+                        </label>
+                        {{ form.city }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.state.id_for_label }}" class="form-label">
+                            State
+                        </label>
+                        {{ form.state }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.pincode.id_for_label }}" class="form-label">
+                            Pincode
+                        </label>
+                        {{ form.pincode }}
+                    </div>
+                </div>
+
+                <!-- Business Details -->
+                <h5 class="form-section-title">Business Details</h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.gst_number.id_for_label }}" class="form-label">
+                            GST Number
+                        </label>
+                        {{ form.gst_number }}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.payment_terms.id_for_label }}" class="form-label">
+                            Payment Terms
+                        </label>
+                        {{ form.payment_terms }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.website.id_for_label }}" class="form-label">
+                        Website
+                    </label>
+                    {{ form.website }}
+                </div>
+
+                <!-- Banking Details -->
+                <h5 class="form-section-title">Banking Details</h5>
+
+                <div class="mb-3">
+                    <label for="{{ form.bank_details.id_for_label }}" class="form-label">
+                        Bank Account Details
+                    </label>
+                    {{ form.bank_details }}
+                    <small class="form-text text-muted">Account number, IFSC, Branch, etc.</small>
+                </div>
+
+                <!-- Notes -->
+                <h5 class="form-section-title">Additional Information</h5>
+
+                <div class="mb-3">
+                    <label for="{{ form.notes.id_for_label }}" class="form-label">
+                        Notes
+                    </label>
+                    {{ form.notes }}
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{% url 'inventory:supplier-list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Add Supplier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-section-title {
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 15px;
+        margin-top: 30px;
+        margin-bottom: 20px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .form-section-title:first-of-type {
+        margin-top: 0;
+    }
+</style>
+
+{% endblock %}

@@ -1,0 +1,223 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .inventory-container {
+        padding: 20px;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-card.success {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .stat-card.warning {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .stat-card.danger {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #333;
+    }
+
+    .stat-card h5 {
+        margin: 0;
+        font-size: 14px;
+        opacity: 0.9;
+        margin-bottom: 10px;
+    }
+
+    .stat-card .stat-value {
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .search-box {
+        position: relative;
+    }
+
+    .search-box input {
+        padding-right: 40px;
+    }
+
+    .search-icon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+        pointer-events: none;
+    }
+
+    .badge-stock-status {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .badge-stock-status.low {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .badge-stock-status.ok {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .badge-stock-status.high {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .table-responsive {
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+    }
+
+    .action-buttons .btn {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+
+    .form-section {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+    }
+
+    .form-section h2 {
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 15px;
+        margin-bottom: 25px;
+        color: #333;
+    }
+
+    .form-group label {
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 8px;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .form-control-plaintext {
+        color: #333;
+        font-weight: 500;
+    }
+
+    .calculation-box {
+        background: #f8f9fa;
+        padding: 15px;
+        border-left: 4px solid #667eea;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+
+    .calculation-box .label {
+        font-size: 13px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .calculation-box .value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .alert-badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background-color: #dc3545;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .breadcrumb {
+        background-color: transparent;
+        padding: 0 0 15px 0;
+    }
+
+    .breadcrumb-item.active {
+        color: #667eea;
+        font-weight: 500;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        color: #ccc;
+        margin-bottom: 20px;
+    }
+
+    .empty-state h3 {
+        color: #999;
+        margin-bottom: 10px;
+    }
+
+    .empty-state p {
+        color: #bbb;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if page_title %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">{{ page_title }}</h1>
+    </div>
+    {% block page_actions %}{% endblock %}
+</div>
+{% endif %}
+{% endblock %}

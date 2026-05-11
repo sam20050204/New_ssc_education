@@ -1,0 +1,438 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Add New Item{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .item-form-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .form-section-title {
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 15px;
+        margin-bottom: 25px;
+        margin-top: 35px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .form-section-title:first-of-type {
+        margin-top: 0;
+    }
+
+    .calculation-display {
+        background: #f0f4ff;
+        padding: 15px;
+        border-left: 4px solid #667eea;
+        border-radius: 4px;
+        margin-top: 10px;
+        font-weight: 500;
+    }
+
+    .category-badge {
+        display: inline-block;
+        background: #e7f3ff;
+        color: #0066cc;
+        padding: 6px 12px;
+        border-radius: 20px;
+        margin: 5px 5px 5px 0;
+        cursor: pointer;
+        border: 1px solid #0066cc;
+    }
+
+    .category-badge:hover {
+        background: #0066cc;
+        color: white;
+    }
+
+    .toggle-new-category {
+        margin-top: 10px;
+    }
+
+    .autocomplete-results {
+        position: absolute;
+        background: white;
+        border: 1px solid #ddd;
+        border-top: none;
+        width: 100%;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+
+    .autocomplete-results.show {
+        display: block;
+    }
+
+    .autocomplete-item {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .autocomplete-item:hover {
+        background: #f5f5f5;
+    }
+
+    .autocomplete-item strong {
+        display: block;
+        color: #333;
+    }
+
+    .autocomplete-item small {
+        display: block;
+        color: #999;
+        margin-top: 3px;
+    }
+
+    .previous-purchases {
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 6px;
+        border-left: 4px solid #ffc107;
+    }
+
+    .purchase-history-table {
+        font-size: 13px;
+    }
+
+    .purchase-history-table td {
+        padding: 8px 4px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .help-text {
+        font-size: 13px;
+        color: #666;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+
+<div class="item-form-container">
+    {% if item_form.non_field_errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle"></i> <strong>Error!</strong>
+        {% for error in item_form.non_field_errors %}
+        <div>{{ error }}</div>
+        {% endfor %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="form-section">
+        {% csrf_token %}
+
+        <!-- Item Basic Information -->
+        <h3 class="form-section-title">Item Information</h3>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="{{ item_form.name.id_for_label }}" class="form-label">
+                    Item Name <span class="text-danger">*</span>
+                </label>
+                {{ item_form.name }}
+                {% if item_form.name.errors %}
+                <div class="invalid-feedback d-block">{{ item_form.name.errors.0 }}</div>
+                {% endif %}
+                <div class="help-text">
+                    <i class="fas fa-info-circle"></i>
+                    Enter the product name. We'll show you previous purchases if this item exists.
+                </div>
+                <div id="previous-purchases"></div>
+            </div>
+
+            <div class="col-md-6">
+                <label for="{{ item_form.sku.id_for_label }}" class="form-label">
+                    SKU (Stock Code)
+                </label>
+                {{ item_form.sku }}
+                {% if item_form.sku.errors %}
+                <div class="invalid-feedback d-block">{{ item_form.sku.errors.0 }}</div>
+                {% endif %}
+                <div class="help-text">Leave blank for auto-generation</div>
+            </div>
+        </div>
+
+        <!-- Category Selection -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="{{ item_form.category.id_for_label }}" class="form-label">
+                    Category <span class="text-danger">*</span>
+                </label>
+                {{ item_form.category }}
+                {% if item_form.category.errors %}
+                <div class="invalid-feedback d-block">{{ item_form.category.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <label for="{{ item_form.new_category.id_for_label }}" class="form-label">
+                    Or Create New Category
+                </label>
+                {{ item_form.new_category }}
+                <div class="help-text">Leave blank to use an existing category</div>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+            <label for="{{ item_form.description.id_for_label }}" class="form-label">
+                Description
+            </label>
+            {{ item_form.description }}
+            {% if item_form.description.errors %}
+            <div class="invalid-feedback d-block">{{ item_form.description.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Specifications -->
+        <div class="mb-3">
+            <label for="{{ item_form.specifications.id_for_label }}" class="form-label">
+                Technical Specifications
+            </label>
+            {{ item_form.specifications }}
+            {% if item_form.specifications.errors %}
+            <div class="invalid-feedback d-block">{{ item_form.specifications.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Image -->
+        <div class="mb-3">
+            <label for="{{ item_form.image.id_for_label }}" class="form-label">
+                Product Image
+            </label>
+            {{ item_form.image }}
+            <div class="help-text">JPG, PNG, or GIF up to 5MB</div>
+        </div>
+
+        <!-- Stock Management -->
+        <h3 class="form-section-title">Stock Management</h3>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="{{ item_form.minimum_stock.id_for_label }}" class="form-label">
+                    Minimum Stock Level
+                </label>
+                {{ item_form.minimum_stock }}
+                {% if item_form.minimum_stock.errors %}
+                <div class="invalid-feedback d-block">{{ item_form.minimum_stock.errors.0 }}</div>
+                {% endif %}
+                <div class="help-text">Alert when stock falls below this level</div>
+            </div>
+
+            <div class="col-md-6">
+                <label for="{{ item_form.maximum_stock.id_for_label }}" class="form-label">
+                    Maximum Stock Level
+                </label>
+                {{ item_form.maximum_stock }}
+                {% if item_form.maximum_stock.errors %}
+                <div class="invalid-feedback d-block">{{ item_form.maximum_stock.errors.0 }}</div>
+                {% endif %}
+                <div class="help-text">Threshold for overstocking alerts</div>
+            </div>
+        </div>
+
+        <!-- Pricing Information -->
+        <h3 class="form-section-title">Pricing & GST</h3>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="{{ item_form.selling_price.id_for_label }}" class="form-label">
+                    Selling Price (per unit) <span class="text-danger">*</span>
+                </label>
+                {{ item_form.selling_price }}
+                {% if item_form.selling_price.errors %}
+                <div class="invalid-feedback d-block">{{ item_form.selling_price.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <label for="{{ item_form.gst_percentage.id_for_label }}" class="form-label">
+                    GST Percentage
+                </label>
+                {{ item_form.gst_percentage }}
+                {% if item_form.gst_percentage.errors %}
+                <div class="invalid-feedback d-block">{{ item_form.gst_percentage.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Form Buttons -->
+        <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'inventory:item-list' %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Add Item & Record Purchase
+            </button>
+        </div>
+    </form>
+
+    <!-- Purchase Details Section -->
+    <form method="post" class="form-section">
+        {% csrf_token %}
+
+        <h3 class="form-section-title">Initial Purchase Details</h3>
+        <p class="text-muted mb-3">Record the first purchase when adding this item</p>
+
+        <!-- Item Selection / Creation (handled above) -->
+        <!-- Supplier Selection -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="{{ purchase_form.supplier.id_for_label }}" class="form-label">
+                    Supplier/Vendor
+                </label>
+                <div class="input-group">
+                    {{ purchase_form.supplier }}
+                    <a href="{% url 'inventory:add-supplier' %}" class="btn btn-outline-secondary" target="_blank">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                </div>
+                <div class="help-text">Or <a href="{% url 'inventory:add-supplier' %}">add new supplier</a></div>
+            </div>
+
+            <div class="col-md-6">
+                <label for="{{ purchase_form.purchase_date.id_for_label }}" class="form-label">
+                    Purchase Date <span class="text-danger">*</span>
+                </label>
+                {{ purchase_form.purchase_date }}
+            </div>
+        </div>
+
+        <!-- Quantity & Pricing -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="{{ purchase_form.quantity.id_for_label }}" class="form-label">
+                    Quantity Purchased <span class="text-danger">*</span>
+                </label>
+                {{ purchase_form.quantity }}
+                {% if purchase_form.quantity.errors %}
+                <div class="invalid-feedback d-block">{{ purchase_form.quantity.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <label for="{{ purchase_form.purchase_rate.id_for_label }}" class="form-label">
+                    Purchase Rate (per unit) <span class="text-danger">*</span>
+                </label>
+                {{ purchase_form.purchase_rate }}
+                {% if purchase_form.purchase_rate.errors %}
+                <div class="invalid-feedback d-block">{{ purchase_form.purchase_rate.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Total Cost</label>
+                <div class="calculation-display" id="total-cost-display">
+                    ₹ 0.00
+                </div>
+            </div>
+        </div>
+
+        <!-- Selling Price -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="{{ purchase_form.selling_price.id_for_label }}" class="form-label">
+                    Selling Price (at time of purchase)
+                </label>
+                {{ purchase_form.selling_price }}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Profit per Unit</label>
+                <div class="calculation-display" id="profit-display">
+                    ₹ 0.00
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Information -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="{{ purchase_form.batch_number.id_for_label }}" class="form-label">
+                    Batch Number
+                </label>
+                {{ purchase_form.batch_number }}
+            </div>
+
+            <div class="col-md-6">
+                <label for="{{ purchase_form.expiry_date.id_for_label }}" class="form-label">
+                    Expiry Date
+                </label>
+                {{ purchase_form.expiry_date }}
+            </div>
+        </div>
+
+        <!-- Invoice Number -->
+        <div class="mb-3">
+            <label for="{{ purchase_form.invoice_number.id_for_label }}" class="form-label">
+                Invoice/Bill Number
+            </label>
+            {{ purchase_form.invoice_number }}
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-3">
+            <label for="{{ purchase_form.notes.id_for_label }}" class="form-label">
+                Additional Notes
+            </label>
+            {{ purchase_form.notes }}
+        </div>
+
+        {% if purchase_form.non_field_errors %}
+        <div class="alert alert-danger">
+            {% for error in purchase_form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <hr class="my-4">
+
+        <!-- Form Buttons -->
+        <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'inventory:item-list' %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Add Item & Record Purchase
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Auto-calculate total cost and profit
+function calculatePrices() {
+    const quantity = parseFloat(document.querySelector('#quantity_input').value) || 0;
+    const purchaseRate = parseFloat(document.querySelector('#purchase_rate_input').value) || 0;
+    const sellingPrice = parseFloat(document.querySelector('#selling_price_input').value) || 0;
+
+    const totalCost = quantity * purchaseRate;
+    const profitPerUnit = sellingPrice - purchaseRate;
+
+    document.querySelector('#total-cost-display').textContent = '₹ ' + totalCost.toFixed(2);
+    document.querySelector('#profit-display').textContent = '₹ ' + profitPerUnit.toFixed(2);
+}
+
+document.querySelector('#quantity_input').addEventListener('change', calculatePrices);
+document.querySelector('#quantity_input').addEventListener('keyup', calculatePrices);
+document.querySelector('#purchase_rate_input').addEventListener('change', calculatePrices);
+document.querySelector('#purchase_rate_input').addEventListener('keyup', calculatePrices);
+document.querySelector('#selling_price_input').addEventListener('change', calculatePrices);
+document.querySelector('#selling_price_input').addEventListener('keyup', calculatePrices);
+</script>
+{% endblock %}

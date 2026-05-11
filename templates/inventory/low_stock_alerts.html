@@ -1,0 +1,84 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Low Stock Alerts{% endblock %}
+
+{% block content %}
+{{ block.super }}
+
+<!-- Filter Tabs -->
+<div class="mb-4">
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link {% if status == 'active' or not status %}active{% endif %}"
+               href="{% url 'inventory:low-stock-alerts' %}?status=active">
+                Active
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status == 'acknowledged' %}active{% endif %}"
+               href="{% url 'inventory:low-stock-alerts' %}?status=acknowledged">
+                Acknowledged
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status == 'resolved' %}active{% endif %}"
+               href="{% url 'inventory:low-stock-alerts' %}?status=resolved">
+                Resolved
+            </a>
+        </li>
+    </ul>
+</div>
+
+{% if alerts %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Item</th>
+                <th>Current Stock</th>
+                <th>Minimum Stock</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alert in alerts %}
+            <tr>
+                <td>
+                    <a href="{% url 'inventory:item-detail' alert.item.pk %}">
+                        {{ alert.item.name }}
+                    </a>
+                </td>
+                <td><strong>{{ alert.current_stock }}</strong></td>
+                <td>{{ alert.minimum_stock }}</td>
+                <td>
+                    {% if alert.status == 'active' %}
+                    <span class="badge bg-danger">Active</span>
+                    {% elif alert.status == 'acknowledged' %}
+                    <span class="badge bg-warning">Acknowledged</span>
+                    {% else %}
+                    <span class="badge bg-success">Resolved</span>
+                    {% endif %}
+                </td>
+                <td>{{ alert.created_at|date:"d M Y, H:i" }}</td>
+                <td>
+                    <a href="{% url 'inventory:add-purchase' %}?item_id={{ alert.item.pk }}"
+                       class="btn btn-sm btn-success">
+                        <i class="fas fa-shopping-cart"></i> Purchase
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="fas fa-check-circle"></i>
+    No {{ status }} alerts found. Great job!
+</div>
+{% endif %}
+
+{% endblock %}

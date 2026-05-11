@@ -1,0 +1,137 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}{{ supplier.name }} - Details{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{% url 'inventory:edit-supplier' supplier.pk %}" class="btn btn-warning">
+        <i class="fas fa-edit"></i> Edit
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Supplier Information</h5>
+            </div>
+            <div class="card-body">
+                {% if supplier.contact_person %}
+                <p><strong>Contact:</strong> {{ supplier.contact_person }}</p>
+                {% endif %}
+
+                {% if supplier.phone %}
+                <p><strong>Phone:</strong> <a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a></p>
+                {% endif %}
+
+                {% if supplier.email %}
+                <p><strong>Email:</strong> <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a></p>
+                {% endif %}
+
+                {% if supplier.address %}
+                <p><strong>Address:</strong> {{ supplier.address }}{% if supplier.city %}, {{ supplier.city }}{% endif %}</p>
+                {% endif %}
+
+                {% if supplier.gst_number %}
+                <p><strong>GST:</strong> {{ supplier.gst_number }}</p>
+                {% endif %}
+
+                {% if supplier.payment_terms %}
+                <p><strong>Payment Terms:</strong> {{ supplier.payment_terms }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Purchase Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <div style="font-size: 32px; font-weight: bold;">{{ total_purchases }}</div>
+                            <p class="text-muted">Total Purchases</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <div style="font-size: 32px; font-weight: bold;">₹{{ total_spent|floatformat:0 }}</div>
+                            <p class="text-muted">Total Spent</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Purchase History</h5>
+            </div>
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Item</th>
+                            <th>Date</th>
+                            <th>Quantity</th>
+                            <th>Rate</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for purchase in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'inventory:item-detail' purchase.item.pk %}">
+                                    {{ purchase.item.name }}
+                                </a>
+                            </td>
+                            <td>{{ purchase.purchase_date|date:"d M Y" }}</td>
+                            <td>{{ purchase.quantity }}</td>
+                            <td>₹{{ purchase.purchase_rate|floatformat:2 }}</td>
+                            <td>₹{{ purchase.total_purchase_price|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if is_paginated %}
+            <nav class="mt-3">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">First</a>
+                    </li>
+                    {% endif %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted text-center mb-0">No purchases from this supplier yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

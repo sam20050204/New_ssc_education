@@ -1,0 +1,93 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Categories{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'inventory:add-category' %}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Add Category
+</a>
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+
+{% if categories %}
+<div class="row g-4">
+    {% for category in categories %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        {% if category.icon %}
+                        <i class="fas {{ category.icon }}" style="font-size: 32px; color: #667eea;"></i>
+                        {% endif %}
+                        <h5 class="card-title mt-2">{{ category.name }}</h5>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'inventory:edit-category' category.pk %}">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            </li>
+                            <li>
+                                <form method="post" action="{% url 'inventory:delete-category' category.pk %}"
+                                      style="display:inline;" onsubmit="return confirm('Delete this category?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                {% if category.description %}
+                <p class="card-text text-muted small mb-3">{{ category.description }}</p>
+                {% endif %}
+
+                <div class="row text-center g-2">
+                    <div class="col">
+                        <div style="font-size: 18px; font-weight: bold; color: #667eea;">
+                            {{ category.item_count }}
+                        </div>
+                        <small class="text-muted">Items</small>
+                    </div>
+                    <div class="col">
+                        <div style="font-size: 18px; font-weight: bold; color: #28a745;">
+                            {{ category.get_total_stock }}
+                        </div>
+                        <small class="text-muted">In Stock</small>
+                    </div>
+                    <div class="col">
+                        <div style="font-size: 18px; font-weight: bold; color: #ffc107;">
+                            ₹{{ category.get_total_value|floatformat:0 }}
+                        </div>
+                        <small class="text-muted">Value</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">
+        <i class="fas fa-folder"></i>
+    </div>
+    <h3>No categories yet</h3>
+    <p>Create your first category to organize your inventory</p>
+    <a href="{% url 'inventory:add-category' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Category
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}

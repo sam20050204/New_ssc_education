@@ -1,0 +1,218 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Record Purchase{% endblock %}
+
+{% block content %}
+{{ block.super }}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="form-section">
+            <h2>Record Purchase</h2>
+            <p class="text-muted">Add a new purchase to update item stock and maintain price history</p>
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- Item Selection -->
+                <h5 class="form-section-title">Item Details</h5>
+
+                <div class="mb-3">
+                    <label for="{{ form.item.id_for_label }}" class="form-label">
+                        Item <span class="text-danger">*</span>
+                    </label>
+                    {{ form.item }}
+                    {% if form.item.errors %}
+                    <div class="invalid-feedback d-block">{{ form.item.errors.0 }}</div>
+                    {% endif %}
+                    <div class="help-text">Select existing item or scroll below to create new</div>
+                </div>
+
+                <!-- Supplier Selection -->
+                <div class="mb-3">
+                    <label for="{{ form.supplier.id_for_label }}" class="form-label">
+                        Supplier
+                    </label>
+                    <div class="input-group">
+                        {{ form.supplier }}
+                        <a href="{% url 'inventory:add-supplier' %}" class="btn btn-outline-secondary" target="_blank">
+                            <i class="fas fa-plus"></i> New
+                        </a>
+                    </div>
+                    <div class="help-text">Optional - leave blank if no supplier information</div>
+                </div>
+
+                <!-- Purchase Date -->
+                <div class="mb-3">
+                    <label for="{{ form.purchase_date.id_for_label }}" class="form-label">
+                        Purchase Date <span class="text-danger">*</span>
+                    </label>
+                    {{ form.purchase_date }}
+                    {% if form.purchase_date.errors %}
+                    <div class="invalid-feedback d-block">{{ form.purchase_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Pricing Information -->
+                <h5 class="form-section-title">Pricing Information</h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="{{ form.quantity.id_for_label }}" class="form-label">
+                            Quantity <span class="text-danger">*</span>
+                        </label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}
+                        <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.purchase_rate.id_for_label }}" class="form-label">
+                            Purchase Rate (per unit) <span class="text-danger">*</span>
+                        </label>
+                        {{ form.purchase_rate }}
+                        {% if form.purchase_rate.errors %}
+                        <div class="invalid-feedback d-block">{{ form.purchase_rate.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Total Cost</label>
+                        <div class="calculation-display" id="total-cost-display">
+                            ₹ 0.00
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.selling_price.id_for_label }}" class="form-label">
+                            Selling Price (per unit)
+                        </label>
+                        {{ form.selling_price }}
+                        <small class="form-text text-muted">Can be updated later in item details</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Expected Profit per Unit</label>
+                        <div class="calculation-display" id="profit-display">
+                            ₹ 0.00
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Batch Information -->
+                <h5 class="form-section-title">Batch & Tracking</h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.batch_number.id_for_label }}" class="form-label">
+                            Batch Number
+                        </label>
+                        {{ form.batch_number }}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
+                            Expiry Date
+                        </label>
+                        {{ form.expiry_date }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.invoice_number.id_for_label }}" class="form-label">
+                        Invoice/Bill Number
+                    </label>
+                    {{ form.invoice_number }}
+                </div>
+
+                <!-- Additional Notes -->
+                <div class="mb-3">
+                    <label for="{{ form.notes.id_for_label }}" class="form-label">
+                        Notes
+                    </label>
+                    {{ form.notes }}
+                    <small class="form-text text-muted">Any additional information about this purchase</small>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{% url 'inventory:purchase-list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Record Purchase
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-calculate totals
+function calculatePrices() {
+    const quantity = parseFloat(document.querySelector('#quantity_input').value) || 0;
+    const purchaseRate = parseFloat(document.querySelector('#purchase_rate_input').value) || 0;
+    const sellingPrice = parseFloat(document.querySelector('#selling_price_input').value) || 0;
+
+    const totalCost = quantity * purchaseRate;
+    const profitPerUnit = sellingPrice - purchaseRate;
+
+    document.querySelector('#total-cost-display').textContent = '₹ ' + totalCost.toFixed(2);
+    document.querySelector('#profit-display').textContent = '₹ ' + profitPerUnit.toFixed(2);
+}
+
+const quantityInput = document.querySelector('#quantity_input');
+const purchaseRateInput = document.querySelector('#purchase_rate_input');
+const sellingPriceInput = document.querySelector('#selling_price_input');
+
+if (quantityInput) quantityInput.addEventListener('change', calculatePrices);
+if (quantityInput) quantityInput.addEventListener('keyup', calculatePrices);
+if (purchaseRateInput) purchaseRateInput.addEventListener('change', calculatePrices);
+if (purchaseRateInput) purchaseRateInput.addEventListener('keyup', calculatePrices);
+if (sellingPriceInput) sellingPriceInput.addEventListener('change', calculatePrices);
+if (sellingPriceInput) sellingPriceInput.addEventListener('keyup', calculatePrices);
+</script>
+
+<style>
+    .form-section-title {
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 15px;
+        margin-top: 30px;
+        margin-bottom: 20px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .form-section-title:first-of-type {
+        margin-top: 0;
+    }
+
+    .calculation-display {
+        background: #f0f4ff;
+        padding: 12px;
+        border-left: 4px solid #667eea;
+        border-radius: 4px;
+        font-weight: 500;
+        color: #667eea;
+    }
+
+    .help-text {
+        font-size: 13px;
+        color: #666;
+        margin-top: 5px;
+    }
+</style>
+
+{% endblock %}

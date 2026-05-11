@@ -35,6 +35,13 @@
         </div>
 
         <div class="sidebar-group">
+            <div class="sidebar-label">Inventory</div>
+            <a href="{% url 'inventory:dashboard' %}" class="menu-item" data-menu-label="inventory stock management">
+                <i class="fa-solid fa-warehouse"></i><span>Inventory</span>
+            </a>
+        </div>
+
+        <div class="sidebar-group">
             <div class="sidebar-label">Navigation</div>
             <a href="{% url 'dashboard' %}" class="menu-item" data-menu-label="education dashboard crm">
                 <i class="fa-solid fa-arrow-left"></i><span>Back to Education</span>

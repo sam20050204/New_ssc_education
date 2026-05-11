@@ -12,6 +12,9 @@ urlpatterns = [
 
     path('logout/', security_views.custom_logout, name='logout'),
 
+    # Inventory Management Module
+    path('inventory/', include('inventory.urls')),
+
     path('', include('core.urls')),
 ]
 

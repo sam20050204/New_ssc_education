@@ -1,0 +1,109 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Edit Item: {{ item.name }}{% endblock %}
+
+{% block content %}
+{{ block.super }}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="form-section">
+            <h2>Edit Item: {{ item.name }}</h2>
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Item Name</label>
+                        {{ form.name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.sku.id_for_label }}" class="form-label">SKU</label>
+                        {{ form.sku }}
+                        <small class="form-text text-muted">Auto-generated, cannot be changed</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                        {{ form.category }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                    {{ form.description }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.specifications.id_for_label }}" class="form-label">Specifications</label>
+                    {{ form.specifications }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.image.id_for_label }}" class="form-label">Product Image</label>
+                    {{ form.image }}
+                    {% if item.image %}
+                    <br>
+                    <small>Current:
+                        <img src="{{ item.image.url }}" alt="{{ item.name }}" style="max-height: 100px;">
+                    </small>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <h5>Stock Management</h5>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="{{ form.minimum_stock.id_for_label }}" class="form-label">Minimum Stock</label>
+                        {{ form.minimum_stock }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.maximum_stock.id_for_label }}" class="form-label">Maximum Stock</label>
+                        {{ form.maximum_stock }}
+                    </div>
+                </div>
+
+                <hr>
+
+                <h5>Pricing</h5>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.selling_price.id_for_label }}" class="form-label">Selling Price</label>
+                        {{ form.selling_price }}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.gst_percentage.id_for_label }}" class="form-label">GST %</label>
+                        {{ form.gst_percentage }}
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{% url 'inventory:item-detail' item.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
