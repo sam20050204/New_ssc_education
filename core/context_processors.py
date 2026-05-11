@@ -52,3 +52,27 @@ def collaboration_context(request):
         "topbar_recent_notifications": notifications,
         "topbar_recent_threads": recent_threads,
     }
+
+
+def current_mode(request):
+    """
+    Add current mode (education or sales) to all templates.
+    Defaults to 'education' mode unless on a sales/finance page.
+    """
+    path = request.path
+    
+    # Define all paths that should be in 'sales' mode
+    sales_paths = [
+        '/sales',          # Sales dashboard and items
+        '/fees',           # Fee payment section
+        '/payment-tracking',  # Payment tracking section
+        '/receipts',       # Receipts section
+    ]
+    
+    # Check if current path matches any sales-related paths
+    for sales_path in sales_paths:
+        if path.startswith(sales_path):
+            return {'current_mode': 'sales'}
+    
+    # Default to education mode
+    return {'current_mode': 'education'}

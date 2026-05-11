@@ -12,6 +12,7 @@ from core.forms import FeePaymentForm
 from core.models import AdmittedStudent
 from core.services.collaboration_service import create_role_notification
 from core.services.fee_service import record_fee_payment
+from core.utils import number_to_words
 
 
 @login_required
@@ -108,10 +109,45 @@ def submit_fee_payment(request):
             dedupe_window_hours=24,
         )
 
+    # Prepare receipt data in the same format expected by frontend
+    student = payment.student
+    course_name = (
+        student.custom_course if student.course == "Other" and student.custom_course else student.course
+    )
+
+    # Get batch information
+    batch_month = student.batch_month or ""
+    batch_year = student.batch_year or ""
+
+    if batch_month and batch_year:
+        batch_display = f"{batch_month} {batch_year}"
+    else:
+        batch_display = "Not Assigned"
+
+    # Format payment date
+    payment_date_formatted = payment.payment_date.strftime("%d-%m-%Y")
+
+    receipt_data = {
+        "receipt_no": payment.receipt_no,
+        "date": payment_date_formatted,
+        "time": "",  # No time for DateField
+        "student_name": student.formatted_full_name,
+        "course": course_name,
+        "batch": batch_display,
+        "mobile": student.mobile_own,
+        "payment_mode": payment.payment_mode,
+        "total_fees": f"{float(student.total_fees):.2f}",
+        "previous_paid": f"{float(payment.paid_before_this):.2f}",
+        "amount_paid": f"{float(payment.amount):.2f}",
+        "remaining_fees": f"{float(payment.remaining_after_this):.2f}",
+        "amount_in_words": number_to_words(float(payment.amount)),
+    }
+
     return JsonResponse(
         {
             "success": True,
             "message": f"Payment recorded with receipt {payment.receipt_no}.",
+            "receipt": receipt_data,
             "receipt_no": payment.receipt_no,
             "student": payment.student.full_name,
             "student_id": payment.student.student_id,

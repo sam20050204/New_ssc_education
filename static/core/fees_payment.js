@@ -407,30 +407,53 @@ function submitPayment() {
     })
     .then(async response => {
         console.log('Payment response status:', response.status);
+        console.log('Response headers:', response.headers);
 
         const contentType = response.headers.get('content-type') || '';
+        console.log('Content-Type:', contentType);
+        
         let data;
+        let responseText = '';
 
-        if (contentType.includes('application/json')) {
+        try {
+            // Try to parse as JSON first (most APIs return JSON)
+            responseText = await response.clone().text();
+            console.log('Raw response text:', responseText);
             data = await response.json();
-        } else {
-            const text = await response.text();
-            if (!response.ok) {
-                throw new Error(`Payment submission failed with HTTP ${response.status}. Server returned HTML instead of JSON.`);
-            }
-            throw new Error(`Unexpected response format: ${text.slice(0, 120)}`);
+        } catch (parseError) {
+            console.error('Failed to parse JSON response:', parseError);
+            console.error('Response body:', responseText || '(empty)');
+            throw new Error(`Failed to parse server response as JSON. Got: ${(responseText || 'empty').slice(0, 120)}`);
         }
 
         if (!response.ok) {
-            throw new Error(data.error || 'Payment submission failed');
+            console.error('Response not OK. Status:', response.status, 'Data:', data);
+            throw new Error(data.error || `Payment submission failed with HTTP ${response.status}`);
         }
 
+        console.log('Parsed response data:', data);
+        console.log('data keys:', Object.keys(data));
         return data;
     })
     .then(data => {
-        console.log('Payment successful:', data);
+        console.log('=== PAYMENT RESPONSE RECEIVED ===');
+        console.log('Full Response:', JSON.stringify(data, null, 2));
+        console.log('data.success:', data.success);
+        console.log('data.receipt:', data.receipt);
+        console.log('data.error:', data.error);
         
         if (data.success) {
+            // Validate receipt data exists
+            if (!data.receipt) {
+                console.error('ERROR: Receipt data is undefined or null');
+                console.error('Full response:', JSON.stringify(data, null, 2));
+                alert('Server returned success=true but no receipt data.\n\nResponse:\n' + JSON.stringify(data, null, 2));
+                throw new Error('Receipt data not returned from server');
+            }
+            
+            console.log('Receipt data validated:', data.receipt);
+            console.log('Receipt No:', data.receipt.receipt_no);
+            
             // Show success message
             alert('✅ Payment recorded successfully!\n\nReceipt No: ' + data.receipt.receipt_no);
             
@@ -467,6 +490,8 @@ function submitPayment() {
                 input.disabled = false;
             });
         } else {
+            console.error('Server returned success=false');
+            console.error('Error message from server:', data.error);
             throw new Error(data.error || 'Unknown error');
         }
     })
@@ -489,6 +514,19 @@ function submitPayment() {
 // Display receipt in modal - ✅ UPDATED WITH BATCH
 function displayReceipt(receipt) {
     console.log('Displaying receipt:', receipt);
+    
+    // Validate all required receipt fields
+    if (!receipt.receipt_no) {
+        console.error('Missing receipt_no in receipt data:', receipt);
+        alert('Error: Receipt number not available');
+        return;
+    }
+    
+    if (!receipt.student_name) {
+        console.error('Missing student_name in receipt data:', receipt);
+        alert('Error: Student name not available');
+        return;
+    }
     
     // Create complete receipt HTML
     const receiptHTML = `

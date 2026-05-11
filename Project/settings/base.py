@@ -107,6 +107,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.static_version',  # Custom context
                 'core.context_processors.collaboration_context',
+                'core.context_processors.current_mode',  # Mode switching context
             ],
         },
     },

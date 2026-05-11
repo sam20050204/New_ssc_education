@@ -17,7 +17,11 @@
 <div class="app-shell">
     <aside class="sidebar" id="erpSidebar">
         {% block sidebar %}
-            {% include 'includes/sidebar.html' %}
+            {% if current_mode == 'sales' %}
+                {% include 'includes/sales_sidebar_empty.html' %}
+            {% else %}
+                {% include 'includes/education_sidebar.html' %}
+            {% endif %}
         {% endblock %}
     </aside>
 
@@ -37,10 +41,12 @@
             </div>
 
             <div class="topbar-center">
+                {% if current_mode != 'sales' %}
                 <form action="{% url 'admitted_students' %}" method="get" class="global-search">
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <input type="search" name="search" placeholder="Search students, admissions, mobile..." aria-label="Global search">
                 </form>
+                {% endif %}
             </div>
 
             <div class="topbar-right">
@@ -119,12 +125,21 @@
                         </div>
                     </div>
                 </div>
+                {% if current_mode == 'sales' %}
                 <div class="quick-actions dropdown-shell">
-                    <a href="{% url 'sales_services_dashboard' %}" class="quick-action-btn" title="Sales and Services">
+                    <a href="{% url 'education_home' %}" class="quick-action-btn" title="Switch to Computer Education">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Computer Education</span>
+                    </a>
+                </div>
+                {% else %}
+                <div class="quick-actions dropdown-shell">
+                    <a href="{% url 'sales_services_dashboard' %}" class="quick-action-btn" title="Switch to Sales and Services">
                         <i class="fa-solid fa-store"></i>
                         <span>Sales & Services</span>
                     </a>
                 </div>
+                {% endif %}
                 <div class="user-menu dropdown-shell">
                     <button class="user-chip" type="button" data-dropdown-target="userMenuPanel">
                         <span class="user-avatar">{{ request.user.username|default:"A"|first|upper }}</span>

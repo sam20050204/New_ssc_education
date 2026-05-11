@@ -438,6 +438,13 @@ textarea {
     box-shadow: 0 16px 24px rgba(37, 99, 235, 0.18);
 }
 
+.quick-action-btn.active,
+.btn.active,
+.action-btn.active {
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+    box-shadow: 0 16px 24px rgba(22, 163, 74, 0.18);
+}
+
 .btn-secondary,
 .action-btn.secondary {
     background: #eef4fb;

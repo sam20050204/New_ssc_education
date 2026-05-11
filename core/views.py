@@ -25,7 +25,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import F, Prefetch, Q, Sum
+from django.db.models import F, Prefetch, Q, Sum, Count
 from django.db.models.functions import ExtractYear
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -369,9 +369,16 @@ def dashboard(request):
         "active_page": "dashboard",
         "course_distribution": course_distribution_json,
         "monthly_by_course": monthly_by_course_json,
+        "current_mode": "education",
     }
 
     return render(request, "core/dashboard.html", context)
+
+
+@login_required
+def education_home(request):
+    """Education Home - Redirects to dashboard with education mode set."""
+    return redirect("dashboard")
 
 
 @login_required
@@ -2109,9 +2116,13 @@ def submit_fee_payment(request):
 
                 logger.info("Payment recorded successfully for receipt %s", receipt_data["receipt_no"])
 
-                return JsonResponse(
-                    {"success": True, "receipt": receipt_data, "message": "Payment recorded successfully"}
-                )
+                response_dict = {
+                    "success": True,
+                    "message": "Payment recorded successfully",
+                    "receipt": receipt_data,
+                    "_debug": "This is from the fixed submit_fee_payment view"
+                }
+                return JsonResponse(response_dict)
 
         except Exception as e:
             logger.exception("Error in submit_fee_payment")
@@ -3454,8 +3465,39 @@ def month_wise_admission(request):
 @roles_required(ROLE_SUPER_ADMIN, ROLE_ADMIN)
 def sales_services_dashboard(request):
     """Sales and Services Dashboard"""
+    # Get available years from SalesItem
+    available_years = (
+        SalesItem.objects.annotate(year=ExtractYear("created_at"))
+        .values_list("year", flat=True)
+        .distinct()
+        .order_by("-year")
+    )
+    
+    selected_year = request.GET.get("year", "")
+    
+    # Get sales items
+    items = SalesItem.objects.all()
+    if selected_year:
+        items = items.filter(created_at__year=selected_year)
+    
+    # Calculate totals
+    total_items = items.count()
+    total_revenue = items.aggregate(Sum("total_amount"))["total_amount__sum"] or 0
+    total_orders = items.count()
+    
+    # Calculate profit (assuming 30% markup on purchase rate)
+    total_cost = items.aggregate(cost=Sum(F("purchase_rate") * F("quantity")))["cost"] or 0
+    total_profit = total_revenue - total_cost if total_revenue and total_cost else 0
+    
     context = {
         "active_page": "sales_dashboard",
+        "available_years": available_years,
+        "selected_year": selected_year,
+        "total_items": total_items,
+        "total_revenue": total_revenue,
+        "total_orders": total_orders,
+        "total_profit": total_profit,
+        "current_mode": "sales",
     }
     return render(request, "core/sales_dashboard.html", context)
 

@@ -1,6 +1,78 @@
-<nav class="sidebar">
-    <!-- Empty sidebar - add menu items here later -->
-    <div class="sidebar-placeholder">
-        <p>Menu items coming soon...</p>
+{% load custom_filters %}
+<div class="sidebar-shell">
+    <div class="sidebar-brand">
+        <button id="sidebar-collapse-toggle-sales" class="sidebar-brand-toggle" type="button" aria-label="Toggle sidebar" title="Hide sidebar">
+            <div class="sidebar-brand-mark">SA</div>
+            <div class="sidebar-brand-copy">
+                <strong>Sales Suite</strong>
+                <span>Sales operations console</span>
+            </div>
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
     </div>
-</nav>
+
+    <div class="sidebar-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" placeholder="Search menu..." oninput="filterSidebarMenu(this.value)">
+    </div>
+
+    <div class="sidebar-scroll" id="salesSidebarScroll">
+        <div class="sidebar-group">
+            <div class="sidebar-label">Dashboard</div>
+            <a href="{% url 'sales_services_dashboard' %}" class="menu-item {% if active_page == 'sales_dashboard' %}active{% endif %}" data-menu-label="sales dashboard">
+                <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
+            </a>
+        </div>
+
+        <div class="sidebar-group">
+            <div class="sidebar-label">Sales Management</div>
+            <a href="{% url 'sales_items' %}" class="menu-item {% if active_page == 'sales_items' %}active{% endif %}" data-menu-label="items products">
+                <i class="fa-solid fa-boxes-stacked"></i><span>Sales Items</span>
+            </a>
+            <a href="{% url 'add_sales_item' %}" class="menu-item" data-menu-label="add new item">
+                <i class="fa-solid fa-plus-circle"></i><span>Add Item</span>
+            </a>
+        </div>
+
+        <div class="sidebar-group">
+            <div class="sidebar-label">Navigation</div>
+            <a href="{% url 'dashboard' %}" class="menu-item" data-menu-label="education dashboard crm">
+                <i class="fa-solid fa-arrow-left"></i><span>Back to Education</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+const salesSidebarScrollKey = 'sales-sidebar-scroll-top';
+
+function persistSidebarScroll() {
+    const sidebarScroll = document.getElementById('salesSidebarScroll');
+    if (!sidebarScroll) return;
+    localStorage.setItem(salesSidebarScrollKey, String(sidebarScroll.scrollTop || 0));
+}
+
+function filterSidebarMenu(query) {
+    const normalized = String(query || '').trim().toLowerCase();
+    document.querySelectorAll('#salesSidebarScroll [data-menu-label]').forEach(function(item) {
+        const visible = !normalized || item.getAttribute('data-menu-label').includes(normalized) || item.textContent.toLowerCase().includes(normalized);
+        item.style.display = visible ? '' : 'none';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarScroll = document.getElementById('salesSidebarScroll');
+    if (sidebarScroll) {
+        const savedTop = parseInt(localStorage.getItem(salesSidebarScrollKey) || '0', 10);
+        if (!Number.isNaN(savedTop)) {
+            sidebarScroll.scrollTop = savedTop;
+        }
+
+        sidebarScroll.addEventListener('scroll', persistSidebarScroll, { passive: true });
+    }
+
+    document.querySelectorAll('#salesSidebarScroll a').forEach(function(item) {
+        item.addEventListener('click', persistSidebarScroll);
+    });
+});
+</script>

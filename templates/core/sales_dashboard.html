@@ -1,53 +1,205 @@
-{% extends 'base/sales_base.html' %}
+{% extends 'base/base.html' %}
 {% load static %}
 
-{% block title %}Sales and Services Dashboard{% endblock %}
-
-{% block sidebar %}
-    {% include 'includes/sales_sidebar_empty.html' %}
-{% endblock %}
+{% block title %}Sales & Services Dashboard{% endblock %}
 
 {% block page_heading %}
-<div class="page-header">
+<div class="page-header dashboard-page-header">
     <div class="page-header-content">
         <div class="page-title-wrapper">
-            <div class="page-icon">🖥️</div>
+            <div class="page-icon dashboard-page-icon">SA</div>
             <div>
-                <h1 class="page-title">Sales and Services Dashboard</h1>
-                <p class="page-subtitle">Manage your sales and services operations</p>
+                <h1 class="page-title">Sales & Services Dashboard</h1>
+                <p class="page-subtitle">Sales performance, inventory management, and revenue tracking.</p>
             </div>
+        </div>
+        <div class="page-filters">
+            <form method="get" class="year-filter-form">
+                <label for="sales-year-select">
+                    <span class="filter-label">Reporting Year</span>
+                </label>
+                <select name="year" id="sales-year-select" class="year-select" onchange="this.form.submit()">
+                    <option value="">All Years</option>
+                    {% for year in available_years %}
+                        <option value="{{ year }}" {% if year|stringformat:"s" == selected_year %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </form>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
+<section class="dashboard-view">
+    <div class="stats-grid dashboard-stats-grid">
+        <div class="stat-card stat-card-sales">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Revenue</span>
+            </div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">₹{{ total_revenue|floatformat:0 }}</div>
+                    <div class="stat-label">Total Sales Revenue</div>
+                    <p class="stat-description">Cumulative sales income from all items and services sold.</p>
+                    <div class="stat-period">{% if selected_year %}Year {{ selected_year }}{% else %}All years{% endif %}</div>
+                </div>
+                <div class="stat-visual stat-visual-sales">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
 
-<div class="stats-grid">
-    <a href="{% url 'sales_items' %}" class="stat-card clickable-card" style="text-decoration: none; color: inherit;">
-        <div class="stat-icon">📦</div>
-        <div class="stat-label">Items</div>
-        <div class="stat-number">0</div>
-        <div class="stat-sublabel">Total Items</div>
-    </a>
+        <div class="stat-card stat-card-items">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Inventory</span>
+            </div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">{{ total_items|default:0 }}</div>
+                    <div class="stat-label">Sales Items</div>
+                    <p class="stat-description">Total number of unique products and services available for sale.</p>
+                    <div class="stat-period"><a href="{% url 'sales_items' %}" style="color: #2563eb; text-decoration: none;">Manage Items →</a></div>
+                </div>
+                <div class="stat-visual stat-visual-items">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+            </div>
+        </div>
 
-    <div class="stat-card clickable-card">
-        <div class="stat-icon">💼</div>
-        <div class="stat-label">Orders</div>
-        <p class="coming-soon">Coming Soon</p>
+        <div class="stat-card stat-card-orders">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Orders</span>
+            </div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">{{ total_orders|default:0 }}</div>
+                    <div class="stat-label">Total Orders</div>
+                    <p class="stat-description">Complete count of all sales transactions processed.</p>
+                    <div class="stat-period">Sales completed</div>
+                </div>
+                <div class="stat-visual stat-visual-orders">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card stat-card-profit">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Profit</span>
+            </div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">₹{{ total_profit|floatformat:0 }}</div>
+                    <div class="stat-label">Net Profit</div>
+                    <p class="stat-description">Revenue minus cost of goods sold and operational expenses.</p>
+                    <div class="stat-period">Bottom line performance</div>
+                </div>
+                <div class="stat-visual stat-visual-profit">
+                    <i class="fa-solid fa-coins"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="stat-card clickable-card">
-        <div class="stat-icon">📊</div>
-        <div class="stat-label">Sales Analytics</div>
-        <p class="coming-soon">Coming Soon</p>
+    <div class="charts-container dashboard-charts-container">
+        <div class="chart-container dashboard-chart-card">
+            <div class="chart-header">
+                <div>
+                    <h3>Sales Trends</h3>
+                    <p class="chart-subtitle">Monthly sales performance and revenue growth trajectory.</p>
+                </div>
+                <span class="status-badge status-active">Live</span>
+            </div>
+            <div class="chart-canvas-wrap">
+                <p style="text-align: center; padding: 40px; color: var(--text-faint);">Sales trend chart coming soon...</p>
+            </div>
+        </div>
+
+        <div class="chart-container dashboard-chart-card">
+            <div class="chart-header">
+                <div>
+                    <h3>Top Selling Items</h3>
+                    <p class="chart-subtitle">Performance ranking of best-selling products and services.</p>
+                </div>
+                <span class="status-badge status-pending">Analysis</span>
+            </div>
+            <div class="chart-canvas-wrap">
+                <p style="text-align: center; padding: 40px; color: var(--text-faint);">Top items analysis coming soon...</p>
+            </div>
+        </div>
     </div>
 
-    <div class="stat-card clickable-card">
-        <div class="stat-icon">💰</div>
-        <div class="stat-label">Revenue</div>
-        <p class="coming-soon">Coming Soon</p>
+    <div class="charts-container">
+        <div class="chart-container">
+            <div class="chart-header">
+                <div>
+                    <h3>Recent Sales Activity</h3>
+                    <p class="chart-subtitle">Latest transactions and sales operations.</p>
+                </div>
+                <a href="{% url 'sales_items' %}" class="mini-link-btn">View All</a>
+            </div>
+            <div class="activity-list">
+                <div class="empty-state">
+                    <i class="fa-solid fa-inbox"></i>
+                    <p>No recent sales data available yet.</p>
+                    <p style="font-size: 12px; color: var(--text-faint);">Start adding sales items to begin tracking.</p>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+</section>
+
+<style>
+    .stat-card-sales .stat-visual {
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+        color: #22c55e;
+    }
+
+    .stat-card-items .stat-visual {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+        color: #f59e0b;
+    }
+
+    .stat-card-orders .stat-visual {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+        color: #8b5cf6;
+    }
+
+    .stat-card-profit .stat-visual {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+        color: #3b82f6;
+    }
+
+    .stat-visual {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        min-width: 80px;
+        min-height: 80px;
+        border-radius: 14px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        text-align: center;
+        color: var(--text-faint);
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .empty-state p {
+        margin: 8px 0;
+    }
+</style>
 
 {% endblock %}
