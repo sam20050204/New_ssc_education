@@ -29,6 +29,7 @@ from django.db.models import F, Prefetch, Q, Sum, Count
 from django.db.models.functions import ExtractYear
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -51,6 +52,8 @@ from .models import (
     FeePayment,
     Notification,
     NotificationSetting,
+    SalesReceipt,
+    SalesReceiptLine,
     SalesItem,
     StudentFinanceDetail,
 )
@@ -290,6 +293,7 @@ def home(request):
 def dashboard(request):
     """Render the main dashboard with student and revenue summaries."""
     selected_year = request.GET.get("year", "")
+    chart_year = int(selected_year) if selected_year else datetime.now().year
 
     # Get available admission years (from admission_date, not entry date)
     available_years = (
@@ -323,17 +327,26 @@ def dashboard(request):
     )
 
     course_distribution = {}
+    admission_month_counter = Counter()
+    top_batch_counter = Counter()
     for student in students:
         course_name = get_display_course_name(student)
         course_distribution[course_name] = course_distribution.get(course_name, 0) + 1
+        if student.admission_date:
+            admission_month_counter[student.admission_date.strftime("%b")] += 1
+        batch_label = (
+            f"{student.batch_month or 'Batch'} {student.batch_year or ''}".strip()
+            if (student.batch_month or student.batch_year)
+            else "Unassigned"
+        )
+        if batch_label != "Unassigned":
+            top_batch_counter[batch_label] += 1
 
     # Prepare data for clustered bar chart: admissions by course for each month (based on admission_date)
     if selected_year:
-        # Filter by admission year (not entry year)
-        year_students = AdmittedStudent.objects.filter(admission_date__year=int(selected_year))
+        year_students = AdmittedStudent.objects.filter(admission_date__year=chart_year)
     else:
-        current_year = datetime.now().year
-        year_students = AdmittedStudent.objects.filter(admission_date__year=current_year)
+        year_students = AdmittedStudent.objects.filter(admission_date__year=chart_year)
 
     # Get unique courses
     unique_courses = set()
@@ -358,6 +371,10 @@ def dashboard(request):
 
     course_distribution_json = json.dumps(course_distribution)
     monthly_by_course_json = json.dumps(monthly_by_course)
+    dashboard_top_courses = sorted(course_distribution.items(), key=lambda item: item[1], reverse=True)[:5]
+    dashboard_top_batches = top_batch_counter.most_common(5)
+    dashboard_admission_trends = [{"label": label, "count": count} for label, count in admission_month_counter.items()]
+    dashboard_admission_trends.sort(key=lambda item: dt.strptime(item["label"], "%b").month)
 
     context = {
         "enquiry_count": enquiry_count,
@@ -369,6 +386,9 @@ def dashboard(request):
         "active_page": "dashboard",
         "course_distribution": course_distribution_json,
         "monthly_by_course": monthly_by_course_json,
+        "dashboard_top_courses": dashboard_top_courses,
+        "dashboard_top_batches": dashboard_top_batches,
+        "dashboard_admission_trends": dashboard_admission_trends,
         "current_mode": "education",
     }
 
@@ -1439,6 +1459,7 @@ def admitted_students(request):
     course = request.GET.get("course", "")
     batch_month = request.GET.get("batch_month", "")  # NEW
     batch_year = request.GET.get("batch_year", "")  # NEW
+    view_mode = "compact" if request.GET.get("view") == "compact" else "default"
 
     # Optimized query with only required fields to reduce database hits
     students = AdmittedStudent.objects.only(
@@ -1618,9 +1639,13 @@ def admitted_students(request):
     admission_trends = [{"label": label, "count": count} for label, count in month_counter.items()]
     admission_trends.sort(key=lambda item: dt.strptime(item["label"], "%b").month)
 
-    paginator = Paginator(students, 25)
-    page_number = request.GET.get("page", 1)
-    page_obj = paginator.get_page(page_number)
+    if view_mode == "compact":
+        paginator = Paginator(students, max(total_students, 1))
+        page_obj = paginator.get_page(1)
+    else:
+        paginator = Paginator(students, 25)
+        page_number = request.GET.get("page", 1)
+        page_obj = paginator.get_page(page_number)
 
     return render(
         request,
@@ -1634,6 +1659,7 @@ def admitted_students(request):
             "course": course,
             "batch_month": batch_month,  # NEW
             "batch_year": batch_year,  # NEW
+            "view_mode": view_mode,
             "sort": sort,  # NEW - Sorting parameter
             "available_years": available_years,
             "available_batch_months": available_batch_months,  # NEW
@@ -3465,9 +3491,9 @@ def month_wise_admission(request):
 @roles_required(ROLE_SUPER_ADMIN, ROLE_ADMIN)
 def sales_services_dashboard(request):
     """Sales and Services Dashboard"""
-    # Get available years from SalesItem
+    # Get available years from saved receipts first, with item years as fallback coverage.
     available_years = (
-        SalesItem.objects.annotate(year=ExtractYear("created_at"))
+        SalesReceipt.objects.annotate(year=ExtractYear("sale_date"))
         .values_list("year", flat=True)
         .distinct()
         .order_by("-year")
@@ -3475,19 +3501,21 @@ def sales_services_dashboard(request):
     
     selected_year = request.GET.get("year", "")
     
-    # Get sales items
     items = SalesItem.objects.all()
+    receipts = SalesReceipt.objects.prefetch_related("lines").all()
     if selected_year:
         items = items.filter(created_at__year=selected_year)
+        receipts = receipts.filter(sale_date__year=selected_year)
     
-    # Calculate totals
     total_items = items.count()
-    total_revenue = items.aggregate(Sum("total_amount"))["total_amount__sum"] or 0
-    total_orders = items.count()
-    
-    # Calculate profit (assuming 30% markup on purchase rate)
-    total_cost = items.aggregate(cost=Sum(F("purchase_rate") * F("quantity")))["cost"] or 0
-    total_profit = total_revenue - total_cost if total_revenue and total_cost else 0
+    total_revenue = receipts.aggregate(Sum("grand_total"))["grand_total__sum"] or 0
+    total_orders = receipts.count()
+    total_cost = Decimal("0")
+    for receipt in receipts:
+        for line in receipt.lines.all():
+            if line.sales_item:
+                total_cost += (line.sales_item.purchase_rate or Decimal("0")) * line.quantity
+    total_profit = total_revenue - total_cost
     
     context = {
         "active_page": "sales_dashboard",
@@ -3497,6 +3525,7 @@ def sales_services_dashboard(request):
         "total_revenue": total_revenue,
         "total_orders": total_orders,
         "total_profit": total_profit,
+        "recent_sales_receipts": receipts.order_by("-sale_date", "-created_at")[:8],
         "current_mode": "sales",
     }
     return render(request, "core/sales_dashboard.html", context)
@@ -3548,6 +3577,140 @@ def add_sales_item(request):
         return redirect("sales_items")
 
     return redirect("sales_items")
+
+
+@login_required
+@roles_required(ROLE_SUPER_ADMIN, ROLE_ADMIN)
+def sales_receipts(request):
+    """Create and review bills/receipts for items and services."""
+    available_items = SalesItem.objects.all().order_by("item_name")
+
+    if request.method == "POST":
+        customer_name = request.POST.get("customer_name", "").strip()
+        customer_phone = request.POST.get("customer_phone", "").strip()
+        customer_address = request.POST.get("customer_address", "").strip()
+        sale_date_raw = request.POST.get("sale_date", "").strip()
+        payment_mode = request.POST.get("payment_mode", "Cash").strip() or "Cash"
+        notes = request.POST.get("notes", "").strip()
+        discount_raw = request.POST.get("discount_amount", "0").strip() or "0"
+
+        line_types = request.POST.getlist("line_type[]")
+        sales_item_ids = request.POST.getlist("sales_item_id[]")
+        descriptions = request.POST.getlist("description[]")
+        quantities = request.POST.getlist("quantity[]")
+        unit_prices = request.POST.getlist("unit_price[]")
+
+        try:
+            if not customer_name:
+                raise ValueError("Customer name is required.")
+
+            sale_date_value = dt.strptime(sale_date_raw, "%Y-%m-%d").date() if sale_date_raw else timezone.localdate()
+            discount_amount = Decimal(discount_raw)
+            if discount_amount < 0:
+                raise ValueError("Discount cannot be negative.")
+
+            row_count = max(len(descriptions), len(quantities), len(unit_prices), len(line_types))
+            if row_count == 0:
+                raise ValueError("Add at least one item or service line.")
+
+            prepared_lines = []
+            subtotal = Decimal("0")
+
+            with transaction.atomic():
+                for index in range(row_count):
+                    line_type = (line_types[index] if index < len(line_types) else "service").strip() or "service"
+                    sales_item_id = (sales_item_ids[index] if index < len(sales_item_ids) else "").strip()
+                    description = (descriptions[index] if index < len(descriptions) else "").strip()
+                    quantity_raw = (quantities[index] if index < len(quantities) else "").strip()
+                    unit_price_raw = (unit_prices[index] if index < len(unit_prices) else "").strip()
+
+                    if not any([description, quantity_raw, unit_price_raw, sales_item_id]):
+                        continue
+
+                    quantity_value = int(quantity_raw)
+                    unit_price_value = Decimal(unit_price_raw)
+                    if quantity_value <= 0:
+                        raise ValueError(f"Line {index + 1}: quantity must be greater than zero.")
+                    if unit_price_value < 0:
+                        raise ValueError(f"Line {index + 1}: unit price cannot be negative.")
+
+                    sales_item = None
+                    if line_type == "item" and sales_item_id:
+                        sales_item = SalesItem.objects.select_for_update().get(id=int(sales_item_id))
+                        if not description:
+                            description = sales_item.item_name
+                        if sales_item.quantity < quantity_value:
+                            raise ValueError(
+                                f"Line {index + 1}: only {sales_item.quantity} units available for {sales_item.item_name}."
+                            )
+                    elif not description:
+                        raise ValueError(f"Line {index + 1}: description is required.")
+
+                    line_total = unit_price_value * quantity_value
+                    subtotal += line_total
+                    prepared_lines.append(
+                        {
+                            "line_type": line_type if line_type in {"item", "service"} else "service",
+                            "sales_item": sales_item,
+                            "description": description,
+                            "quantity": quantity_value,
+                            "unit_price": unit_price_value,
+                            "line_total": line_total,
+                        }
+                    )
+
+                if not prepared_lines:
+                    raise ValueError("Add at least one valid item or service line.")
+
+                grand_total = subtotal - discount_amount
+                if grand_total < 0:
+                    raise ValueError("Discount cannot exceed the subtotal.")
+
+                receipt = SalesReceipt.objects.create(
+                    customer_name=customer_name,
+                    customer_phone=customer_phone,
+                    customer_address=customer_address,
+                    sale_date=sale_date_value,
+                    payment_mode=payment_mode,
+                    notes=notes,
+                    subtotal=subtotal,
+                    discount_amount=discount_amount,
+                    grand_total=grand_total,
+                    created_by=request.user,
+                )
+
+                for line in prepared_lines:
+                    SalesReceiptLine.objects.create(receipt=receipt, **line)
+                    if line["line_type"] == "item" and line["sales_item"]:
+                        line["sales_item"].quantity -= line["quantity"]
+                        line["sales_item"].save(update_fields=["quantity", "updated_at"])
+
+            messages.success(request, f"Sales receipt {receipt.receipt_no} created successfully.")
+            return redirect(f"{reverse('sales_receipts')}?receipt={receipt.id}")
+        except SalesItem.DoesNotExist:
+            messages.error(request, "One of the selected sales items no longer exists.")
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            messages.error(request, f"Unable to create bill: {exc}")
+
+    selected_receipt = None
+    receipt_id = request.GET.get("receipt", "").strip()
+    if receipt_id:
+        try:
+            selected_receipt = SalesReceipt.objects.prefetch_related("lines__sales_item").get(id=int(receipt_id))
+        except (SalesReceipt.DoesNotExist, ValueError, TypeError):
+            messages.error(request, "Requested receipt was not found.")
+
+    recent_receipts = SalesReceipt.objects.prefetch_related("lines").all()[:12]
+    context = {
+        "active_page": "sales_receipts",
+        "current_mode": "sales",
+        "available_items": available_items,
+        "recent_receipts": recent_receipts,
+        "selected_receipt": selected_receipt,
+        "payment_modes": SalesReceipt.PAYMENT_MODE_CHOICES,
+        "today": timezone.localdate(),
+    }
+    return render(request, "core/sales_receipts.html", context)
 
 
 # ================= PAYMENT TRACKING PAGE =================

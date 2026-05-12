@@ -23,22 +23,17 @@
                 <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
             </a>
             <a href="{% url 'statistics' %}" class="menu-item {% if active_page == 'statistics' %}active{% endif %}" data-menu-label="statistics dashboard reports analytics">
-                <i class="fa-solid fa-chart-simple"></i><span>Statistics Dashboard</span>
-            </a>
-            <a href="{% url 'admission_pipeline' %}" class="menu-item {% if active_page == 'admission_pipeline' %}active{% endif %}" data-menu-label="admission pipeline crm leads">
-                <i class="fa-solid fa-filter-circle-dollar"></i><span>Admission Pipeline</span>
+                <i class="fa-solid fa-chart-simple"></i><span>Statistics</span>
             </a>
         </div>
 
         <div class="sidebar-group">
-            <div class="sidebar-label">CRM / Leads</div>
             <a href="{% url 'enquiry_list' %}" class="menu-item {% if active_page == 'enquiries' %}active{% endif %}" data-menu-label="crm leads enquiries follow-ups admissions pipeline">
                 <i class="fa-solid fa-user-group"></i><span>Enquiries</span>
             </a>
         </div>
 
         <div class="sidebar-group">
-            <div class="sidebar-label">Students</div>
             <button class="menu-item menu-toggle" type="button" onclick="toggleSidebarMenu(this, 'studentsMenu')">
                 <span class="menu-item-main"><i class="fa-solid fa-user-graduate"></i><span>Students</span></span>
                 <i class="fa-solid fa-chevron-right toggle-arrow"></i>
@@ -51,7 +46,6 @@
 
         {% if request.user.is_superuser or request.user|has_group:"Admin" or request.user|has_group:"Accountant" %}
         <div class="sidebar-group">
-            <div class="sidebar-label">Finance</div>
             <button class="menu-item menu-toggle" type="button" onclick="toggleSidebarMenu(this, 'financeMenu')">
                 <span class="menu-item-main"><i class="fa-solid fa-wallet"></i><span>Finance</span></span>
                 <i class="fa-solid fa-chevron-right toggle-arrow"></i>
@@ -65,7 +59,6 @@
         {% endif %}
 
         <div class="sidebar-group">
-            <div class="sidebar-label">Attendance</div>
             <button class="menu-item menu-toggle" type="button" onclick="toggleSidebarMenu(this, 'attendanceMenu')">
                 <span class="menu-item-main"><i class="fa-solid fa-clipboard-check"></i><span>Attendance</span></span>
                 <i class="fa-solid fa-chevron-right toggle-arrow"></i>
@@ -79,7 +72,6 @@
         </div>
 
         <div class="sidebar-group">
-            <div class="sidebar-label">Batch Management</div>
             <button class="menu-item menu-toggle" type="button" onclick="toggleSidebarMenu(this, 'batchManagementMenu')">
                 <span class="menu-item-main"><i class="fa-solid fa-calendar-days"></i><span>Batch Management</span></span>
                 <i class="fa-solid fa-chevron-right toggle-arrow"></i>

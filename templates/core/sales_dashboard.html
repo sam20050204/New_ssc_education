@@ -59,7 +59,7 @@
                     <div class="stat-number">{{ total_items|default:0 }}</div>
                     <div class="stat-label">Sales Items</div>
                     <p class="stat-description">Total number of unique products and services available for sale.</p>
-                    <div class="stat-period"><a href="{% url 'sales_items' %}" style="color: #2563eb; text-decoration: none;">Manage Items →</a></div>
+                    <div class="stat-period"><a href="{% url 'inventory:dashboard' %}" style="color: #2563eb; text-decoration: none;">Open Inventory →</a></div>
                 </div>
                 <div class="stat-visual stat-visual-items">
                     <i class="fa-solid fa-boxes-stacked"></i>
@@ -137,14 +137,28 @@
                     <h3>Recent Sales Activity</h3>
                     <p class="chart-subtitle">Latest transactions and sales operations.</p>
                 </div>
-                <a href="{% url 'sales_items' %}" class="mini-link-btn">View All</a>
+                <a href="{% url 'sales_receipts' %}" class="mini-link-btn">Open Billing</a>
             </div>
             <div class="activity-list">
+                {% for receipt in recent_sales_receipts %}
+                <div class="activity-card">
+                    <div class="activity-pill priority-success">{{ receipt.payment_mode }}</div>
+                    <div class="activity-copy">
+                        <strong>{{ receipt.receipt_no }} • {{ receipt.customer_name }}</strong>
+                        <p>{{ receipt.lines.count }} line{{ receipt.lines.count|pluralize }} • Rs. {{ receipt.grand_total|floatformat:2 }}</p>
+                        <div class="activity-meta">
+                            <span>{{ receipt.sale_date|date:"d M Y" }}</span>
+                            <span><a href="{% url 'sales_receipts' %}?receipt={{ receipt.id }}">Open receipt</a></span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
                 <div class="empty-state">
                     <i class="fa-solid fa-inbox"></i>
                     <p>No recent sales data available yet.</p>
-                    <p style="font-size: 12px; color: var(--text-faint);">Start adding sales items to begin tracking.</p>
+                    <p style="font-size: 12px; color: var(--text-faint);">Start creating bills to track counter sales and service receipts.</p>
                 </div>
+                {% endfor %}
             </div>
         </div>
     </div>

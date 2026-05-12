@@ -24,15 +24,36 @@ Write-Host "[OK] Project directory: $(Get-Location)" -ForegroundColor Green
 Write-Host "[OK] Configuration file (.env) found" -ForegroundColor Green
 Write-Host ""
 
+$lanIps = Get-CimInstance Win32_NetworkAdapterConfiguration |
+    Where-Object { $_.IPEnabled -and $_.IPAddress } |
+    ForEach-Object { $_.IPAddress } |
+    Where-Object { $_ -match '^\d{1,3}(\.\d{1,3}){3}$' -and $_ -notlike '127.*' -and $_ -notlike '169.254.*' } |
+    Select-Object -Unique
+
 # Display server information
 Write-Host "============================================"
 Write-Host " SERVER INFORMATION"
 Write-Host "============================================"
-Write-Host "Server IP Address: 192.168.29.47" -ForegroundColor Cyan
+Write-Host "Server IP Address: 0.0.0.0 (all network interfaces)" -ForegroundColor Cyan
 Write-Host "Server Port: 8000" -ForegroundColor Cyan
-Write-Host "Access URL: http://192.168.29.47:8000" -ForegroundColor Yellow
+if ($lanIps) {
+    Write-Host "LAN IP Address(es): $($lanIps -join ', ')" -ForegroundColor Cyan
+    foreach ($ip in $lanIps) {
+        Write-Host "Access from another computer: http://$ip`:8000" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "[WARN] No LAN IPv4 address detected. Check the network connection." -ForegroundColor Yellow
+}
+Write-Host "Local access URL: http://127.0.0.1:8000" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "[WARN] Make sure firewall allows port 8000!" -ForegroundColor Yellow
+$firewallRule = netsh advfirewall firewall show rule name="SSC Education Django 8000" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[WARN] Windows Firewall may still be blocking inbound traffic on port 8000." -ForegroundColor Yellow
+    Write-Host '[WARN] Run this once in an Administrator terminal:' -ForegroundColor Yellow
+    Write-Host '       netsh advfirewall firewall add rule name="SSC Education Django 8000" dir=in action=allow protocol=TCP localport=8000' -ForegroundColor Yellow
+} else {
+    Write-Host '[OK] Firewall rule "SSC Education Django 8000" already exists.' -ForegroundColor Green
+}
 Write-Host ""
 
 # Prefer the project's virtual environment, then fall back to PATH

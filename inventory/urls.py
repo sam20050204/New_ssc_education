@@ -46,4 +46,7 @@ urlpatterns = [
 
     # API
     path("api/items/search/", views.search_item_autocomplete, name="item-search-api"),
+    path("api/items/<int:pk>/insights/", views.item_insights_api, name="item-insights-api"),
+    path("api/categories/create/", views.category_quick_create_api, name="category-quick-create-api"),
+    path("api/suppliers/create/", views.supplier_quick_create_api, name="supplier-quick-create-api"),
 ]

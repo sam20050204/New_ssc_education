@@ -4,138 +4,202 @@
 {% block page_title %}Suppliers{% endblock %}
 
 {% block page_actions %}
-<a href="{% url 'inventory:add-supplier' %}" class="btn btn-primary">
-    <i class="fas fa-plus"></i> Add Supplier
-</a>
+<div class="supplier-top-actions">
+    <a href="{% url 'inventory:category-list' %}" class="btn btn-secondary">
+        <i class="fas fa-layer-group"></i> Categories
+    </a>
+    <a href="{% url 'inventory:add-supplier' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Supplier
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .supplier-top-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .supplier-shell {
+        display: grid;
+        gap: 20px;
+    }
+
+    .supplier-search-grid {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 14px;
+        align-items: end;
+    }
+
+    .supplier-list-grid {
+        display: grid;
+        gap: 16px;
+    }
+
+    .supplier-row {
+        display: grid;
+        grid-template-columns: minmax(260px, 1.2fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr) minmax(130px, 0.7fr) minmax(150px, 0.8fr) auto;
+        gap: 14px;
+        align-items: center;
+        padding: 18px 20px;
+        border-bottom: 1px solid #edf3f8;
+    }
+
+    .supplier-row:last-child {
+        border-bottom: 0;
+    }
+
+    .supplier-name {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--inventory-ink);
+        font-size: 1rem;
+        font-weight: 800;
+    }
+
+    .supplier-meta {
+        color: var(--inventory-muted);
+        font-size: 0.88rem;
+        line-height: 1.5;
+    }
+
+    .supplier-metric strong {
+        display: block;
+        color: var(--inventory-ink);
+        font-weight: 800;
+    }
+
+    .supplier-metric small {
+        color: var(--inventory-muted);
+    }
+
+    .supplier-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    @media (max-width: 1180px) {
+        .supplier-row {
+            grid-template-columns: 1fr;
+            align-items: start;
+        }
+
+        .supplier-actions {
+            justify-content: flex-start;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .supplier-search-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 {{ block.super }}
 
-<!-- Search -->
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-8">
-                <input type="text" name="search" class="form-control" placeholder="Search by name, email, or phone..."
-                       value="{{ request.GET.search }}">
+<div class="inventory-container">
+    <div class="supplier-shell">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="supplier-search-grid">
+                    <div>
+                        <label class="text-muted" style="display:block; margin-bottom:8px; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:800;">Search Suppliers</label>
+                        <input type="text" name="search" class="form-control" placeholder="Search by supplier name, email, or phone"
+                               value="{{ request.GET.search }}">
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter"></i> Search
+                        </button>
+                    </div>
+                </form>
             </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="fas fa-filter"></i> Search
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+        </div>
 
-{% if suppliers %}
-<div class="table-responsive">
-    <table class="table table-hover">
-        <thead class="table-light">
-            <tr>
-                <th>Supplier Name</th>
-                <th>Contact</th>
-                <th>Phone</th>
-                <th>GST</th>
-                <th>Purchases</th>
-                <th>Total Spent</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for supplier in suppliers %}
-            <tr>
-                <td>
-                    <strong>{{ supplier.name }}</strong>
-                    {% if supplier.contact_person %}
-                    <br>
-                    <small class="text-muted">{{ supplier.contact_person }}</small>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if supplier.email %}
-                    <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if supplier.phone %}
-                    <a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a>
-                    {% if supplier.alternate_phone %}
-                    <br><small>{{ supplier.alternate_phone }}</small>
-                    {% endif %}
-                    {% endif %}
-                </td>
-                <td>
-                    {% if supplier.gst_number %}
-                    <code>{{ supplier.gst_number }}</code>
-                    {% else %}
-                    <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <span class="badge bg-info">{{ supplier.purchase_count }}</span>
-                </td>
-                <td>
-                    <strong>₹{{ supplier.total_spent|floatformat:0 }}</strong>
-                </td>
-                <td>
-                    <div class="action-buttons">
-                        <a href="{% url 'inventory:supplier-detail' supplier.pk %}" class="btn btn-sm btn-info"
-                           title="View Details">
-                            <i class="fas fa-eye"></i>
+        {% if suppliers %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Supplier Directory</h5>
+                <span class="badge bg-info">{{ page_obj.paginator.count }} suppliers</span>
+            </div>
+            <div class="supplier-list-grid">
+                {% for supplier in suppliers %}
+                <div class="supplier-row">
+                    <div>
+                        <a href="{% url 'inventory:supplier-detail' supplier.pk %}" class="supplier-name">{{ supplier.name }}</a>
+                        <div class="supplier-meta">
+                            {% if supplier.contact_person %}{{ supplier.contact_person }}<br>{% endif %}
+                            {% if supplier.email %}{{ supplier.email }}{% else %}No email recorded{% endif %}
+                        </div>
+                    </div>
+                    <div class="supplier-metric">
+                        <strong>{% if supplier.phone %}{{ supplier.phone }}{% else %}-{% endif %}</strong>
+                        <small>{% if supplier.alternate_phone %}Alt {{ supplier.alternate_phone }}{% else %}Primary contact{% endif %}</small>
+                    </div>
+                    <div class="supplier-metric">
+                        <strong>{% if supplier.gst_number %}<code>{{ supplier.gst_number }}</code>{% else %}-{% endif %}</strong>
+                        <small>GST</small>
+                    </div>
+                    <div class="supplier-metric">
+                        <strong>{{ supplier.purchase_count }}</strong>
+                        <small>Purchases</small>
+                    </div>
+                    <div class="supplier-metric">
+                        <strong>Rs {{ supplier.total_spent|floatformat:0 }}</strong>
+                        <small>Total spent</small>
+                    </div>
+                    <div class="supplier-actions">
+                        <a href="{% url 'inventory:supplier-detail' supplier.pk %}" class="btn btn-sm btn-info">
+                            <i class="fas fa-list-check"></i> View Purchases
                         </a>
-                        <a href="{% url 'inventory:edit-supplier' supplier.pk %}" class="btn btn-sm btn-warning"
-                           title="Edit">
-                            <i class="fas fa-edit"></i>
+                        <a href="{% url 'inventory:edit-supplier' supplier.pk %}" class="btn btn-sm btn-warning">
+                            <i class="fas fa-edit"></i> Edit
                         </a>
                     </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
 
-{% if is_paginated %}
-<nav aria-label="Page navigation" class="mt-4">
-    <ul class="pagination">
-        {% if page_obj.has_previous %}
-        <li class="page-item">
-            <a class="page-link" href="?page=1">First</a>
-        </li>
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-        </li>
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a></li>
+                {% endif %}
+            </ul>
+        </nav>
         {% endif %}
-
-        <li class="page-item disabled">
-            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        </li>
-
-        {% if page_obj.has_next %}
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-        </li>
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
-        </li>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <h3>No suppliers found</h3>
+            <p>Add your first supplier to start managing vendor purchase history.</p>
+            <a href="{% url 'inventory:add-supplier' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Supplier
+            </a>
+        </div>
         {% endif %}
-    </ul>
-</nav>
-{% endif %}
-
-{% else %}
-<div class="empty-state">
-    <div class="empty-state-icon">
-        <i class="fas fa-building"></i>
     </div>
-    <h3>No suppliers found</h3>
-    <p>Add your first supplier/vendor to start purchasing items</p>
-    <a href="{% url 'inventory:add-supplier' %}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Add Supplier
-    </a>
 </div>
-{% endif %}
-
 {% endblock %}

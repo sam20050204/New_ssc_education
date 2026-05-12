@@ -1072,6 +1072,7 @@ function refreshStudentTable() {
         
         if (newStudentsContainer && currentStudentsContainer) {
             currentStudentsContainer.innerHTML = newStudentsContainer.innerHTML;
+            currentStudentsContainer.className = newStudentsContainer.className;
 
             if (newResultsSummary && currentResultsSummary) {
                 currentResultsSummary.innerHTML = newResultsSummary.innerHTML;
@@ -1083,6 +1084,9 @@ function refreshStudentTable() {
 
             showNotification('List updated instantly!', 'info');
             markDuplicateStudents();
+            if (typeof window.restoreStudentViewMode === 'function') {
+                window.restoreStudentViewMode();
+            }
         } else {
             window.location.reload();
         }

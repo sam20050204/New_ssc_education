@@ -1133,6 +1133,47 @@ textarea {
     gap: 18px;
 }
 
+.dashboard-insights-grid {
+    align-items: stretch;
+}
+
+.dashboard-insight-card {
+    min-height: 100%;
+}
+
+.insight-list {
+    display: grid;
+    gap: 12px;
+}
+
+.insight-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(248, 250, 255, 0.92) 0%, rgba(239, 244, 252, 0.96) 100%);
+    border: 1px solid rgba(217, 227, 239, 0.82);
+}
+
+.insight-copy {
+    min-width: 0;
+}
+
+.insight-copy strong {
+    display: block;
+    color: var(--text);
+    font-size: 15px;
+}
+
+.insight-value {
+    flex-shrink: 0;
+    color: var(--primary);
+    font-weight: 800;
+    white-space: nowrap;
+}
+
 .chart-header {
     display: flex;
     justify-content: space-between;

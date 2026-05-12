@@ -64,6 +64,7 @@ def current_mode(request):
     # Define all paths that should be in 'sales' mode
     sales_paths = [
         '/sales',          # Sales dashboard and items
+        '/inventory',      # Inventory module
         '/fees',           # Fee payment section
         '/payment-tracking',  # Payment tracking section
         '/receipts',       # Receipts section

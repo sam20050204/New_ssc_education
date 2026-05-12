@@ -92,80 +92,6 @@
         </article>
     </div>
 
-    <div class="dashboard-panels">
-        <article class="analytics-panel glass-panel">
-            <div class="panel-head">
-                <div>
-                    <h2>Admission Trends</h2>
-                    <p>Monthly pattern of admitted students within the current filtered list.</p>
-                </div>
-            </div>
-            <div class="trend-bars">
-                {% for item in admission_trends %}
-                <div class="trend-item">
-                    <div class="trend-label-row">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.count }}</strong>
-                    </div>
-                    <div class="trend-bar">
-                        <div class="trend-fill" style="width: {% widthratio item.count dashboard_metrics.total_students 100 %}%"></div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="empty-inline">No trend data available.</div>
-                {% endfor %}
-            </div>
-        </article>
-
-        <article class="analytics-panel glass-panel">
-            <div class="panel-head">
-                <div>
-                    <h2>Course Popularity</h2>
-                    <p>Most represented courses in the current result set.</p>
-                </div>
-            </div>
-            <div class="rank-list">
-                {% for course_name, count in top_courses %}
-                <div class="rank-item">
-                    <div>
-                        <strong>{{ course_name }}</strong>
-                        <span>{{ count }} students</span>
-                    </div>
-                    <div class="mini-bar">
-                        <div class="mini-fill" style="width: {% widthratio count dashboard_metrics.total_students 100 %}%"></div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="empty-inline">No course distribution available.</div>
-                {% endfor %}
-            </div>
-        </article>
-
-        <article class="analytics-panel glass-panel">
-            <div class="panel-head">
-                <div>
-                    <h2>Batch Performance</h2>
-                    <p>Most utilized academic batches from the visible student pool.</p>
-                </div>
-            </div>
-            <div class="rank-list">
-                {% for batch_name, count in top_batches %}
-                <div class="rank-item">
-                    <div>
-                        <strong>{{ batch_name }}</strong>
-                        <span>{{ count }} students</span>
-                    </div>
-                    <div class="mini-bar">
-                        <div class="mini-fill alt" style="width: {% widthratio count dashboard_metrics.total_students 100 %}%"></div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="empty-inline">No batch allocation data available.</div>
-                {% endfor %}
-            </div>
-        </article>
-    </div>
-
     <div class="toolbar-shell glass-panel">
         <div class="toolbar-main">
             <div class="search-cluster">
@@ -202,6 +128,16 @@
             <button type="button" class="quick-chip" data-quick-filter="new">New Admissions</button>
             <button type="button" class="quick-chip" data-quick-filter="completed">Completed</button>
             <button type="button" class="quick-chip" data-quick-filter="overdue">Overdue Fees</button>
+            <div class="view-toggle" role="group" aria-label="Student card view switcher">
+                <button type="button" class="view-toggle-btn active" data-view-mode="default">
+                    <i class="fa-solid fa-table-cells-large"></i>
+                    <span>Current View</span>
+                </button>
+                <button type="button" class="view-toggle-btn" data-view-mode="compact">
+                    <i class="fa-solid fa-grip-lines"></i>
+                    <span>Compact Cards</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -226,6 +162,7 @@
                 </div>
 
                 <div class="filter-grid">
+                    <input type="hidden" name="view" id="viewModeInput" value="{{ view_mode }}">
                     <div class="filter-group">
                         <label for="month">Admission Month</label>
                         <select name="month" id="month" class="filter-select">
@@ -418,6 +355,16 @@
                         <div class="student-info">
                             <h3 class="student-name">{{ student.surname }} {{ student.student_name }} {{ student.father_name }}</h3>
                             <div class="student-subline">Admission ID: {{ student.student_id|default:"Pending" }}</div>
+                            <div class="compact-student-meta">
+                                <div class="compact-meta-line">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span>{{ student.mobile_own }}</span>
+                                </div>
+                                <div class="compact-meta-badges">
+                                    <span class="compact-badge compact-batch-badge">{{ student.batch_label }}</span>
+                                    <span class="compact-badge compact-remaining-badge">Rs. {{ student.remaining_fees|floatformat:2 }} due</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -478,7 +425,7 @@
         </div>
     </div>
 
-    {% if page_obj and page_obj.has_other_pages %}
+    {% if view_mode != 'compact' and page_obj and page_obj.has_other_pages %}
     <div class="pagination-container">
         {% if page_obj.has_previous %}
         <a class="filter-btn secondary" href="?page=1&search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}">First</a>
@@ -908,6 +855,66 @@ function bulkCopyMobiles() {
     });
 }
 
+const STUDENT_VIEW_STORAGE_KEY = 'admitted-students-view-mode';
+
+function applyStudentViewMode(viewMode) {
+    const container = document.querySelector('.students-container');
+    const toggleButtons = document.querySelectorAll('.view-toggle-btn');
+    const normalizedMode = viewMode === 'compact' ? 'compact' : 'default';
+
+    if (container) {
+        container.classList.toggle('compact-view', normalizedMode === 'compact');
+    }
+
+    toggleButtons.forEach(button => {
+        const isActive = button.dataset.viewMode === normalizedMode;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+}
+
+function setStudentViewMode(viewMode) {
+    const normalizedMode = viewMode === 'compact' ? 'compact' : 'default';
+    window.localStorage.setItem(STUDENT_VIEW_STORAGE_KEY, normalizedMode);
+    applyStudentViewMode(normalizedMode);
+
+    const params = new URLSearchParams(window.location.search);
+    if (normalizedMode === 'compact') {
+        params.set('view', 'compact');
+    } else {
+        params.delete('view');
+    }
+    params.delete('page');
+
+    const viewModeInput = document.getElementById('viewModeInput');
+    if (viewModeInput) {
+        viewModeInput.value = normalizedMode;
+    }
+
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) {
+        window.location.assign(nextUrl);
+    }
+}
+
+function restoreStudentViewMode() {
+    const params = new URLSearchParams(window.location.search);
+    const urlMode = params.get('view') === 'compact' ? 'compact' : null;
+    const storedMode = window.localStorage.getItem(STUDENT_VIEW_STORAGE_KEY);
+    const activeMode = urlMode || storedMode || 'default';
+
+    applyStudentViewMode(activeMode);
+
+    const viewModeInput = document.getElementById('viewModeInput');
+    if (viewModeInput) {
+        viewModeInput.value = activeMode;
+    }
+}
+
+window.restoreStudentViewMode = restoreStudentViewMode;
+
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.quick-chip').forEach(function(chip) {
         chip.addEventListener('click', function() {
@@ -945,6 +952,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const defaultChip = document.querySelector('.quick-chip[data-quick-filter="all"]');
     if (defaultChip) defaultChip.classList.add('active');
+    document.querySelectorAll('.view-toggle-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            setStudentViewMode(button.dataset.viewMode);
+        });
+    });
+    restoreStudentViewMode();
     autoSearchStudents();
 });
 </script>

@@ -81,3 +81,315 @@ html[data-theme="dark"] .lifecycle-stats div {
     background: #182338;
     border-color: var(--line);
 }
+
+html[data-theme="dark"] .inventory-container {
+    --inventory-ink: #eff6ff;
+    --inventory-muted: #9fb0c8;
+    --inventory-line: #24344e;
+    --inventory-panel: rgba(17, 28, 47, 0.94);
+    --inventory-panel-strong: #0f1a2b;
+    --inventory-surface: linear-gradient(180deg, #101a2b 0%, #162338 100%);
+    --inventory-primary: #2dd4bf;
+    --inventory-primary-dark: #14b8a6;
+    --inventory-primary-soft: rgba(45, 212, 191, 0.16);
+    --inventory-accent: #fbbf24;
+    --inventory-danger: #f87171;
+    --inventory-success: #22c55e;
+    --inventory-info: #38bdf8;
+    --inventory-shadow-sm: 0 16px 28px rgba(2, 6, 23, 0.34);
+    --inventory-shadow-md: 0 24px 56px rgba(2, 6, 23, 0.46);
+}
+
+html[data-theme="dark"] .inventory-container::before {
+    background:
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.10), transparent 28%),
+        radial-gradient(circle at top left, rgba(45, 212, 191, 0.08), transparent 24%);
+}
+
+html[data-theme="dark"] .inventory-page-head,
+html[data-theme="dark"] .page-hero,
+html[data-theme="dark"] .hero-primary,
+html[data-theme="dark"] .supplier-hero-main {
+    background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.10), transparent 28%),
+        linear-gradient(135deg, #0f172a 0%, #10354f 48%, #0f766e 100%) !important;
+    color: #f8fbff !important;
+}
+
+html[data-theme="dark"] .inventory-page-head p,
+html[data-theme="dark"] .page-hero p,
+html[data-theme="dark"] .hero-primary p,
+html[data-theme="dark"] .supplier-hero-main p,
+html[data-theme="dark"] .hero-pill,
+html[data-theme="dark"] .hero-chip,
+html[data-theme="dark"] .supplier-chip {
+    color: rgba(239, 246, 255, 0.8) !important;
+}
+
+html[data-theme="dark"] .entry-card,
+html[data-theme="dark"] .metric-tile,
+html[data-theme="dark"] .timeline-item,
+html[data-theme="dark"] .supplier-item,
+html[data-theme="dark"] .summary-panel,
+html[data-theme="dark"] .modal-card,
+html[data-theme="dark"] .insight-item,
+html[data-theme="dark"] .mini-stat,
+html[data-theme="dark"] .category-card,
+html[data-theme="dark"] .category-metric,
+html[data-theme="dark"] .supplier-summary-box,
+html[data-theme="dark"] .summary-tile,
+html[data-theme="dark"] .value-item,
+html[data-theme="dark"] .image-placeholder,
+html[data-theme="dark"] .filter-pill,
+html[data-theme="dark"] .register-row,
+html[data-theme="dark"] .supplier-row {
+    background: var(--panel) !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .register-row.header,
+html[data-theme="dark"] .card-header,
+html[data-theme="dark"] .table thead,
+html[data-theme="dark"] .summary-head,
+html[data-theme="dark"] .panel-mini-head,
+html[data-theme="dark"] .panel-mini-foot {
+    background: #162238 !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .table-responsive,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .chart-container,
+html[data-theme="dark"] .form-section,
+html[data-theme="dark"] .entry-card,
+html[data-theme="dark"] .modal-card,
+html[data-theme="dark"] .empty-state {
+    background: var(--panel) !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .insight-row {
+    background: linear-gradient(180deg, #101a2b 0%, #162338 100%) !important;
+    border-color: var(--line) !important;
+}
+
+html[data-theme="dark"] .insight-copy strong,
+html[data-theme="dark"] .insight-value {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .receipt-form-card,
+html[data-theme="dark"] .receipt-preview-card,
+html[data-theme="dark"] .receipt-history-card {
+    background: linear-gradient(180deg, rgba(17, 28, 47, 0.96) 0%, rgba(14, 24, 41, 0.94) 100%) !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .line-item-row,
+html[data-theme="dark"] .history-card,
+html[data-theme="dark"] .receipt-print-shell {
+    background: linear-gradient(180deg, #101a2b 0%, #162338 100%) !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .history-card:hover,
+html[data-theme="dark"] .history-card.active {
+    border-color: rgba(56, 189, 248, 0.38) !important;
+    box-shadow: 0 14px 28px rgba(2, 6, 23, 0.32) !important;
+}
+
+html[data-theme="dark"] .section-head h2,
+html[data-theme="dark"] .line-items-head h3,
+html[data-theme="dark"] .print-brand strong,
+html[data-theme="dark"] .receipt-meta-grid strong,
+html[data-theme="dark"] .receipt-address strong,
+html[data-theme="dark"] .receipt-notes p,
+html[data-theme="dark"] .total-chip strong,
+html[data-theme="dark"] .history-topline strong {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .section-head p,
+html[data-theme="dark"] .field-group label,
+html[data-theme="dark"] .print-brand span,
+html[data-theme="dark"] .receipt-address span,
+html[data-theme="dark"] .receipt-notes span,
+html[data-theme="dark"] .receipt-meta-grid span,
+html[data-theme="dark"] .receipt-lines-table th,
+html[data-theme="dark"] .history-meta,
+html[data-theme="dark"] .empty-preview,
+html[data-theme="dark"] .total-chip span {
+    color: var(--text-soft) !important;
+}
+
+html[data-theme="dark"] .receipt-lines-table td,
+html[data-theme="dark"] .receipt-lines-table th,
+html[data-theme="dark"] .print-brand,
+html[data-theme="dark"] .receipt-summary-grand {
+    border-color: var(--line) !important;
+}
+
+html[data-theme="dark"] .total-chip {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(14, 165, 233, 0.2) 100%) !important;
+    border-color: rgba(56, 189, 248, 0.26) !important;
+}
+
+html[data-theme="dark"] .remove-line-btn {
+    background: rgba(239, 68, 68, 0.16) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] .remove-line-btn:hover {
+    background: rgba(239, 68, 68, 0.24) !important;
+}
+
+html[data-theme="dark"] .table th,
+html[data-theme="dark"] .table td,
+html[data-theme="dark"] .card-title,
+html[data-theme="dark"] .entry-card-title,
+html[data-theme="dark"] .item-title,
+html[data-theme="dark"] .category-name,
+html[data-theme="dark"] .supplier-name,
+html[data-theme="dark"] .insight-item strong,
+html[data-theme="dark"] .hero-metric strong,
+html[data-theme="dark"] .summary-tile strong,
+html[data-theme="dark"] .value-item strong,
+html[data-theme="dark"] .mini-stat strong,
+html[data-theme="dark"] .metric-block strong,
+html[data-theme="dark"] .info-row div,
+html[data-theme="dark"] .supplier-info-row div {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .text-muted,
+html[data-theme="dark"] .field-helper,
+html[data-theme="dark"] .entry-card-copy,
+html[data-theme="dark"] .insight-meta,
+html[data-theme="dark"] .item-subtext,
+html[data-theme="dark"] .category-description,
+html[data-theme="dark"] .supplier-meta,
+html[data-theme="dark"] .summary-note,
+html[data-theme="dark"] .info-row label,
+html[data-theme="dark"] .supplier-info-row label,
+html[data-theme="dark"] .mini-stat label,
+html[data-theme="dark"] .metric-tile label,
+html[data-theme="dark"] .summary-tile label,
+html[data-theme="dark"] .value-item label,
+html[data-theme="dark"] .status-meta,
+html[data-theme="dark"] .stock-bar-label {
+    color: var(--text-soft) !important;
+}
+
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="date"],
+html[data-theme="dark"] input[type="url"],
+html[data-theme="dark"] input[type="file"],
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+    background: #0f1a2b !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+    box-shadow: inset 0 1px 2px rgba(2, 6, 23, 0.25) !important;
+}
+
+html[data-theme="dark"] .form-control:focus,
+html[data-theme="dark"] .form-select:focus,
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus {
+    border-color: rgba(45, 212, 191, 0.5) !important;
+    background: #122036 !important;
+    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.12) !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: #7f93af !important;
+}
+
+html[data-theme="dark"] .table tbody tr:hover,
+html[data-theme="dark"] .timeline-item:hover,
+html[data-theme="dark"] .supplier-item:hover,
+html[data-theme="dark"] .register-row:hover,
+html[data-theme="dark"] .supplier-row:hover {
+    background: #152235 !important;
+}
+
+html[data-theme="dark"] .progress {
+    background: #1b2a40 !important;
+}
+
+html[data-theme="dark"] code {
+    background: #16253d !important;
+    color: #7dd3fc !important;
+}
+
+html[data-theme="dark"] .btn-outline-primary,
+html[data-theme="dark"] .ghost-btn {
+    background: #162238 !important;
+    border-color: var(--line) !important;
+    color: #7dd3fc !important;
+}
+
+html[data-theme="dark"] .btn-secondary {
+    background: #182338 !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .subtle-btn {
+    background: #132132 !important;
+    border-color: rgba(45, 212, 191, 0.24) !important;
+    color: #7cead9 !important;
+}
+
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .chart-empty-state,
+html[data-theme="dark"] .image-placeholder {
+    color: var(--text-soft) !important;
+}
+
+html[data-theme="dark"] .badge.bg-light {
+    background: #162238 !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .filter-pill,
+html[data-theme="dark"] .status-chip.ok {
+    background: #132132 !important;
+}
+
+html[data-theme="dark"] .filter-pill.is-active {
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+html[data-theme="dark"] .filter-pill.is-active.low-stock {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%) !important;
+}
+
+html[data-theme="dark"] .filter-pill.is-active.overstocked {
+    background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%) !important;
+}
+
+html[data-theme="dark"] .filter-pill.is-active.clear-filter {
+    background: linear-gradient(135deg, #475569 0%, #64748b 100%) !important;
+}
+
+html[data-theme="dark"] .status-chip.low {
+    background: rgba(248, 113, 113, 0.16) !important;
+}
+
+html[data-theme="dark"] .status-chip.high {
+    background: rgba(251, 191, 36, 0.16) !important;
+}

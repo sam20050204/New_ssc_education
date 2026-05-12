@@ -1,438 +1,1288 @@
 {% extends "inventory/base.html" %}
 {% load static %}
 
-{% block page_title %}Add New Item{% endblock %}
+{% block page_title %}Unified Inventory Entry{% endblock %}
 
 {% block extra_css %}
 {{ block.super }}
 <style>
-    .item-form-container {
-        max-width: 900px;
-        margin: 0 auto;
+    .inventory-workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+        gap: 24px;
+        align-items: start;
     }
 
-    .form-section-title {
-        border-bottom: 2px solid #667eea;
-        padding-bottom: 15px;
-        margin-bottom: 25px;
-        margin-top: 35px;
-        font-size: 18px;
+    .workspace-main,
+    .workspace-side {
+        display: grid;
+        gap: 20px;
+    }
+
+    .page-hero {
+        position: relative;
+        overflow: hidden;
+        border-radius: 28px;
+        padding: 28px;
+        background:
+            radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 28%),
+            linear-gradient(135deg, #0f172a 0%, #134e4a 48%, #0f766e 100%);
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+    }
+
+    .page-hero h1 {
+        margin: 0 0 10px;
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+    }
+
+    .page-hero p {
+        max-width: 720px;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.82);
+    }
+
+    .hero-metrics {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .hero-pill {
+        padding: 10px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 0.92rem;
+    }
+
+    .entry-card {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(10px);
+    }
+
+    .entry-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 20px;
+    }
+
+    .entry-card-title {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .entry-card-copy {
+        margin: 6px 0 0;
+        color: #475569;
+        font-size: 0.95rem;
+    }
+
+    .section-tag {
+        padding: 8px 12px;
+        border-radius: 14px;
+        background: #ecfeff;
+        color: #0f766e;
+        font-weight: 700;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .form-col-12 { grid-column: span 12; }
+    .form-col-8 { grid-column: span 8; }
+    .form-col-6 { grid-column: span 6; }
+    .form-col-4 { grid-column: span 4; }
+
+    .field-group {
+        position: relative;
+    }
+
+    .field-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .field-helper {
+        margin-top: 8px;
+        color: #64748b;
+        font-size: 0.84rem;
+    }
+
+    .field-error {
+        margin-top: 8px;
+        color: #dc2626;
+        font-size: 0.84rem;
         font-weight: 600;
-        color: #333;
     }
 
-    .form-section-title:first-of-type {
-        margin-top: 0;
+    .input-action {
+        display: flex;
+        gap: 10px;
+        align-items: center;
     }
 
-    .calculation-display {
-        background: #f0f4ff;
-        padding: 15px;
-        border-left: 4px solid #667eea;
-        border-radius: 4px;
-        margin-top: 10px;
-        font-weight: 500;
-    }
-
-    .category-badge {
-        display: inline-block;
-        background: #e7f3ff;
-        color: #0066cc;
-        padding: 6px 12px;
-        border-radius: 20px;
-        margin: 5px 5px 5px 0;
+    .ghost-btn,
+    .primary-btn,
+    .subtle-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 14px;
+        border-radius: 14px;
+        border: 0;
+        text-decoration: none;
+        font-weight: 700;
         cursor: pointer;
-        border: 1px solid #0066cc;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
     }
 
-    .category-badge:hover {
-        background: #0066cc;
-        color: white;
+    .primary-btn {
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+        color: #fff;
+        box-shadow: 0 16px 30px rgba(20, 184, 166, 0.24);
     }
 
-    .toggle-new-category {
-        margin-top: 10px;
+    .ghost-btn {
+        background: #e2e8f0;
+        color: #0f172a;
     }
 
-    .autocomplete-results {
+    .subtle-btn {
+        background: #f8fafc;
+        color: #0f766e;
+        border: 1px dashed rgba(15, 118, 110, 0.25);
+    }
+
+    .primary-btn:hover,
+    .ghost-btn:hover,
+    .subtle-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .autocomplete-panel {
         position: absolute;
-        background: white;
-        border: 1px solid #ddd;
-        border-top: none;
-        width: 100%;
-        max-height: 300px;
-        overflow-y: auto;
-        z-index: 1000;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        z-index: 25;
         display: none;
+        border-radius: 18px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        background: #fff;
+        box-shadow: 0 26px 50px rgba(15, 23, 42, 0.15);
+        overflow: hidden;
     }
 
-    .autocomplete-results.show {
+    .autocomplete-panel.show {
         display: block;
     }
 
     .autocomplete-item {
-        padding: 12px;
-        border-bottom: 1px solid #eee;
+        padding: 14px 16px;
+        border-bottom: 1px solid #e2e8f0;
         cursor: pointer;
-        transition: background 0.2s;
     }
 
-    .autocomplete-item:hover {
-        background: #f5f5f5;
+    .autocomplete-item:last-child {
+        border-bottom: 0;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.is-active {
+        background: #f0fdfa;
     }
 
     .autocomplete-item strong {
         display: block;
-        color: #333;
+        color: #0f172a;
+        margin-bottom: 4px;
     }
 
     .autocomplete-item small {
+        color: #64748b;
+    }
+
+    .insight-shell {
+        display: none;
+        gap: 14px;
+    }
+
+    .insight-shell.show {
+        display: grid;
+    }
+
+    .insight-banner {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #ecfeff 0%, #f8fafc 100%);
+        border: 1px solid rgba(13, 148, 136, 0.14);
+    }
+
+    .insight-grid,
+    .summary-grid,
+    .history-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .metric-tile {
+        padding: 14px;
+        border-radius: 18px;
+        background: #f8fafc;
+        border: 1px solid rgba(15, 23, 42, 0.06);
+    }
+
+    .metric-tile label {
         display: block;
-        color: #999;
-        margin-top: 3px;
+        margin-bottom: 6px;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #64748b;
+        font-weight: 700;
     }
 
-    .previous-purchases {
-        background: #f9f9f9;
-        padding: 15px;
-        border-radius: 6px;
-        border-left: 4px solid #ffc107;
+    .metric-tile strong {
+        font-size: 1.05rem;
+        color: #0f172a;
     }
 
-    .purchase-history-table {
-        font-size: 13px;
+    .timeline-list,
+    .supplier-list {
+        display: grid;
+        gap: 10px;
     }
 
-    .purchase-history-table td {
-        padding: 8px 4px;
-        border-bottom: 1px solid #eee;
+    .timeline-item,
+    .supplier-item {
+        padding: 14px;
+        border-radius: 16px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
     }
 
-    .help-text {
-        font-size: 13px;
-        color: #666;
-        margin-top: 5px;
+    .timeline-top,
+    .supplier-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+    }
+
+    .timeline-top strong,
+    .supplier-top strong {
+        color: #0f172a;
+    }
+
+    .timeline-meta,
+    .supplier-meta {
+        color: #64748b;
+        font-size: 0.84rem;
+    }
+
+    .workspace-side {
+        position: sticky;
+        top: 18px;
+    }
+
+    .summary-panel {
+        overflow: hidden;
+        border-radius: 28px;
+        background:
+            radial-gradient(circle at top left, rgba(20, 184, 166, 0.22), transparent 26%),
+            linear-gradient(180deg, #0f172a 0%, #111827 100%);
+        color: #fff;
+    }
+
+    .summary-head {
+        padding: 24px 24px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .summary-head h3 {
+        margin: 0 0 8px;
+        font-size: 1.2rem;
+        font-weight: 800;
+    }
+
+    .summary-head p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.72);
+    }
+
+    .summary-body {
+        padding: 20px 24px 24px;
+        display: grid;
+        gap: 14px;
+    }
+
+    .summary-stat {
+        padding: 15px 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .summary-stat label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.56);
+        font-weight: 700;
+    }
+
+    .summary-stat strong {
+        font-size: 1.28rem;
+        font-weight: 800;
+    }
+
+    .summary-note {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.86rem;
+    }
+
+    .status-chip.low {
+        background: rgba(248, 113, 113, 0.16);
+        color: #fecaca;
+    }
+
+    .status-chip.ok {
+        background: rgba(52, 211, 153, 0.16);
+        color: #bbf7d0;
+    }
+
+    .status-chip.high {
+        background: rgba(251, 191, 36, 0.16);
+        color: #fde68a;
+    }
+
+    .modal-shell {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(15, 23, 42, 0.56);
+        z-index: 1200;
+    }
+
+    .modal-shell.show {
+        display: flex;
+    }
+
+    .modal-card {
+        width: min(100%, 560px);
+        background: #fff;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 30px 70px rgba(15, 23, 42, 0.25);
+    }
+
+    .modal-card h3 {
+        margin: 0 0 8px;
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+    .modal-card p {
+        color: #64748b;
+        margin-bottom: 18px;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .error-banner {
+        margin-bottom: 16px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+
+    .toolbar-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .muted-inline {
+        color: #64748b;
+        font-size: 0.86rem;
+    }
+
+    @media (max-width: 1180px) {
+        .inventory-workspace {
+            grid-template-columns: 1fr;
+        }
+
+        .workspace-side {
+            position: static;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .form-col-8,
+        .form-col-6,
+        .form-col-4 {
+            grid-column: span 12;
+        }
+
+        .entry-card,
+        .page-hero,
+        .modal-card {
+            padding: 20px;
+            border-radius: 20px;
+        }
+
+        .summary-head,
+        .summary-body {
+            padding-left: 20px;
+            padding-right: 20px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-{{ block.super }}
-
-<div class="item-form-container">
-    {% if item_form.non_field_errors %}
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-circle"></i> <strong>Error!</strong>
-        {% for error in item_form.non_field_errors %}
-        <div>{{ error }}</div>
-        {% endfor %}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="inventory-container">
+    <div class="page-hero mb-4">
+        <h1>Unified Inventory Entry</h1>
+        <p>Capture item details, supplier information, pricing, stock controls, and the latest purchase in one structured workflow designed for fast counter operations.</p>
+        <div class="hero-metrics">
+            <div class="hero-pill"><i class="fa-solid fa-boxes-stacked"></i> Single-screen item + purchase workflow</div>
+            <div class="hero-pill"><i class="fa-solid fa-clock-rotate-left"></i> Purchase history and supplier memory</div>
+            <div class="hero-pill"><i class="fa-solid fa-chart-line"></i> Live profit and stock projections</div>
+        </div>
     </div>
-    {% endif %}
 
-    <form method="post" enctype="multipart/form-data" class="form-section">
+    <form method="post" enctype="multipart/form-data" id="inventory-entry-form">
         {% csrf_token %}
 
-        <!-- Item Basic Information -->
-        <h3 class="form-section-title">Item Information</h3>
-
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="{{ item_form.name.id_for_label }}" class="form-label">
-                    Item Name <span class="text-danger">*</span>
-                </label>
-                {{ item_form.name }}
-                {% if item_form.name.errors %}
-                <div class="invalid-feedback d-block">{{ item_form.name.errors.0 }}</div>
-                {% endif %}
-                <div class="help-text">
-                    <i class="fas fa-info-circle"></i>
-                    Enter the product name. We'll show you previous purchases if this item exists.
-                </div>
-                <div id="previous-purchases"></div>
-            </div>
-
-            <div class="col-md-6">
-                <label for="{{ item_form.sku.id_for_label }}" class="form-label">
-                    SKU (Stock Code)
-                </label>
-                {{ item_form.sku }}
-                {% if item_form.sku.errors %}
-                <div class="invalid-feedback d-block">{{ item_form.sku.errors.0 }}</div>
-                {% endif %}
-                <div class="help-text">Leave blank for auto-generation</div>
-            </div>
-        </div>
-
-        <!-- Category Selection -->
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="{{ item_form.category.id_for_label }}" class="form-label">
-                    Category <span class="text-danger">*</span>
-                </label>
-                {{ item_form.category }}
-                {% if item_form.category.errors %}
-                <div class="invalid-feedback d-block">{{ item_form.category.errors.0 }}</div>
-                {% endif %}
-            </div>
-
-            <div class="col-md-6">
-                <label for="{{ item_form.new_category.id_for_label }}" class="form-label">
-                    Or Create New Category
-                </label>
-                {{ item_form.new_category }}
-                <div class="help-text">Leave blank to use an existing category</div>
-            </div>
-        </div>
-
-        <!-- Description -->
-        <div class="mb-3">
-            <label for="{{ item_form.description.id_for_label }}" class="form-label">
-                Description
-            </label>
-            {{ item_form.description }}
-            {% if item_form.description.errors %}
-            <div class="invalid-feedback d-block">{{ item_form.description.errors.0 }}</div>
-            {% endif %}
-        </div>
-
-        <!-- Specifications -->
-        <div class="mb-3">
-            <label for="{{ item_form.specifications.id_for_label }}" class="form-label">
-                Technical Specifications
-            </label>
-            {{ item_form.specifications }}
-            {% if item_form.specifications.errors %}
-            <div class="invalid-feedback d-block">{{ item_form.specifications.errors.0 }}</div>
-            {% endif %}
-        </div>
-
-        <!-- Image -->
-        <div class="mb-3">
-            <label for="{{ item_form.image.id_for_label }}" class="form-label">
-                Product Image
-            </label>
-            {{ item_form.image }}
-            <div class="help-text">JPG, PNG, or GIF up to 5MB</div>
-        </div>
-
-        <!-- Stock Management -->
-        <h3 class="form-section-title">Stock Management</h3>
-
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="{{ item_form.minimum_stock.id_for_label }}" class="form-label">
-                    Minimum Stock Level
-                </label>
-                {{ item_form.minimum_stock }}
-                {% if item_form.minimum_stock.errors %}
-                <div class="invalid-feedback d-block">{{ item_form.minimum_stock.errors.0 }}</div>
-                {% endif %}
-                <div class="help-text">Alert when stock falls below this level</div>
-            </div>
-
-            <div class="col-md-6">
-                <label for="{{ item_form.maximum_stock.id_for_label }}" class="form-label">
-                    Maximum Stock Level
-                </label>
-                {{ item_form.maximum_stock }}
-                {% if item_form.maximum_stock.errors %}
-                <div class="invalid-feedback d-block">{{ item_form.maximum_stock.errors.0 }}</div>
-                {% endif %}
-                <div class="help-text">Threshold for overstocking alerts</div>
-            </div>
-        </div>
-
-        <!-- Pricing Information -->
-        <h3 class="form-section-title">Pricing & GST</h3>
-
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="{{ item_form.selling_price.id_for_label }}" class="form-label">
-                    Selling Price (per unit) <span class="text-danger">*</span>
-                </label>
-                {{ item_form.selling_price }}
-                {% if item_form.selling_price.errors %}
-                <div class="invalid-feedback d-block">{{ item_form.selling_price.errors.0 }}</div>
-                {% endif %}
-            </div>
-
-            <div class="col-md-6">
-                <label for="{{ item_form.gst_percentage.id_for_label }}" class="form-label">
-                    GST Percentage
-                </label>
-                {{ item_form.gst_percentage }}
-                {% if item_form.gst_percentage.errors %}
-                <div class="invalid-feedback d-block">{{ item_form.gst_percentage.errors.0 }}</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <hr class="my-4">
-
-        <!-- Form Buttons -->
-        <div class="d-flex gap-2 justify-content-end">
-            <a href="{% url 'inventory:item-list' %}" class="btn btn-secondary">
-                <i class="fas fa-times"></i> Cancel
-            </a>
-            <button type="submit" class="btn btn-primary btn-lg">
-                <i class="fas fa-save"></i> Add Item & Record Purchase
-            </button>
-        </div>
-    </form>
-
-    <!-- Purchase Details Section -->
-    <form method="post" class="form-section">
-        {% csrf_token %}
-
-        <h3 class="form-section-title">Initial Purchase Details</h3>
-        <p class="text-muted mb-3">Record the first purchase when adding this item</p>
-
-        <!-- Item Selection / Creation (handled above) -->
-        <!-- Supplier Selection -->
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="{{ purchase_form.supplier.id_for_label }}" class="form-label">
-                    Supplier/Vendor
-                </label>
-                <div class="input-group">
-                    {{ purchase_form.supplier }}
-                    <a href="{% url 'inventory:add-supplier' %}" class="btn btn-outline-secondary" target="_blank">
-                        <i class="fas fa-plus"></i>
-                    </a>
-                </div>
-                <div class="help-text">Or <a href="{% url 'inventory:add-supplier' %}">add new supplier</a></div>
-            </div>
-
-            <div class="col-md-6">
-                <label for="{{ purchase_form.purchase_date.id_for_label }}" class="form-label">
-                    Purchase Date <span class="text-danger">*</span>
-                </label>
-                {{ purchase_form.purchase_date }}
-            </div>
-        </div>
-
-        <!-- Quantity & Pricing -->
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <label for="{{ purchase_form.quantity.id_for_label }}" class="form-label">
-                    Quantity Purchased <span class="text-danger">*</span>
-                </label>
-                {{ purchase_form.quantity }}
-                {% if purchase_form.quantity.errors %}
-                <div class="invalid-feedback d-block">{{ purchase_form.quantity.errors.0 }}</div>
-                {% endif %}
-            </div>
-
-            <div class="col-md-4">
-                <label for="{{ purchase_form.purchase_rate.id_for_label }}" class="form-label">
-                    Purchase Rate (per unit) <span class="text-danger">*</span>
-                </label>
-                {{ purchase_form.purchase_rate }}
-                {% if purchase_form.purchase_rate.errors %}
-                <div class="invalid-feedback d-block">{{ purchase_form.purchase_rate.errors.0 }}</div>
-                {% endif %}
-            </div>
-
-            <div class="col-md-4">
-                <label class="form-label">Total Cost</label>
-                <div class="calculation-display" id="total-cost-display">
-                    ₹ 0.00
-                </div>
-            </div>
-        </div>
-
-        <!-- Selling Price -->
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="{{ purchase_form.selling_price.id_for_label }}" class="form-label">
-                    Selling Price (at time of purchase)
-                </label>
-                {{ purchase_form.selling_price }}
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Profit per Unit</label>
-                <div class="calculation-display" id="profit-display">
-                    ₹ 0.00
-                </div>
-            </div>
-        </div>
-
-        <!-- Batch Information -->
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="{{ purchase_form.batch_number.id_for_label }}" class="form-label">
-                    Batch Number
-                </label>
-                {{ purchase_form.batch_number }}
-            </div>
-
-            <div class="col-md-6">
-                <label for="{{ purchase_form.expiry_date.id_for_label }}" class="form-label">
-                    Expiry Date
-                </label>
-                {{ purchase_form.expiry_date }}
-            </div>
-        </div>
-
-        <!-- Invoice Number -->
-        <div class="mb-3">
-            <label for="{{ purchase_form.invoice_number.id_for_label }}" class="form-label">
-                Invoice/Bill Number
-            </label>
-            {{ purchase_form.invoice_number }}
-        </div>
-
-        <!-- Notes -->
-        <div class="mb-3">
-            <label for="{{ purchase_form.notes.id_for_label }}" class="form-label">
-                Additional Notes
-            </label>
-            {{ purchase_form.notes }}
-        </div>
-
-        {% if purchase_form.non_field_errors %}
-        <div class="alert alert-danger">
-            {% for error in purchase_form.non_field_errors %}
+        {% if form.non_field_errors %}
+        <div class="error-banner">
+            {% for error in form.non_field_errors %}
             <div>{{ error }}</div>
             {% endfor %}
         </div>
         {% endif %}
 
-        <hr class="my-4">
+        <div class="inventory-workspace">
+            <div class="workspace-main">
+                <section class="entry-card">
+                    <div class="entry-card-header">
+                        <div>
+                            <h2 class="entry-card-title">Item Details</h2>
+                            <p class="entry-card-copy">Search an existing product or register a new stock item with SKU, description, and technical specs.</p>
+                        </div>
+                        <span class="section-tag">A</span>
+                    </div>
 
-        <!-- Form Buttons -->
-        <div class="d-flex gap-2 justify-content-end">
-            <a href="{% url 'inventory:item-list' %}" class="btn btn-secondary">
-                <i class="fas fa-times"></i> Cancel
-            </a>
-            <button type="submit" class="btn btn-primary btn-lg">
-                <i class="fas fa-save"></i> Add Item & Record Purchase
-            </button>
+                    {{ form.existing_item_id }}
+
+                    <div class="form-grid">
+                        <div class="field-group form-col-12">
+                            <label for="{{ form.item_name.id_for_label }}">Item Name</label>
+                            {{ form.item_name }}
+                            {% if form.item_name.errors %}<div class="field-error">{{ form.item_name.errors.0 }}</div>{% endif %}
+                            <div class="field-helper">Autocomplete checks existing inventory and loads purchase memory for repeat buying.</div>
+                            <div class="autocomplete-panel" id="item-autocomplete-results"></div>
+                        </div>
+
+                        <div class="field-group form-col-12">
+                            <div id="item-insights-shell" class="insight-shell">
+                                <div class="insight-banner">
+                                    <div class="toolbar-actions">
+                                        <strong id="insight-item-label">Existing item detected</strong>
+                                        <button class="subtle-btn" type="button" id="clear-existing-item">
+                                            <i class="fa-solid fa-pen"></i> Treat as new item
+                                        </button>
+                                    </div>
+                                    <div class="insight-grid">
+                                        <div class="metric-tile">
+                                            <label>Current Stock</label>
+                                            <strong id="insight-current-stock">0</strong>
+                                        </div>
+                                        <div class="metric-tile">
+                                            <label>Average Purchase Cost</label>
+                                            <strong id="insight-average-rate">Rs 0.00</strong>
+                                        </div>
+                                        <div class="metric-tile">
+                                            <label>Latest Purchase Rate</label>
+                                            <strong id="insight-latest-rate">Rs 0.00</strong>
+                                        </div>
+                                        <div class="metric-tile">
+                                            <label>Selling Price</label>
+                                            <strong id="insight-selling-price">Rs 0.00</strong>
+                                        </div>
+                                    </div>
+                                    <div class="toolbar-actions">
+                                        <button type="button" class="subtle-btn" data-open-modal="purchase-history-modal">
+                                            <i class="fa-solid fa-clock-rotate-left"></i> View purchase history
+                                        </button>
+                                        <button type="button" class="subtle-btn" data-open-modal="supplier-history-modal">
+                                            <i class="fa-solid fa-truck-field"></i> View supplier history
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field-group form-col-8">
+                            <label for="{{ form.description.id_for_label }}">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<div class="field-error">{{ form.description.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.image.id_for_label }}">Item Image</label>
+                            {{ form.image }}
+                            {% if form.image.errors %}<div class="field-error">{{ form.image.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-12">
+                            <label for="{{ form.specifications.id_for_label }}">Specifications</label>
+                            {{ form.specifications }}
+                            {% if form.specifications.errors %}<div class="field-error">{{ form.specifications.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="entry-card">
+                    <div class="entry-card-header">
+                        <div>
+                            <h2 class="entry-card-title">Category Management</h2>
+                            <p class="entry-card-copy">Assign the item to a clean category structure and create new categories without leaving the page.</p>
+                        </div>
+                        <span class="section-tag">B</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="field-group form-col-8">
+                            <label for="{{ form.category.id_for_label }}">Category</label>
+                            <div class="input-action">
+                                {{ form.category }}
+                                <button type="button" class="subtle-btn" data-open-modal="category-modal">
+                                    <i class="fa-solid fa-plus"></i> Add Category
+                                </button>
+                            </div>
+                            {% if form.category.errors %}<div class="field-error">{{ form.category.errors.0 }}</div>{% endif %}
+                            <div class="field-helper">Duplicate category names are blocked case-insensitively.</div>
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label>Quick Actions</label>
+                            <div class="toolbar-actions">
+                                <a href="{% url 'inventory:category-list' %}" class="ghost-btn">
+                                    <i class="fa-solid fa-layer-group"></i> Manage Categories
+                                </a>
+                            </div>
+                            <div class="field-helper">Use the category list page for full edit or soft-delete actions.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="entry-card">
+                    <div class="entry-card-header">
+                        <div>
+                            <h2 class="entry-card-title">Purchase Information</h2>
+                            <p class="entry-card-copy">Record the supplier, purchase date, batch traceability, quantity, and tax-ready invoice metadata.</p>
+                        </div>
+                        <span class="section-tag">C</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="field-group form-col-8">
+                            <label for="{{ form.supplier.id_for_label }}">Supplier</label>
+                            <div class="input-action">
+                                {{ form.supplier }}
+                                <button type="button" class="subtle-btn" data-open-modal="supplier-modal">
+                                    <i class="fa-solid fa-user-plus"></i> Add Supplier
+                                </button>
+                            </div>
+                            {% if form.supplier.errors %}<div class="field-error">{{ form.supplier.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.purchase_date.id_for_label }}">Purchase Date</label>
+                            {{ form.purchase_date }}
+                            {% if form.purchase_date.errors %}<div class="field-error">{{ form.purchase_date.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.quantity.id_for_label }}">Quantity</label>
+                            {{ form.quantity }}
+                            {% if form.quantity.errors %}<div class="field-error">{{ form.quantity.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.purchase_rate.id_for_label }}">Purchase Rate</label>
+                            {{ form.purchase_rate }}
+                            {% if form.purchase_rate.errors %}<div class="field-error">{{ form.purchase_rate.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label>Total Purchase Cost</label>
+                            <div class="metric-tile">
+                                <label>Auto Calculation</label>
+                                <strong id="total-purchase-cost">Rs 0.00</strong>
+                            </div>
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.batch_number.id_for_label }}">Batch Number</label>
+                            {{ form.batch_number }}
+                            {% if form.batch_number.errors %}<div class="field-error">{{ form.batch_number.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.invoice_number.id_for_label }}">Invoice Number</label>
+                            {{ form.invoice_number }}
+                            {% if form.invoice_number.errors %}<div class="field-error">{{ form.invoice_number.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.expiry_date.id_for_label }}">Expiry Date</label>
+                            {{ form.expiry_date }}
+                            {% if form.expiry_date.errors %}<div class="field-error">{{ form.expiry_date.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-12">
+                            <label for="{{ form.notes.id_for_label }}">Purchase Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}<div class="field-error">{{ form.notes.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="entry-card">
+                    <div class="entry-card-header">
+                        <div>
+                            <h2 class="entry-card-title">Pricing and Profit Calculation</h2>
+                            <p class="entry-card-copy">Set selling price and tax defaults while monitoring projected margins, profit, and revenue in real time.</p>
+                        </div>
+                        <span class="section-tag">D</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.selling_price.id_for_label }}">Selling Price</label>
+                            {{ form.selling_price }}
+                            {% if form.selling_price.errors %}<div class="field-error">{{ form.selling_price.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.gst_percentage.id_for_label }}">GST Percentage</label>
+                            {{ form.gst_percentage }}
+                            {% if form.gst_percentage.errors %}<div class="field-error">{{ form.gst_percentage.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label>Profit Per Unit</label>
+                            <div class="metric-tile">
+                                <label>Auto Calculation</label>
+                                <strong id="profit-per-unit">Rs 0.00</strong>
+                            </div>
+                        </div>
+
+                        <div class="field-group form-col-6">
+                            <div class="metric-tile">
+                                <label>Expected Revenue</label>
+                                <strong id="expected-revenue">Rs 0.00</strong>
+                            </div>
+                        </div>
+
+                        <div class="field-group form-col-6">
+                            <div class="metric-tile">
+                                <label>Total Expected Profit</label>
+                                <strong id="total-expected-profit">Rs 0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="entry-card">
+                    <div class="entry-card-header">
+                        <div>
+                            <h2 class="entry-card-title">Stock Settings</h2>
+                            <p class="entry-card-copy">Control minimum alerts, maximum thresholds, and batch-aware stock posture before saving the transaction.</p>
+                        </div>
+                        <span class="section-tag">E</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.minimum_stock.id_for_label }}">Minimum Stock Alert</label>
+                            {{ form.minimum_stock }}
+                            {% if form.minimum_stock.errors %}<div class="field-error">{{ form.minimum_stock.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label for="{{ form.maximum_stock.id_for_label }}">Maximum Stock Threshold</label>
+                            {{ form.maximum_stock }}
+                            {% if form.maximum_stock.errors %}<div class="field-error">{{ form.maximum_stock.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="field-group form-col-4">
+                            <label>Projected Stock After Save</label>
+                            <div class="metric-tile">
+                                <label>Current + This Purchase</label>
+                                <strong id="projected-stock">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="entry-card">
+                    <div class="entry-card-header">
+                        <div>
+                            <h2 class="entry-card-title">Save Actions</h2>
+                            <p class="entry-card-copy">Commit the item and purchase together, or leave the page without creating duplicate records.</p>
+                        </div>
+                        <span class="section-tag">F</span>
+                    </div>
+
+                    <div class="toolbar-actions">
+                        <a href="{% url 'inventory:item-list' %}" class="ghost-btn">
+                            <i class="fa-solid fa-arrow-left"></i> Back to Items
+                        </a>
+                        <button type="submit" class="primary-btn">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Inventory Entry
+                        </button>
+                        <span class="muted-inline">This writes item details, purchase history, stock, and inventory analytics in one step.</span>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="workspace-side">
+                <section class="summary-panel">
+                    <div class="summary-head">
+                        <h3>Pricing Summary</h3>
+                        <p>Live commercial snapshot for the current purchase line.</p>
+                    </div>
+                    <div class="summary-body">
+                        <div class="summary-stat">
+                            <label>Total Purchase Cost</label>
+                            <strong id="summary-total-cost">Rs 0.00</strong>
+                        </div>
+                        <div class="summary-stat">
+                            <label>Expected Revenue</label>
+                            <strong id="summary-revenue">Rs 0.00</strong>
+                        </div>
+                        <div class="summary-stat">
+                            <label>Total Expected Profit</label>
+                            <strong id="summary-profit">Rs 0.00</strong>
+                        </div>
+                        <div class="summary-stat">
+                            <label>Average Purchase Cost</label>
+                            <strong id="summary-average-cost">Rs 0.00</strong>
+                        </div>
+                        <div class="summary-stat">
+                            <label>Latest Purchase Rate</label>
+                            <strong id="summary-latest-cost">Rs 0.00</strong>
+                        </div>
+                        <div class="summary-stat">
+                            <label>Stock Status</label>
+                            <div id="stock-status-chip" class="status-chip ok">Healthy Stock</div>
+                        </div>
+                        <div class="summary-note">
+                            Batch-wise history, supplier history, barcode-ready SKU, invoice reference, and GST defaults are captured for future ERP flows.
+                        </div>
+                    </div>
+                </section>
+            </aside>
         </div>
     </form>
 </div>
 
+<div class="modal-shell" id="category-modal" aria-hidden="true">
+    <div class="modal-card">
+        <h3>Add New Category</h3>
+        <p>Create a category without leaving the inventory entry workflow.</p>
+        <form id="category-quick-create-form">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="field-group form-col-12">
+                    <label for="category_name_modal">Category Name</label>
+                    <input type="text" id="category_name_modal" name="name" class="form-control" placeholder="Laptops, Printers, Components">
+                </div>
+                <div class="field-group form-col-8">
+                    <label for="category_description_modal">Description</label>
+                    <textarea id="category_description_modal" name="description" class="form-control" rows="3" placeholder="Category description"></textarea>
+                </div>
+                <div class="field-group form-col-4">
+                    <label for="category_icon_modal">Icon</label>
+                    <input type="text" id="category_icon_modal" name="icon" class="form-control" placeholder="fa-laptop">
+                </div>
+            </div>
+            <div class="field-error" id="category-modal-errors"></div>
+            <div class="modal-actions">
+                <button type="button" class="ghost-btn" data-close-modal="category-modal">Cancel</button>
+                <button type="submit" class="primary-btn">Save Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-shell" id="supplier-modal" aria-hidden="true">
+    <div class="modal-card">
+        <h3>Add New Supplier</h3>
+        <p>Create a supplier record inline for faster receiving and purchase entry.</p>
+        <form id="supplier-quick-create-form">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="field-group form-col-6">
+                    <label for="supplier_name_modal">Supplier Name</label>
+                    <input type="text" id="supplier_name_modal" name="name" class="form-control" placeholder="Vendor or distributor name">
+                </div>
+                <div class="field-group form-col-6">
+                    <label for="supplier_contact_modal">Contact Person</label>
+                    <input type="text" id="supplier_contact_modal" name="contact_person" class="form-control" placeholder="Contact person">
+                </div>
+                <div class="field-group form-col-6">
+                    <label for="supplier_phone_modal">Phone</label>
+                    <input type="text" id="supplier_phone_modal" name="phone" class="form-control" placeholder="Phone number">
+                </div>
+                <div class="field-group form-col-6">
+                    <label for="supplier_gst_modal">GST Number</label>
+                    <input type="text" id="supplier_gst_modal" name="gst_number" class="form-control" placeholder="GST number">
+                </div>
+            </div>
+            <div class="field-error" id="supplier-modal-errors"></div>
+            <div class="modal-actions">
+                <button type="button" class="ghost-btn" data-close-modal="supplier-modal">Cancel</button>
+                <button type="submit" class="primary-btn">Save Supplier</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-shell" id="purchase-history-modal" aria-hidden="true">
+    <div class="modal-card">
+        <h3>Purchase History</h3>
+        <p>Recent batches, rates, suppliers, and purchase dates for the selected item.</p>
+        <div class="timeline-list" id="purchase-history-list">
+            <div class="muted-inline">Select an existing item to load purchase history.</div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="ghost-btn" data-close-modal="purchase-history-modal">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-shell" id="supplier-history-modal" aria-hidden="true">
+    <div class="modal-card">
+        <h3>Supplier Analytics</h3>
+        <p>Supplier frequency, quantities, and spend for the selected item.</p>
+        <div class="supplier-list" id="supplier-history-list">
+            <div class="muted-inline">Select an existing item to load supplier history.</div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="ghost-btn" data-close-modal="supplier-history-modal">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-// Auto-calculate total cost and profit
-function calculatePrices() {
-    const quantity = parseFloat(document.querySelector('#quantity_input').value) || 0;
-    const purchaseRate = parseFloat(document.querySelector('#purchase_rate_input').value) || 0;
-    const sellingPrice = parseFloat(document.querySelector('#selling_price_input').value) || 0;
+(function() {
+    const form = document.getElementById('inventory-entry-form');
+    const itemInput = document.getElementById('item_name_input');
+    const existingItemInput = document.getElementById('existing_item_id');
+    const categorySelect = document.getElementById('category_select');
+    const descriptionInput = document.getElementById('{{ form.description.id_for_label }}');
+    const specificationsInput = document.getElementById('{{ form.specifications.id_for_label }}');
+    const supplierSelect = document.getElementById('supplier_select');
+    const quantityInput = document.getElementById('quantity_input');
+    const purchaseRateInput = document.getElementById('purchase_rate_input');
+    const sellingPriceInput = document.getElementById('selling_price_input');
+    const minimumStockInput = document.getElementById('minimum_stock_input');
+    const maximumStockInput = document.getElementById('maximum_stock_input');
+    const gstInput = document.getElementById('gst_percentage_input');
+    const autocompletePanel = document.getElementById('item-autocomplete-results');
+    const insightsShell = document.getElementById('item-insights-shell');
+    const csrfToken = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
 
-    const totalCost = quantity * purchaseRate;
-    const profitPerUnit = sellingPrice - purchaseRate;
+    let autocompleteItems = [];
+    let autocompleteIndex = -1;
+    let selectedItemInsight = null;
 
-    document.querySelector('#total-cost-display').textContent = '₹ ' + totalCost.toFixed(2);
-    document.querySelector('#profit-display').textContent = '₹ ' + profitPerUnit.toFixed(2);
-}
+    function formatCurrency(value) {
+        const number = Number(value || 0);
+        return `Rs ${number.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
 
-document.querySelector('#quantity_input').addEventListener('change', calculatePrices);
-document.querySelector('#quantity_input').addEventListener('keyup', calculatePrices);
-document.querySelector('#purchase_rate_input').addEventListener('change', calculatePrices);
-document.querySelector('#purchase_rate_input').addEventListener('keyup', calculatePrices);
-document.querySelector('#selling_price_input').addEventListener('change', calculatePrices);
-document.querySelector('#selling_price_input').addEventListener('keyup', calculatePrices);
+    function setText(id, value) {
+        const node = document.getElementById(id);
+        if (node) {
+            node.textContent = value;
+        }
+    }
+
+    function toNumber(input) {
+        return Number(input && input.value ? input.value : 0);
+    }
+
+    function updateSummary() {
+        const quantity = toNumber(quantityInput);
+        const purchaseRate = toNumber(purchaseRateInput);
+        const sellingPrice = toNumber(sellingPriceInput);
+        const currentStock = selectedItemInsight ? Number(selectedItemInsight.current_stock || 0) : 0;
+        const minStock = toNumber(minimumStockInput);
+        const maxStock = toNumber(maximumStockInput);
+        const avgCost = selectedItemInsight ? Number(selectedItemInsight.average_purchase_rate || 0) : purchaseRate;
+        const latestCost = selectedItemInsight ? Number(selectedItemInsight.latest_purchase_rate || 0) : purchaseRate;
+
+        const totalCost = quantity * purchaseRate;
+        const revenue = quantity * sellingPrice;
+        const profitPerUnit = sellingPrice - purchaseRate;
+        const totalProfit = quantity * profitPerUnit;
+        const projectedStock = currentStock + quantity;
+
+        setText('total-purchase-cost', formatCurrency(totalCost));
+        setText('profit-per-unit', formatCurrency(profitPerUnit));
+        setText('expected-revenue', formatCurrency(revenue));
+        setText('total-expected-profit', formatCurrency(totalProfit));
+        setText('projected-stock', projectedStock.toLocaleString('en-IN'));
+
+        setText('summary-total-cost', formatCurrency(totalCost));
+        setText('summary-revenue', formatCurrency(revenue));
+        setText('summary-profit', formatCurrency(totalProfit));
+        setText('summary-average-cost', formatCurrency(avgCost));
+        setText('summary-latest-cost', formatCurrency(latestCost));
+
+        const statusNode = document.getElementById('stock-status-chip');
+        statusNode.className = 'status-chip';
+        if (projectedStock <= minStock) {
+            statusNode.classList.add('low');
+            statusNode.textContent = 'Low Stock Warning';
+        } else if (projectedStock > maxStock) {
+            statusNode.classList.add('high');
+            statusNode.textContent = 'Overstock Threshold';
+        } else {
+            statusNode.classList.add('ok');
+            statusNode.textContent = 'Healthy Stock';
+        }
+    }
+
+    function renderPurchaseHistory(purchases) {
+        const list = document.getElementById('purchase-history-list');
+        if (!purchases || !purchases.length) {
+            list.innerHTML = '<div class="muted-inline">No purchase history found for this item.</div>';
+            return;
+        }
+
+        list.innerHTML = purchases.map(function(purchase) {
+            return `
+                <div class="timeline-item">
+                    <div class="timeline-top">
+                        <strong>${purchase.supplier_name}</strong>
+                        <span class="timeline-meta">${purchase.purchase_date}</span>
+                    </div>
+                    <div class="timeline-meta">
+                        Rate: ${formatCurrency(purchase.purchase_rate)} | Sell: ${formatCurrency(purchase.selling_price)} | Qty: ${purchase.quantity}
+                    </div>
+                    <div class="timeline-meta">
+                        Invoice: ${purchase.invoice_number || 'Not recorded'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderSupplierHistory(suppliers) {
+        const list = document.getElementById('supplier-history-list');
+        if (!suppliers || !suppliers.length) {
+            list.innerHTML = '<div class="muted-inline">No supplier history found for this item.</div>';
+            return;
+        }
+
+        list.innerHTML = suppliers.map(function(supplier) {
+            return `
+                <div class="supplier-item">
+                    <div class="supplier-top">
+                        <strong>${supplier.supplier_name}</strong>
+                        <span class="supplier-meta">${supplier.latest_purchase_date || 'No date'}</span>
+                    </div>
+                    <div class="supplier-meta">
+                        Purchases: ${supplier.purchase_count} | Qty: ${supplier.total_quantity} | Spend: ${formatCurrency(supplier.total_spent)}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function populateInsights(item) {
+        selectedItemInsight = item;
+        insightsShell.classList.add('show');
+        setText('insight-item-label', `${item.name} already exists in inventory`);
+        setText('insight-current-stock', Number(item.current_stock || 0).toLocaleString('en-IN'));
+        setText('insight-average-rate', formatCurrency(item.average_purchase_rate));
+        setText('insight-latest-rate', formatCurrency(item.latest_purchase_rate));
+        setText('insight-selling-price', formatCurrency(item.selling_price));
+
+        if (categorySelect) categorySelect.value = item.category_id;
+        if (descriptionInput) descriptionInput.value = item.description || '';
+        if (specificationsInput) specificationsInput.value = item.specifications || '';
+        if (minimumStockInput) minimumStockInput.value = item.minimum_stock || 0;
+        if (maximumStockInput) maximumStockInput.value = item.maximum_stock || 0;
+        if (sellingPriceInput && !sellingPriceInput.value) sellingPriceInput.value = item.selling_price || 0;
+        if (gstInput) gstInput.value = item.gst_percentage || 0;
+
+        renderPurchaseHistory(item.recent_purchases || []);
+        renderSupplierHistory(item.supplier_history || []);
+        updateSummary();
+    }
+
+    function clearExistingItemSelection() {
+        existingItemInput.value = '';
+        selectedItemInsight = null;
+        insightsShell.classList.remove('show');
+        renderPurchaseHistory([]);
+        renderSupplierHistory([]);
+        updateSummary();
+    }
+
+    async function fetchItemInsights(itemId) {
+        const response = await fetch(`/inventory/api/items/${itemId}/insights/`);
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (payload.success && payload.item) {
+            populateInsights(payload.item);
+        }
+    }
+
+    function renderAutocomplete(results) {
+        autocompleteItems = results || [];
+        autocompleteIndex = -1;
+
+        if (!autocompleteItems.length) {
+            autocompletePanel.classList.remove('show');
+            autocompletePanel.innerHTML = '';
+            return;
+        }
+
+        autocompletePanel.innerHTML = autocompleteItems.map(function(item, index) {
+            return `
+                <div class="autocomplete-item" data-index="${index}">
+                    <strong>${item.name} (${item.sku})</strong>
+                    <small>${item.category} | Stock: ${item.stock} | Avg: ${formatCurrency(item.avg_rate)} | Sell: ${formatCurrency(item.selling_price)}</small>
+                </div>
+            `;
+        }).join('');
+        autocompletePanel.classList.add('show');
+    }
+
+    function pickAutocomplete(index) {
+        const item = autocompleteItems[index];
+        if (!item) return;
+        itemInput.value = item.name;
+        existingItemInput.value = item.id;
+        autocompletePanel.classList.remove('show');
+        fetchItemInsights(item.id);
+    }
+
+    let searchTimer = null;
+    itemInput.addEventListener('input', function() {
+        clearExistingItemSelection();
+        const query = itemInput.value.trim();
+
+        if (searchTimer) window.clearTimeout(searchTimer);
+        if (query.length < 2) {
+            autocompletePanel.classList.remove('show');
+            autocompletePanel.innerHTML = '';
+            return;
+        }
+
+        searchTimer = window.setTimeout(async function() {
+            const params = new URLSearchParams({ q: query });
+            if (categorySelect && categorySelect.value) {
+                params.set('category_id', categorySelect.value);
+            }
+
+            const response = await fetch(`/inventory/api/items/search/?${params.toString()}`);
+            if (!response.ok) return;
+            const payload = await response.json();
+            renderAutocomplete(payload.results || []);
+        }, 220);
+    });
+
+    itemInput.addEventListener('keydown', function(event) {
+        if (!autocompleteItems.length || !autocompletePanel.classList.contains('show')) return;
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            autocompleteIndex = Math.min(autocompleteIndex + 1, autocompleteItems.length - 1);
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            autocompleteIndex = Math.max(autocompleteIndex - 1, 0);
+        } else if (event.key === 'Enter' && autocompleteIndex >= 0) {
+            event.preventDefault();
+            pickAutocomplete(autocompleteIndex);
+            return;
+        } else {
+            return;
+        }
+
+        autocompletePanel.querySelectorAll('.autocomplete-item').forEach(function(node, index) {
+            node.classList.toggle('is-active', index === autocompleteIndex);
+        });
+    });
+
+    autocompletePanel.addEventListener('click', function(event) {
+        const row = event.target.closest('.autocomplete-item');
+        if (!row) return;
+        pickAutocomplete(Number(row.dataset.index));
+    });
+
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.field-group')) {
+            autocompletePanel.classList.remove('show');
+        }
+    });
+
+    document.getElementById('clear-existing-item').addEventListener('click', function() {
+        clearExistingItemSelection();
+        itemInput.focus();
+    });
+
+    [quantityInput, purchaseRateInput, sellingPriceInput, minimumStockInput, maximumStockInput].forEach(function(input) {
+        if (!input) return;
+        input.addEventListener('input', updateSummary);
+        input.addEventListener('change', updateSummary);
+    });
+
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.add('show');
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.remove('show');
+    }
+
+    document.querySelectorAll('[data-open-modal]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            openModal(button.getAttribute('data-open-modal'));
+        });
+    });
+
+    document.querySelectorAll('[data-close-modal]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            closeModal(button.getAttribute('data-close-modal'));
+        });
+    });
+
+    document.querySelectorAll('.modal-shell').forEach(function(modal) {
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.classList.remove('show');
+            }
+        });
+    });
+
+    async function submitQuickCreate(formId, url, errorId, callback) {
+        const quickForm = document.getElementById(formId);
+        const errorNode = document.getElementById(errorId);
+
+        quickForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            errorNode.textContent = '';
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: new FormData(quickForm),
+            });
+
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                const errors = payload.errors || {};
+                errorNode.textContent = Object.values(errors).flat().join(' ');
+                return;
+            }
+
+            callback(payload);
+            quickForm.reset();
+        });
+    }
+
+    function appendSelectOption(selectNode, item) {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.name;
+        selectNode.appendChild(option);
+        selectNode.value = item.id;
+    }
+
+    submitQuickCreate(
+        'category-quick-create-form',
+        "{% url 'inventory:category-quick-create-api' %}",
+        'category-modal-errors',
+        function(payload) {
+            appendSelectOption(categorySelect, payload.category);
+            closeModal('category-modal');
+        }
+    );
+
+    submitQuickCreate(
+        'supplier-quick-create-form',
+        "{% url 'inventory:supplier-quick-create-api' %}",
+        'supplier-modal-errors',
+        function(payload) {
+            appendSelectOption(supplierSelect, payload.supplier);
+            closeModal('supplier-modal');
+        }
+    );
+
+    updateSummary();
+})();
 </script>
 {% endblock %}

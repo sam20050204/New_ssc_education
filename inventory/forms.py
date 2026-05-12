@@ -14,6 +14,15 @@ from inventory.models import (
     Purchase,
     Inventory,
 )
+from inventory.services import get_or_create_category_by_name
+
+
+def _bootstrap_control(attrs=None, **extra):
+    merged = {"class": "form-control"}
+    if attrs:
+        merged.update(attrs)
+    merged.update(extra)
+    return merged
 
 
 class CategoryForm(forms.ModelForm):
@@ -132,6 +141,13 @@ class SupplierForm(forms.ModelForm):
         name = self.cleaned_data.get("name", "").strip()
         if not name:
             raise ValidationError("Supplier name cannot be empty.")
+        existing = Supplier.objects.filter(name__iexact=name).exclude(
+            pk=self.instance.pk if self.instance.pk else None
+        )
+        if existing.exists():
+            raise ValidationError(
+                f"Supplier '{name}' already exists. Please use a different name."
+            )
         return name
 
 
@@ -272,12 +288,7 @@ class ItemForm(forms.ModelForm):
 
         new_category_name = self.cleaned_data.get("new_category", "").strip()
         if new_category_name:
-            # Create or get the category
-            category, created = Category.objects.get_or_create(
-                name__iexact=new_category_name,
-                defaults={"name": new_category_name},
-            )
-            instance.category = category
+            instance.category = get_or_create_category_by_name(new_category_name)
 
         if commit:
             instance.save()
@@ -440,22 +451,22 @@ class PurchaseForm(forms.ModelForm):
             new_category_name = self.cleaned_data.get("new_category", "").strip()
 
             if new_category_name:
-                category, created = Category.objects.get_or_create(
-                    name__iexact=new_category_name,
-                    defaults={"name": new_category_name},
-                )
+                category = get_or_create_category_by_name(new_category_name)
 
             if category:
-                instance.item, created = Item.objects.get_or_create(
+                instance.item = Item.objects.filter(
                     name__iexact=item_name,
                     category=category,
-                    defaults={
-                        "name": item_name,
-                        "category": category,
-                        "selling_price": self.cleaned_data.get("selling_price")
+                ).first()
+                if instance.item is None:
+                    instance.item = Item(
+                        name=item_name,
+                        category=category,
+                        selling_price=self.cleaned_data.get("selling_price")
                         or Decimal("0.00"),
-                    },
-                )
+                    )
+                    if commit:
+                        instance.item.save()
 
         if instance.item:
             # Update item's selling price if provided
@@ -467,6 +478,225 @@ class PurchaseForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class InventoryEntryForm(forms.Form):
+    """Unified form for item creation/update and purchase capture."""
+
+    existing_item_id = forms.IntegerField(
+        required=False,
+        widget=forms.HiddenInput(attrs={"id": "existing_item_id"}),
+    )
+    item_name = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(
+            attrs=_bootstrap_control(
+                {
+                    "id": "item_name_input",
+                    "placeholder": "Search or type item name",
+                    "autocomplete": "off",
+                    "data-autocomplete-url": "/inventory/api/items/search/",
+                }
+            )
+        ),
+    )
+    category = forms.ModelChoiceField(
+        queryset=Category.objects.filter(is_active=True),
+        widget=forms.Select(
+            attrs=_bootstrap_control(
+                {
+                    "class": "form-control form-select",
+                    "id": "category_select",
+                }
+            )
+        ),
+    )
+    description = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs=_bootstrap_control(
+                {
+                    "rows": 3,
+                    "placeholder": "Short commercial description",
+                }
+            )
+        ),
+    )
+    specifications = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs=_bootstrap_control(
+                {
+                    "rows": 4,
+                    "placeholder": "Technical specifications, model details, RAM, SSD, warranty, etc.",
+                }
+            )
+        ),
+    )
+    image = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs=_bootstrap_control({"accept": "image/*"})),
+    )
+    supplier = forms.ModelChoiceField(
+        queryset=Supplier.objects.filter(is_active=True),
+        required=False,
+        widget=forms.Select(
+            attrs=_bootstrap_control(
+                {
+                    "class": "form-control form-select",
+                    "id": "supplier_select",
+                }
+            )
+        ),
+    )
+    purchase_date = forms.DateField(
+        widget=forms.DateInput(
+            attrs=_bootstrap_control({"type": "date", "id": "purchase_date_input"})
+        )
+    )
+    purchase_rate = forms.DecimalField(
+        min_value=Decimal("0.00"),
+        decimal_places=2,
+        max_digits=10,
+        widget=forms.NumberInput(
+            attrs=_bootstrap_control(
+                {
+                    "id": "purchase_rate_input",
+                    "step": "0.01",
+                    "min": "0",
+                    "placeholder": "0.00",
+                }
+            )
+        ),
+    )
+    quantity = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs=_bootstrap_control(
+                {
+                    "id": "quantity_input",
+                    "min": "1",
+                    "placeholder": "1",
+                }
+            )
+        ),
+    )
+    selling_price = forms.DecimalField(
+        min_value=Decimal("0.00"),
+        decimal_places=2,
+        max_digits=10,
+        widget=forms.NumberInput(
+            attrs=_bootstrap_control(
+                {
+                    "id": "selling_price_input",
+                    "step": "0.01",
+                    "min": "0",
+                    "placeholder": "0.00",
+                }
+            )
+        ),
+    )
+    minimum_stock = forms.IntegerField(
+        min_value=0,
+        initial=5,
+        widget=forms.NumberInput(
+            attrs=_bootstrap_control({"id": "minimum_stock_input", "min": "0"})
+        ),
+    )
+    maximum_stock = forms.IntegerField(
+        min_value=1,
+        initial=100,
+        widget=forms.NumberInput(
+            attrs=_bootstrap_control({"id": "maximum_stock_input", "min": "1"})
+        ),
+    )
+    gst_percentage = forms.DecimalField(
+        min_value=Decimal("0.00"),
+        max_digits=5,
+        decimal_places=2,
+        initial=Decimal("18.00"),
+        widget=forms.NumberInput(
+            attrs=_bootstrap_control(
+                {
+                    "id": "gst_percentage_input",
+                    "step": "0.01",
+                    "min": "0",
+                }
+            )
+        ),
+    )
+    batch_number = forms.CharField(
+        required=False,
+        max_length=100,
+        widget=forms.TextInput(
+            attrs=_bootstrap_control({"placeholder": "Optional batch / lot number"})
+        ),
+    )
+    expiry_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs=_bootstrap_control({"type": "date"})),
+    )
+    invoice_number = forms.CharField(
+        required=False,
+        max_length=100,
+        widget=forms.TextInput(
+            attrs=_bootstrap_control({"placeholder": "Supplier invoice / bill number"})
+        ),
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs=_bootstrap_control({"rows": 3, "placeholder": "Internal notes"})
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.resolved_item = None
+
+    def clean_item_name(self):
+        name = self.cleaned_data.get("item_name", "").strip()
+        if not name:
+            raise ValidationError("Item name is required.")
+        return name
+
+    def clean(self):
+        cleaned_data = super().clean()
+        item_name = cleaned_data.get("item_name", "").strip()
+        category = cleaned_data.get("category")
+        existing_item_id = cleaned_data.get("existing_item_id")
+
+        if cleaned_data.get("maximum_stock") and cleaned_data.get("minimum_stock") is not None:
+            if cleaned_data["maximum_stock"] <= cleaned_data["minimum_stock"]:
+                self.add_error(
+                    "maximum_stock",
+                    "Maximum stock must be greater than minimum stock.",
+                )
+
+        resolved_item = None
+        if existing_item_id:
+            resolved_item = Item.objects.filter(
+                pk=existing_item_id,
+                is_active=True,
+            ).select_related("category").first()
+            if resolved_item is None:
+                self.add_error("item_name", "The selected existing item is no longer available.")
+        elif item_name and category:
+            resolved_item = Item.objects.filter(
+                name__iexact=item_name,
+                category=category,
+                is_active=True,
+            ).select_related("category").first()
+
+        if resolved_item is None and not category:
+            self.add_error("category", "Category is required for a new item.")
+
+        if resolved_item:
+            cleaned_data["category"] = resolved_item.category
+
+        cleaned_data["resolved_item"] = resolved_item
+        self.resolved_item = resolved_item
+        return cleaned_data
 
 
 class PurchaseHistoryFilterForm(forms.Form):

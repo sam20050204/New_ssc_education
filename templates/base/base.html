@@ -18,7 +18,7 @@
     <aside class="sidebar" id="erpSidebar">
         {% block sidebar %}
             {% if current_mode == 'sales' %}
-                {% include 'includes/sales_sidebar_empty.html' %}
+                {% include 'includes/sales_sidebar.html' %}
             {% else %}
                 {% include 'includes/education_sidebar.html' %}
             {% endif %}

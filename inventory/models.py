@@ -283,6 +283,40 @@ class Item(models.Model):
             )
             self.save(update_fields=["average_purchase_rate"])
 
+    def refresh_purchase_metrics(self, save=True):
+        """Synchronize stock and pricing snapshots from purchase history."""
+        summary = self.purchases.aggregate(
+            total_cost=Sum("total_purchase_price", default=Decimal("0.00")),
+            total_quantity=Sum("quantity", default=0),
+        )
+        latest_purchase = self.purchases.order_by(
+            "-purchase_date", "-created_at"
+        ).first()
+
+        total_quantity = summary["total_quantity"] or 0
+        total_cost = summary["total_cost"] or Decimal("0.00")
+
+        self.current_stock = total_quantity
+        self.latest_purchase_rate = (
+            latest_purchase.purchase_rate if latest_purchase else Decimal("0.00")
+        )
+        self.average_purchase_rate = (
+            Decimal(total_cost) / Decimal(total_quantity)
+            if total_quantity
+            else Decimal("0.00")
+        )
+
+        if save:
+            self.save(
+                update_fields=[
+                    "current_stock",
+                    "latest_purchase_rate",
+                    "average_purchase_rate",
+                    "updated_at",
+                ]
+            )
+        return self
+
 
 class Purchase(models.Model):
     """Purchase history and batch tracking"""
@@ -363,31 +397,24 @@ class Purchase(models.Model):
         return f"{self.item.name} - {self.quantity} units on {self.purchase_date}"
 
     def save(self, *args, **kwargs):
-        """Calculate total purchase price and update item inventory"""
-        # Calculate total price
+        """Calculate total purchase price and synchronize item inventory."""
         self.total_purchase_price = self.quantity * self.purchase_rate
+        previous_item = None
 
-        is_new = self.pk is None
+        if self.pk:
+            previous_item = Purchase.objects.select_related("item").get(pk=self.pk).item
+
         super().save(*args, **kwargs)
 
-        # Update item stock if this is a new purchase
-        if is_new:
-            self.item.current_stock += self.quantity
-            self.item.latest_purchase_rate = self.purchase_rate
-            self.item.save(update_fields=[
-                "current_stock",
-                "latest_purchase_rate",
-                "updated_at",
-            ])
-            self.item.update_average_price()
+        if previous_item and previous_item.pk != self.item.pk:
+            previous_item.refresh_purchase_metrics()
+        self.item.refresh_purchase_metrics()
 
     def delete(self, *args, **kwargs):
-        """Handle stock reduction on purchase deletion"""
+        """Handle stock recalculation on purchase deletion."""
         item = self.item
-        item.current_stock -= self.quantity
-        item.save(update_fields=["current_stock"])
-        item.update_average_price()
         super().delete(*args, **kwargs)
+        item.refresh_purchase_metrics()
 
 
 class Inventory(models.Model):

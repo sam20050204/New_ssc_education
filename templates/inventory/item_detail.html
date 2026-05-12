@@ -4,15 +4,18 @@
 {% block page_title %}{{ item.name }}{% endblock %}
 
 {% block page_actions %}
-<div class="btn-group">
+<div class="detail-actions">
+    <a href="{% url 'inventory:item-list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> All Items
+    </a>
     <a href="{% url 'inventory:edit-item' item.pk %}" class="btn btn-warning">
         <i class="fas fa-edit"></i> Edit
     </a>
     <a href="{% url 'inventory:add-purchase' %}?item_id={{ item.pk }}" class="btn btn-success">
         <i class="fas fa-shopping-cart"></i> Record Purchase
     </a>
-    <form method="post" action="{% url 'inventory:delete-item' item.pk %}" style="display:inline;"
-          onsubmit="return confirm('Are you sure?');">
+    <form method="post" action="{% url 'inventory:delete-item' item.pk %}" class="inline-form"
+          onsubmit="return confirm('Are you sure you want to delete this item?');">
         {% csrf_token %}
         <button type="submit" class="btn btn-danger">
             <i class="fas fa-trash"></i> Delete
@@ -21,176 +24,560 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .detail-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .inline-form {
+        display: inline;
+    }
+
+    .item-detail-shell {
+        display: grid;
+        gap: 22px;
+    }
+
+    .detail-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+        gap: 20px;
+        align-items: stretch;
+    }
+
+    .hero-primary {
+        padding: 24px;
+        border-radius: 24px;
+        background:
+            radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 28%),
+            linear-gradient(135deg, #10233f 0%, #134e4a 52%, #0f766e 100%);
+        color: #fff;
+        box-shadow: 0 24px 56px rgba(15, 23, 42, 0.14);
+    }
+
+    .hero-primary h2 {
+        margin: 0 0 8px;
+        font-size: clamp(1.6rem, 2.6vw, 2.3rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+    }
+
+    .hero-primary p {
+        margin: 0 0 18px;
+        color: rgba(255, 255, 255, 0.82);
+        line-height: 1.55;
+    }
+
+    .hero-chips {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .hero-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.10);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .hero-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .hero-metric {
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+
+    .hero-metric label {
+        display: block;
+        margin-bottom: 6px;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 0.76rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 800;
+    }
+
+    .hero-metric strong {
+        font-size: 1.3rem;
+        font-weight: 800;
+    }
+
+    .hero-side {
+        display: grid;
+        gap: 18px;
+    }
+
+    .image-card {
+        min-height: 100%;
+    }
+
+    .image-card img,
+    .image-placeholder {
+        width: 100%;
+        min-height: 260px;
+        border-radius: 18px;
+        object-fit: cover;
+        background: linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%);
+        border: 1px solid var(--inventory-line);
+    }
+
+    .image-placeholder {
+        display: grid;
+        place-items: center;
+        color: var(--inventory-muted);
+        font-weight: 700;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .summary-tile {
+        padding: 18px;
+        border-radius: 20px;
+        background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+        border: 1px solid var(--inventory-line);
+        box-shadow: var(--inventory-shadow-sm);
+    }
+
+    .summary-tile label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--inventory-muted);
+        font-size: 0.76rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 800;
+    }
+
+    .summary-tile strong {
+        display: block;
+        font-size: 1.55rem;
+        font-weight: 800;
+        color: var(--inventory-ink);
+    }
+
+    .summary-tile span {
+        display: block;
+        margin-top: 6px;
+        color: var(--inventory-muted);
+        font-size: 0.88rem;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+        gap: 20px;
+    }
+
+    .stacked-cards {
+        display: grid;
+        gap: 20px;
+    }
+
+    .info-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .info-row {
+        display: grid;
+        grid-template-columns: 140px minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+        padding: 12px 0;
+        border-bottom: 1px solid #edf3f8;
+    }
+
+    .info-row:last-child {
+        border-bottom: 0;
+    }
+
+    .info-row label {
+        color: var(--inventory-muted);
+        font-size: 0.84rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .info-row div {
+        color: var(--inventory-ink);
+        line-height: 1.55;
+    }
+
+    .value-panel {
+        display: grid;
+        gap: 14px;
+    }
+
+    .value-item {
+        padding: 16px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+        border: 1px solid var(--inventory-line);
+    }
+
+    .value-item label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--inventory-muted);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 800;
+    }
+
+    .value-item strong {
+        display: block;
+        font-size: 1.3rem;
+        font-weight: 800;
+    }
+
+    .stock-bar-shell {
+        display: grid;
+        gap: 10px;
+    }
+
+    .stock-bar-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--inventory-muted);
+    }
+
+    .purchase-table th,
+    .purchase-table td {
+        white-space: normal;
+    }
+
+    .purchase-badge {
+        min-width: 0;
+    }
+
+    @media (max-width: 1080px) {
+        .detail-hero,
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .summary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 720px) {
+        .summary-grid,
+        .hero-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .info-row {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 {{ block.super }}
 
-<div class="row">
-    <!-- Item Overview -->
-    <div class="col-md-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Item Information</h5>
-            </div>
-            <div class="card-body">
-                {% if item.image %}
-                <img src="{{ item.image.url }}" alt="{{ item.name }}" class="img-fluid mb-3" style="max-height: 250px;">
-                {% endif %}
-
-                <dl class="row">
-                    <dt class="col-sm-4">SKU:</dt>
-                    <dd class="col-sm-8"><code>{{ item.sku }}</code></dd>
-
-                    <dt class="col-sm-4">Category:</dt>
-                    <dd class="col-sm-8">
-                        <a href="{% url 'inventory:category-list' %}?search={{ item.category.name }}">
-                            {{ item.category.name }}
-                        </a>
-                    </dd>
-                </dl>
-
-                {% if item.description %}
-                <div class="mt-3">
-                    <h6>Description</h6>
-                    <p class="text-muted small">{{ item.description }}</p>
+<div class="inventory-container">
+    <div class="item-detail-shell">
+        <div class="detail-hero">
+            <section class="hero-primary">
+                <div class="hero-chips">
+                    <span class="hero-chip"><i class="fas fa-barcode"></i> {{ item.sku }}</span>
+                    <span class="hero-chip"><i class="fas fa-layer-group"></i> {{ item.category.name }}</span>
+                    {% if item.is_low_stock %}
+                    <span class="hero-chip"><i class="fas fa-triangle-exclamation"></i> Low Stock</span>
+                    {% elif item.is_overstocked %}
+                    <span class="hero-chip"><i class="fas fa-boxes-stacked"></i> Overstocked</span>
+                    {% else %}
+                    <span class="hero-chip"><i class="fas fa-circle-check"></i> Healthy Stock</span>
+                    {% endif %}
                 </div>
-                {% endif %}
-
-                {% if item.specifications %}
-                <div class="mt-3">
-                    <h6>Specifications</h6>
-                    <p class="text-muted small">{{ item.specifications }}</p>
+                <h2>{{ item.name }}</h2>
+                <p>
+                    {% if item.description %}
+                    {{ item.description }}
+                    {% else %}
+                    Commercial inventory record with pricing snapshots, stock controls, and purchase history.
+                    {% endif %}
+                </p>
+                <div class="hero-grid">
+                    <div class="hero-metric">
+                        <label>Current Stock</label>
+                        <strong>{{ item.current_stock }}</strong>
+                    </div>
+                    <div class="hero-metric">
+                        <label>Selling Price</label>
+                        <strong>Rs {{ item.selling_price|floatformat:2 }}</strong>
+                    </div>
+                    <div class="hero-metric">
+                        <label>Average Cost</label>
+                        <strong>Rs {{ item.average_purchase_rate|floatformat:2 }}</strong>
+                    </div>
+                    <div class="hero-metric">
+                        <label>Profit Per Unit</label>
+                        <strong>Rs {{ item.profit_per_unit|floatformat:2 }}</strong>
+                    </div>
                 </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+            </section>
 
-    <!-- Stock & Pricing Summary -->
-    <div class="col-md-8">
-        <!-- Stock Information -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Stock Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 text-center">
-                        <div style="font-size: 32px; font-weight: bold; color: #667eea;">
-                            {{ item.current_stock }}
-                        </div>
-                        <p class="text-muted mb-0">Current Stock</p>
+            <div class="hero-side">
+                <div class="card image-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Item Image</h5>
                     </div>
-                    <div class="col-md-3 text-center">
-                        <div style="font-size: 18px; color: #ffc107;">
-                            {{ item.minimum_stock }}
-                        </div>
-                        <p class="text-muted mb-0 small">Minimum</p>
-                    </div>
-                    <div class="col-md-3 text-center">
-                        <div style="font-size: 18px; color: #28a745;">
-                            {{ item.maximum_stock }}
-                        </div>
-                        <p class="text-muted mb-0 small">Maximum</p>
-                    </div>
-                    <div class="col-md-3">
-                        {% if item.is_low_stock %}
-                        <div class="alert alert-danger mb-0" style="padding: 8px 12px; font-size: 12px;">
-                            <i class="fas fa-exclamation-triangle"></i> LOW STOCK
-                        </div>
-                        {% elif item.is_overstocked %}
-                        <div class="alert alert-warning mb-0" style="padding: 8px 12px; font-size: 12px;">
-                            <i class="fas fa-box"></i> OVERSTOCKED
-                        </div>
+                    <div class="card-body">
+                        {% if item.image %}
+                        <img src="{{ item.image.url }}" alt="{{ item.name }}">
                         {% else %}
-                        <div class="alert alert-success mb-0" style="padding: 8px 12px; font-size: 12px;">
-                            <i class="fas fa-check"></i> OK
-                        </div>
+                        <div class="image-placeholder">No image available</div>
                         {% endif %}
                     </div>
                 </div>
-
-                <!-- Stock Progress -->
-                <div class="mt-4">
-                    <div class="progress" style="height: 25px;">
-                        {% widthratio item.current_stock item.maximum_stock 100 as stock_percentage %}
-                        <div class="progress-bar {% if item.is_low_stock %}bg-danger{% elif item.is_overstocked %}bg-warning{% else %}bg-success{% endif %}"
-                             style="width: {{ stock_percentage }}%;">
-                            {{ item.current_stock }}/{{ item.maximum_stock }}
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 
-        <!-- Pricing Information -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Pricing Information</h5>
+        <div class="summary-grid">
+            <div class="summary-tile">
+                <label>Minimum Stock</label>
+                <strong>{{ item.minimum_stock }}</strong>
+                <span>Alert threshold</span>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <small class="text-muted">Average Purchase Rate</small>
-                            <div style="font-size: 24px; font-weight: bold;">
-                                ₹{{ item.average_purchase_rate|floatformat:2 }}
-                            </div>
-                        </div>
-                        <div>
-                            <small class="text-muted">Latest Purchase Rate</small>
-                            <div style="font-size: 20px; font-weight: bold; color: #28a745;">
-                                ₹{{ item.latest_purchase_rate|floatformat:2 }}
-                            </div>
-                        </div>
+            <div class="summary-tile">
+                <label>Maximum Stock</label>
+                <strong>{{ item.maximum_stock }}</strong>
+                <span>Control threshold</span>
+            </div>
+            <div class="summary-tile">
+                <label>Profit Margin</label>
+                <strong>{{ item.profit_margin_percentage|floatformat:1 }}%</strong>
+                <span>Per-unit margin rate</span>
+            </div>
+            <div class="summary-tile">
+                <label>Total Purchases</label>
+                <strong>{{ total_purchases }}</strong>
+                <span>Historical purchase entries</span>
+            </div>
+        </div>
+
+        <div class="detail-grid">
+            <div class="stacked-cards">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Item Information</h5>
                     </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <small class="text-muted">Selling Price</small>
-                            <div style="font-size: 24px; font-weight: bold;">
-                                ₹{{ item.selling_price|floatformat:2 }}
+                    <div class="card-body">
+                        <div class="info-list">
+                            <div class="info-row">
+                                <label>SKU</label>
+                                <div><code>{{ item.sku }}</code></div>
                             </div>
-                        </div>
-                        <div>
-                            <small class="text-muted">Profit per Unit</small>
-                            <div style="font-size: 20px; font-weight: bold;
-                                       color: {% if item.profit_per_unit > 0 %}#28a745{% else %}#dc3545{% endif %};">
-                                ₹{{ item.profit_per_unit|floatformat:2 }}
-                                <span style="font-size: 14px;">({{ item.profit_margin_percentage|floatformat:1 }}%)</span>
+                            <div class="info-row">
+                                <label>Category</label>
+                                <div>{{ item.category.name }}</div>
+                            </div>
+                            <div class="info-row">
+                                <label>Description</label>
+                                <div>{{ item.description|default:"No description recorded." }}</div>
+                            </div>
+                            <div class="info-row">
+                                <label>Specifications</label>
+                                <div>{{ item.specifications|default:"No technical specifications recorded." }}</div>
+                            </div>
+                            <div class="info-row">
+                                <label>GST</label>
+                                <div>{{ item.gst_percentage|floatformat:2 }}%</div>
+                            </div>
+                            <div class="info-row">
+                                <label>Updated</label>
+                                <div>{{ item.updated_at|date:"d M Y, h:i A" }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Inventory Value Summary -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Inventory Value Summary</h5>
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Purchase History</h5>
+                        <span class="badge bg-info purchase-badge">{{ total_purchases }} entries</span>
+                    </div>
+                    {% if page_obj %}
+                    <div class="table-responsive">
+                        <table class="table purchase-table">
+                            <thead>
+                                <tr>
+                                    <th>Purchase Date</th>
+                                    <th>Supplier</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Rate</th>
+                                    <th>Total Cost</th>
+                                    <th>Selling Price</th>
+                                    <th>Batch / Invoice</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for purchase in page_obj %}
+                                <tr>
+                                    <td>{{ purchase.purchase_date|date:"d M Y" }}</td>
+                                    <td>
+                                        {% if purchase.supplier %}
+                                        <a href="{% url 'inventory:supplier-detail' purchase.supplier.pk %}">{{ purchase.supplier.name }}</a>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><strong>{{ purchase.quantity }}</strong></td>
+                                    <td>Rs {{ purchase.purchase_rate|floatformat:2 }}</td>
+                                    <td>Rs {{ purchase.total_purchase_price|floatformat:2 }}</td>
+                                    <td>Rs {{ purchase.selling_price|floatformat:2 }}</td>
+                                    <td>
+                                        {% if purchase.batch_number %}{{ purchase.batch_number }}{% else %}<span class="text-muted">No batch</span>{% endif %}
+                                        {% if purchase.invoice_number %}<br><small class="text-muted">{{ purchase.invoice_number }}</small>{% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <a href="{% url 'inventory:edit-purchase' purchase.pk %}" class="btn btn-sm btn-warning" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="post" action="{% url 'inventory:delete-purchase' purchase.pk %}" class="inline-form"
+                                                  onsubmit="return confirm('Delete this purchase?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if is_paginated %}
+                    <div class="card-body">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination mb-0">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                                {% endif %}
+                                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                                {% if page_obj.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="card-body">
+                        <p class="text-muted mb-0">No purchases recorded for this item yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="text-center">
-                            <div class="text-muted small mb-2">Stock Value (at avg. cost)</div>
-                            <div style="font-size: 20px; font-weight: bold;">
-                                ₹{{ item.total_value|floatformat:0 }}
+
+            <div class="stacked-cards">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Stock Control</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="stock-bar-shell">
+                            <div class="stock-bar-label">
+                                <span>Current vs Maximum</span>
+                                <strong>{{ item.current_stock }}/{{ item.maximum_stock }}</strong>
+                            </div>
+                            <div class="progress" style="height: 16px;">
+                                {% widthratio item.current_stock item.maximum_stock 100 as stock_percentage %}
+                                <div class="progress-bar {% if item.is_low_stock %}bg-danger{% elif item.is_overstocked %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ stock_percentage }}%;"></div>
+                            </div>
+                            <div class="stock-bar-label">
+                                {% if item.is_low_stock %}
+                                <span class="badge bg-danger">Low stock warning</span>
+                                {% elif item.is_overstocked %}
+                                <span class="badge bg-warning">Overstocked</span>
+                                {% else %}
+                                <span class="badge bg-success">Healthy stock level</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="text-center">
-                            <div class="text-muted small mb-2">Selling Value (if all sold)</div>
-                            <div style="font-size: 20px; font-weight: bold; color: #28a745;">
-                                ₹{{ item.total_selling_value|floatformat:0 }}
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Pricing Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="value-panel">
+                            <div class="value-item">
+                                <label>Average Purchase Rate</label>
+                                <strong>Rs {{ item.average_purchase_rate|floatformat:2 }}</strong>
+                            </div>
+                            <div class="value-item">
+                                <label>Latest Purchase Rate</label>
+                                <strong>Rs {{ item.latest_purchase_rate|floatformat:2 }}</strong>
+                            </div>
+                            <div class="value-item">
+                                <label>Selling Price</label>
+                                <strong>Rs {{ item.selling_price|floatformat:2 }}</strong>
+                            </div>
+                            <div class="value-item">
+                                <label>Profit Per Unit</label>
+                                <strong class="{% if item.profit_per_unit > 0 %}text-success{% else %}text-danger{% endif %}">
+                                    Rs {{ item.profit_per_unit|floatformat:2 }}
+                                </strong>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="text-center">
-                            <div class="text-muted small mb-2">Expected Profit</div>
-                            <div style="font-size: 20px; font-weight: bold; color: #667eea;">
-                                ₹{{ item.total_profit|floatformat:0 }}
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Inventory Value</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="value-panel">
+                            <div class="value-item">
+                                <label>Stock Value</label>
+                                <strong>Rs {{ item.total_value|floatformat:0 }}</strong>
+                            </div>
+                            <div class="value-item">
+                                <label>Total Selling Value</label>
+                                <strong>Rs {{ item.total_selling_value|floatformat:0 }}</strong>
+                            </div>
+                            <div class="value-item">
+                                <label>Expected Profit</label>
+                                <strong class="text-primary">Rs {{ item.total_profit|floatformat:0 }}</strong>
                             </div>
                         </div>
                     </div>
@@ -199,109 +586,4 @@
         </div>
     </div>
 </div>
-
-<!-- Purchase History -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">Purchase History</h5>
-        <span class="badge bg-primary">{{ total_purchases }} purchases</span>
-    </div>
-
-    {% if page_obj %}
-    <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Purchase Date</th>
-                    <th>Supplier</th>
-                    <th>Quantity</th>
-                    <th>Unit Rate</th>
-                    <th>Total Cost</th>
-                    <th>Selling Price</th>
-                    <th>Batch/Invoice</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for purchase in page_obj %}
-                <tr>
-                    <td>{{ purchase.purchase_date|date:"d M Y" }}</td>
-                    <td>
-                        {% if purchase.supplier %}
-                        <a href="{% url 'inventory:supplier-detail' purchase.supplier.pk %}">
-                            {{ purchase.supplier.name }}
-                        </a>
-                        {% else %}
-                        <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td><strong>{{ purchase.quantity }}</strong></td>
-                    <td>₹{{ purchase.purchase_rate|floatformat:2 }}</td>
-                    <td>₹{{ purchase.total_purchase_price|floatformat:2 }}</td>
-                    <td>₹{{ purchase.selling_price|floatformat:2 }}</td>
-                    <td>
-                        {% if purchase.batch_number %}
-                        {{ purchase.batch_number }}
-                        {% endif %}
-                        {% if purchase.invoice_number %}
-                        <br><small>({{ purchase.invoice_number }})</small>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="action-buttons">
-                            <a href="{% url 'inventory:edit-purchase' purchase.pk %}" class="btn btn-sm btn-warning"
-                               title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form method="post" action="{% url 'inventory:delete-purchase' purchase.pk %}"
-                                  style="display:inline;" onsubmit="return confirm('Delete this purchase?');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-danger" title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Pagination -->
-    {% if is_paginated %}
-    <nav aria-label="Page navigation" class="mt-3">
-        <ul class="pagination pagination-sm mb-0">
-            {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page=1">First</a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-            </li>
-            {% endif %}
-
-            <li class="page-item disabled">
-                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-            </li>
-
-            {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
-
-    {% else %}
-    <div class="card-body">
-        <p class="text-muted text-center mb-0">No purchases recorded for this item yet.</p>
-    </div>
-    {% endif %}
-</div>
-
 {% endblock %}

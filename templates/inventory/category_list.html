@@ -4,90 +4,198 @@
 {% block page_title %}Categories{% endblock %}
 
 {% block page_actions %}
-<a href="{% url 'inventory:add-category' %}" class="btn btn-primary">
-    <i class="fas fa-plus"></i> Add Category
-</a>
+<div class="category-top-actions">
+    <a href="{% url 'inventory:supplier-list' %}" class="btn btn-info">
+        <i class="fas fa-truck-field"></i> Supplier Details
+    </a>
+    <a href="{% url 'inventory:add-category' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Category
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .category-top-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .category-shell {
+        display: grid;
+        gap: 20px;
+    }
+
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 18px;
+    }
+
+    .category-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .category-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: 100%;
+        height: 5px;
+        background: linear-gradient(90deg, #0f766e 0%, #22c55e 100%);
+    }
+
+    .category-card-body {
+        padding: 22px;
+    }
+
+    .category-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+
+    .category-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #ecfeff 0%, #f0fdf4 100%);
+        color: #0f766e;
+        font-size: 1.3rem;
+    }
+
+    .category-name {
+        margin: 0;
+        color: var(--inventory-ink);
+        font-size: 1.15rem;
+        font-weight: 800;
+    }
+
+    .category-description {
+        margin: 10px 0 18px;
+        color: var(--inventory-muted);
+        line-height: 1.55;
+        min-height: 48px;
+    }
+
+    .category-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .category-metric {
+        padding: 14px;
+        border-radius: 16px;
+        background: #f8fbfd;
+        border: 1px solid var(--inventory-line);
+        text-align: center;
+    }
+
+    .category-metric strong {
+        display: block;
+        font-size: 1.2rem;
+        color: var(--inventory-ink);
+        font-weight: 800;
+    }
+
+    .category-metric span {
+        display: block;
+        margin-top: 4px;
+        color: var(--inventory-muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+    }
+
+    .category-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .inline-form {
+        display: inline;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 {{ block.super }}
 
-{% if categories %}
-<div class="row g-4">
-    {% for category in categories %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                        {% if category.icon %}
-                        <i class="fas {{ category.icon }}" style="font-size: 32px; color: #667eea;"></i>
-                        {% endif %}
-                        <h5 class="card-title mt-2">{{ category.name }}</h5>
+<div class="inventory-container">
+    <div class="category-shell">
+        {% if categories %}
+        <div class="category-grid">
+            {% for category in categories %}
+            <div class="card category-card">
+                <div class="category-card-body">
+                    <div class="category-top">
+                        <div>
+                            <div class="category-icon">
+                                <i class="fas {% if category.icon %}{{ category.icon }}{% else %}fa-layer-group{% endif %}"></i>
+                            </div>
+                        </div>
+                        <div class="category-actions">
+                            <a href="{% url 'inventory:item-list' %}?category={{ category.id }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-boxes-stacked"></i> View Items
+                            </a>
+                            <a href="{% url 'inventory:edit-category' category.pk %}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <form method="post" action="{% url 'inventory:delete-category' category.pk %}" class="inline-form"
+                                  onsubmit="return confirm('Delete this category?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <a class="dropdown-item" href="{% url 'inventory:edit-category' category.pk %}">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                            </li>
-                            <li>
-                                <form method="post" action="{% url 'inventory:delete-category' category.pk %}"
-                                      style="display:inline;" onsubmit="return confirm('Delete this category?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="dropdown-item text-danger">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
 
-                {% if category.description %}
-                <p class="card-text text-muted small mb-3">{{ category.description }}</p>
-                {% endif %}
+                    <h3 class="category-name">{{ category.name }}</h3>
+                    <p class="category-description">{{ category.description|default:"No category description recorded." }}</p>
 
-                <div class="row text-center g-2">
-                    <div class="col">
-                        <div style="font-size: 18px; font-weight: bold; color: #667eea;">
-                            {{ category.item_count }}
+                    <div class="category-metrics">
+                        <div class="category-metric">
+                            <strong>{{ category.item_count }}</strong>
+                            <span>Items</span>
                         </div>
-                        <small class="text-muted">Items</small>
-                    </div>
-                    <div class="col">
-                        <div style="font-size: 18px; font-weight: bold; color: #28a745;">
-                            {{ category.get_total_stock }}
+                        <div class="category-metric">
+                            <strong>{{ category.get_total_stock }}</strong>
+                            <span>In Stock</span>
                         </div>
-                        <small class="text-muted">In Stock</small>
-                    </div>
-                    <div class="col">
-                        <div style="font-size: 18px; font-weight: bold; color: #ffc107;">
-                            ₹{{ category.get_total_value|floatformat:0 }}
+                        <div class="category-metric">
+                            <strong>Rs {{ category.get_total_value|floatformat:0 }}</strong>
+                            <span>Value</span>
                         </div>
-                        <small class="text-muted">Value</small>
                     </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-folder"></i>
+            </div>
+            <h3>No categories yet</h3>
+            <p>Create your first category to organize your inventory.</p>
+            <a href="{% url 'inventory:add-category' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Category
+            </a>
+        </div>
+        {% endif %}
     </div>
-    {% endfor %}
 </div>
-{% else %}
-<div class="empty-state">
-    <div class="empty-state-icon">
-        <i class="fas fa-folder"></i>
-    </div>
-    <h3>No categories yet</h3>
-    <p>Create your first category to organize your inventory</p>
-    <a href="{% url 'inventory:add-category' %}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Add Category
-    </a>
-</div>
-{% endif %}
-
 {% endblock %}

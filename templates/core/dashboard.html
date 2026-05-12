@@ -130,6 +130,71 @@
         </div>
     </div>
 
+    <div class="charts-container dashboard-insights-grid">
+        <div class="chart-container dashboard-insight-card">
+            <div class="chart-header">
+                <div>
+                    <h3>Admission Trends</h3>
+                    <p class="chart-subtitle">Monthly pattern of admitted students in the selected reporting window.</p>
+                </div>
+            </div>
+            <div class="insight-list">
+                {% for item in dashboard_admission_trends %}
+                <div class="insight-row">
+                    <div class="insight-copy">
+                        <strong>{{ item.label }}</strong>
+                    </div>
+                    <span class="insight-value">{{ item.count }}</span>
+                </div>
+                {% empty %}
+                <div class="collaboration-empty">No trend data available.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="chart-container dashboard-insight-card">
+            <div class="chart-header">
+                <div>
+                    <h3>Course Popularity</h3>
+                    <p class="chart-subtitle">Most represented courses in the current dashboard dataset.</p>
+                </div>
+            </div>
+            <div class="insight-list">
+                {% for course_name, count in dashboard_top_courses %}
+                <div class="insight-row">
+                    <div class="insight-copy">
+                        <strong>{{ course_name }}</strong>
+                    </div>
+                    <span class="insight-value">{{ count }} students</span>
+                </div>
+                {% empty %}
+                <div class="collaboration-empty">No course distribution available.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="chart-container dashboard-insight-card">
+            <div class="chart-header">
+                <div>
+                    <h3>Batch Performance</h3>
+                    <p class="chart-subtitle">Most utilized academic batches from the current student pool.</p>
+                </div>
+            </div>
+            <div class="insight-list">
+                {% for batch_name, count in dashboard_top_batches %}
+                <div class="insight-row">
+                    <div class="insight-copy">
+                        <strong>{{ batch_name }}</strong>
+                    </div>
+                    <span class="insight-value">{{ count }} students</span>
+                </div>
+                {% empty %}
+                <div class="collaboration-empty">No batch allocation data available.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
     <div class="charts-container">
         <div class="chart-container">
             <div class="chart-header">

@@ -1,137 +1,300 @@
 {% extends "inventory/base.html" %}
 {% load static %}
 
-{% block page_title %}{{ supplier.name }} - Details{% endblock %}
+{% block page_title %}{{ supplier.name }}{% endblock %}
 
 {% block page_actions %}
-<div class="btn-group">
+<div class="supplier-detail-actions">
+    <a href="{% url 'inventory:supplier-list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> All Suppliers
+    </a>
     <a href="{% url 'inventory:edit-supplier' supplier.pk %}" class="btn btn-warning">
         <i class="fas fa-edit"></i> Edit
     </a>
 </div>
 {% endblock %}
 
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .supplier-detail-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .supplier-detail-shell {
+        display: grid;
+        gap: 20px;
+    }
+
+    .supplier-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+        gap: 20px;
+    }
+
+    .supplier-hero-main {
+        padding: 24px;
+        border-radius: 24px;
+        background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 28%),
+            linear-gradient(135deg, #10233f 0%, #0f4c81 48%, #0284c7 100%);
+        color: #fff;
+        box-shadow: 0 24px 56px rgba(15, 23, 42, 0.14);
+    }
+
+    .supplier-hero-main h2 {
+        margin: 0 0 8px;
+        font-size: clamp(1.6rem, 2.8vw, 2.3rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+    }
+
+    .supplier-hero-main p {
+        margin: 0 0 18px;
+        color: rgba(255,255,255,0.82);
+        line-height: 1.55;
+    }
+
+    .supplier-chip-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .supplier-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.10);
+        border: 1px solid rgba(255,255,255,0.14);
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .supplier-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .supplier-summary-box {
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .supplier-summary-box label {
+        display: block;
+        margin-bottom: 6px;
+        color: rgba(255,255,255,0.68);
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 800;
+    }
+
+    .supplier-summary-box strong {
+        font-size: 1.3rem;
+        font-weight: 800;
+    }
+
+    .supplier-panels {
+        display: grid;
+        grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.4fr);
+        gap: 20px;
+    }
+
+    .supplier-info-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .supplier-info-row {
+        display: grid;
+        grid-template-columns: 130px minmax(0, 1fr);
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid #edf3f8;
+    }
+
+    .supplier-info-row:last-child {
+        border-bottom: 0;
+    }
+
+    .supplier-info-row label {
+        color: var(--inventory-muted);
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 800;
+    }
+
+    .purchase-history-table th,
+    .purchase-history-table td {
+        white-space: normal;
+    }
+
+    @media (max-width: 1080px) {
+        .supplier-hero,
+        .supplier-panels {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .supplier-summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .supplier-info-row {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 {{ block.super }}
 
-<div class="row">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Supplier Information</h5>
-            </div>
-            <div class="card-body">
-                {% if supplier.contact_person %}
-                <p><strong>Contact:</strong> {{ supplier.contact_person }}</p>
-                {% endif %}
-
-                {% if supplier.phone %}
-                <p><strong>Phone:</strong> <a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a></p>
-                {% endif %}
-
-                {% if supplier.email %}
-                <p><strong>Email:</strong> <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a></p>
-                {% endif %}
-
-                {% if supplier.address %}
-                <p><strong>Address:</strong> {{ supplier.address }}{% if supplier.city %}, {{ supplier.city }}{% endif %}</p>
-                {% endif %}
-
-                {% if supplier.gst_number %}
-                <p><strong>GST:</strong> {{ supplier.gst_number }}</p>
-                {% endif %}
-
-                {% if supplier.payment_terms %}
-                <p><strong>Payment Terms:</strong> {{ supplier.payment_terms }}</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Purchase Summary</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="text-center">
-                            <div style="font-size: 32px; font-weight: bold;">{{ total_purchases }}</div>
-                            <p class="text-muted">Total Purchases</p>
-                        </div>
+<div class="inventory-container">
+    <div class="supplier-detail-shell">
+        <div class="supplier-hero">
+            <section class="supplier-hero-main">
+                <div class="supplier-chip-row">
+                    <span class="supplier-chip"><i class="fas fa-building"></i> Supplier Profile</span>
+                    {% if supplier.gst_number %}<span class="supplier-chip"><i class="fas fa-file-invoice"></i> {{ supplier.gst_number }}</span>{% endif %}
+                </div>
+                <h2>{{ supplier.name }}</h2>
+                <p>Purchase relationship summary showing all items bought from this supplier, quantities, rates, invoices, and total spend.</p>
+                <div class="supplier-summary-grid">
+                    <div class="supplier-summary-box">
+                        <label>Total Purchases</label>
+                        <strong>{{ total_purchases }}</strong>
                     </div>
-                    <div class="col-md-6">
-                        <div class="text-center">
-                            <div style="font-size: 32px; font-weight: bold;">₹{{ total_spent|floatformat:0 }}</div>
-                            <p class="text-muted">Total Spent</p>
+                    <div class="supplier-summary-box">
+                        <label>Total Spent</label>
+                        <strong>Rs {{ total_spent|floatformat:0 }}</strong>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="supplier-panels">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Supplier Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="supplier-info-list">
+                        <div class="supplier-info-row">
+                            <label>Contact</label>
+                            <div>{{ supplier.contact_person|default:"Not recorded" }}</div>
+                        </div>
+                        <div class="supplier-info-row">
+                            <label>Phone</label>
+                            <div>{% if supplier.phone %}<a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a>{% else %}Not recorded{% endif %}</div>
+                        </div>
+                        <div class="supplier-info-row">
+                            <label>Email</label>
+                            <div>{% if supplier.email %}<a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>{% else %}Not recorded{% endif %}</div>
+                        </div>
+                        <div class="supplier-info-row">
+                            <label>Address</label>
+                            <div>
+                                {% if supplier.address %}
+                                {{ supplier.address }}{% if supplier.city %}, {{ supplier.city }}{% endif %}{% if supplier.state %}, {{ supplier.state }}{% endif %}
+                                {% else %}
+                                Not recorded
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="supplier-info-row">
+                            <label>GST</label>
+                            <div>{{ supplier.gst_number|default:"Not recorded" }}</div>
+                        </div>
+                        <div class="supplier-info-row">
+                            <label>Payment Terms</label>
+                            <div>{{ supplier.payment_terms|default:"Not recorded" }}</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Purchase History</h5>
-            </div>
-            {% if page_obj %}
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Item</th>
-                            <th>Date</th>
-                            <th>Quantity</th>
-                            <th>Rate</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for purchase in page_obj %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'inventory:item-detail' purchase.item.pk %}">
-                                    {{ purchase.item.name }}
-                                </a>
-                            </td>
-                            <td>{{ purchase.purchase_date|date:"d M Y" }}</td>
-                            <td>{{ purchase.quantity }}</td>
-                            <td>₹{{ purchase.purchase_rate|floatformat:2 }}</td>
-                            <td>₹{{ purchase.total_purchase_price|floatformat:2 }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Purchased Item Details</h5>
+                </div>
+                {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table purchase-history-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Purchase Date</th>
+                                <th>Quantity</th>
+                                <th>Purchase Rate</th>
+                                <th>Total Cost</th>
+                                <th>Selling Price</th>
+                                <th>Invoice / Batch</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for purchase in page_obj %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'inventory:item-detail' purchase.item.pk %}"><strong>{{ purchase.item.name }}</strong></a>
+                                    <br>
+                                    <small class="text-muted">{{ purchase.item.sku }}</small>
+                                </td>
+                                <td>{{ purchase.purchase_date|date:"d M Y" }}</td>
+                                <td>{{ purchase.quantity }}</td>
+                                <td>Rs {{ purchase.purchase_rate|floatformat:2 }}</td>
+                                <td>Rs {{ purchase.total_purchase_price|floatformat:2 }}</td>
+                                <td>Rs {{ purchase.selling_price|floatformat:2 }}</td>
+                                <td>
+                                    {% if purchase.invoice_number %}{{ purchase.invoice_number }}{% else %}<span class="text-muted">No invoice</span>{% endif %}
+                                    {% if purchase.batch_number %}<br><small class="text-muted">{{ purchase.batch_number }}</small>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
 
-            {% if is_paginated %}
-            <nav class="mt-3">
-                <ul class="pagination pagination-sm mb-0">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1">First</a>
-                    </li>
-                    {% endif %}
-                    <li class="page-item disabled">
-                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-                    </li>
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-
-            {% else %}
-            <div class="card-body">
-                <p class="text-muted text-center mb-0">No purchases from this supplier yet.</p>
+                {% if is_paginated %}
+                <div class="card-body">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                            {% endif %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                            </li>
+                            {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="card-body">
+                    <p class="text-muted text-center mb-0">No purchases from this supplier yet.</p>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
 </div>
-
 {% endblock %}

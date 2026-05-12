@@ -15,7 +15,6 @@ urlpatterns = [
     # Dashboard
     path("dashboard/", views.dashboard, name="dashboard"),
     path("education/", views.education_home, name="education_home"),
-    path("admission-pipeline/", views.admission_pipeline_dashboard, name="admission_pipeline"),
     path("notifications/", views.notifications_page, name="notifications_page"),
     path("communications/", views.communications_page, name="communications_page"),
     # Enquiry URLs
@@ -68,6 +67,7 @@ urlpatterns = [
     path("sales/", views.sales_services_dashboard, name="sales_services_dashboard"),
     path("sales/items/", views.sales_items, name="sales_items"),
     path("sales/items/add/", views.add_sales_item, name="add_sales_item"),
+    path("sales/receipts/", views.sales_receipts, name="sales_receipts"),
     # Timetable & Attendance Management URLs
     path("timetable/", views.student_timetable, name="student_timetable"),
     path("timetable/<int:student_id>/edit/", views.edit_student_batch, name="edit_student_batch"),

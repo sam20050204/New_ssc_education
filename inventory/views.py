@@ -1,23 +1,17 @@
-"""
-Views for Inventory Management
-"""
+"""Views for Inventory Management."""
 
-import json
 from decimal import Decimal
-from datetime import datetime, timedelta
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-from django.db.models import Q, Sum, Avg, F, Count, DecimalField
-from django.db.models.functions import TruncDate
+from django.db.models import Q, Sum, F, Count, DecimalField
 from django.utils import timezone
 from django.core.paginator import Paginator
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
 
 from inventory.models import (
     Item,
@@ -31,9 +25,14 @@ from inventory.models import (
 from inventory.forms import (
     ItemForm,
     CategoryForm,
+    InventoryEntryForm,
     SupplierForm,
     PurchaseForm,
     PurchaseHistoryFilterForm,
+)
+from inventory.services import (
+    build_item_insight_payload,
+    create_inventory_entry,
 )
 
 
@@ -43,17 +42,27 @@ from inventory.forms import (
 @login_required
 def inventory_dashboard(request):
     """Main inventory dashboard with overview"""
+    total_items = Item.objects.filter(is_active=True).count()
+    low_stock_items = Item.objects.filter(
+        is_active=True, current_stock__lte=F("minimum_stock")
+    ).count()
+    overstocked_items = Item.objects.filter(
+        is_active=True, current_stock__gt=F("maximum_stock")
+    ).count()
+
     context = {
-        "total_items": Item.objects.filter(is_active=True).count(),
+        "page_title": "Inventory Dashboard",
+        "total_items": total_items,
         "total_categories": Category.objects.filter(is_active=True).count(),
         "total_suppliers": Supplier.objects.filter(is_active=True).count(),
         "total_purchases": Purchase.objects.count(),
-        "low_stock_items": Item.objects.filter(
-            is_active=True, current_stock__lte=F("minimum_stock")
-        ).count(),
-        "overstocked_items": Item.objects.filter(
-            is_active=True, current_stock__gt=F("maximum_stock")
-        ).count(),
+        "low_stock_items": low_stock_items,
+        "overstocked_items": overstocked_items,
+        "healthy_stock_items": max(total_items - low_stock_items - overstocked_items, 0),
+        "healthy_stock_pct": int((max(total_items - low_stock_items - overstocked_items, 0) / total_items) * 100) if total_items else 0,
+        "low_stock_pct": int((low_stock_items / total_items) * 100) if total_items else 0,
+        "overstocked_pct": int((overstocked_items / total_items) * 100) if total_items else 0,
+        "active_page": "inventory",
     }
 
     # Calculate inventory value
@@ -84,6 +93,9 @@ def inventory_dashboard(request):
     context["recent_purchases"] = Purchase.objects.select_related(
         "item", "supplier"
     ).order_by("-purchase_date")[:10]
+    context["recent_items"] = Item.objects.filter(is_active=True).select_related(
+        "category"
+    ).order_by("-updated_at")[:6]
 
     # Low stock alerts
     context["low_stock_alerts"] = LowStockAlert.objects.filter(
@@ -98,45 +110,38 @@ def inventory_dashboard(request):
 
 @login_required
 def add_item(request):
-    """Add new item with purchase details"""
+    """Unified inventory entry page for item and purchase capture."""
     if request.method == "POST":
-        item_form = ItemForm(request.POST, request.FILES)
-        purchase_form = PurchaseForm(request.POST)
-
-        if item_form.is_valid() and purchase_form.is_valid():
+        form = InventoryEntryForm(request.POST, request.FILES)
+        if form.is_valid():
             try:
-                # Save item
-                item = item_form.save()
-
-                # Save purchase
-                purchase = purchase_form.save(commit=False)
-                purchase.item = item
-                purchase.created_by = request.user
-                purchase.save()
-
-                # Create inventory record if not exists
-                Inventory.objects.get_or_create(item=item)
-
+                item, purchase = create_inventory_entry(form, request.user)
                 messages.success(
                     request,
-                    f"Item '{item.name}' added successfully with {purchase.quantity} units purchased!",
+                    f"Inventory updated for '{item.name}' with {purchase.quantity} new units.",
                 )
                 return redirect("inventory:item-detail", pk=item.pk)
             except Exception as e:
-                messages.error(request, f"Error saving item: {str(e)}")
+                form.add_error(None, f"Unable to save inventory entry: {str(e)}")
         else:
-            for error in item_form.errors.values():
-                messages.error(request, error)
-            for error in purchase_form.errors.values():
-                messages.error(request, error)
+            messages.error(request, "Please correct the highlighted fields and try again.")
     else:
-        item_form = ItemForm()
-        purchase_form = PurchaseForm()
+        form = InventoryEntryForm(
+            initial={
+                "purchase_date": timezone.localdate(),
+                "minimum_stock": 5,
+                "maximum_stock": 100,
+                "gst_percentage": Decimal("18.00"),
+                "quantity": 1,
+            }
+        )
 
     context = {
-        "item_form": item_form,
-        "purchase_form": purchase_form,
+        "form": form,
+        "category_form": CategoryForm(),
+        "supplier_form": SupplierForm(),
         "page_title": "Add New Item",
+        "active_page": "inventory",
     }
     return render(request, "inventory/add_item.html", context)
 
@@ -181,6 +186,17 @@ def search_item_autocomplete(request):
 
 
 @login_required
+def item_insights_api(request, pk):
+    """Return item purchase and stock insights for the unified entry page."""
+    item = get_object_or_404(
+        Item.objects.select_related("category"),
+        pk=pk,
+        is_active=True,
+    )
+    return JsonResponse({"success": True, "item": build_item_insight_payload(item)})
+
+
+@login_required
 def item_detail(request, pk):
     """View item details and purchase history"""
     item = get_object_or_404(Item, pk=pk, is_active=True)
@@ -196,6 +212,7 @@ def item_detail(request, pk):
         "page_obj": page_obj,
         "total_purchases": purchases.count(),
         "page_title": f"Item: {item.name}",
+        "active_page": "inventory",
     }
 
     return render(request, "inventory/item_detail.html", context)
@@ -247,6 +264,7 @@ class ItemListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context["categories"] = Category.objects.filter(is_active=True)
         context["page_title"] = "Inventory Items"
+        context["active_page"] = "inventory"
         return context
 
 
@@ -300,11 +318,12 @@ class CategoryListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return Category.objects.filter(is_active=True).annotate(
             item_count=Count("items")
-        )
+        ).order_by("name")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_title"] = "Categories"
+        context["active_page"] = "inventory"
         return context
 
 
@@ -314,11 +333,20 @@ def add_category(request):
     if request.method == "POST":
         form = CategoryForm(request.POST)
         if form.is_valid():
-            form.save()
+            category = form.save()
             messages.success(request, "Category added successfully!")
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 # Return JSON for AJAX requests
-                return JsonResponse({"success": True, "message": "Category added"})
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "message": "Category added",
+                        "category": {
+                            "id": category.pk,
+                            "name": category.name,
+                        },
+                    }
+                )
             return redirect("inventory:category-list")
         else:
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -333,6 +361,25 @@ def add_category(request):
 
     context = {"form": form, "page_title": "Add Category"}
     return render(request, "inventory/add_category.html", context)
+
+
+@login_required
+@require_POST
+def category_quick_create_api(request):
+    """AJAX endpoint for quick category creation from the unified entry page."""
+    form = CategoryForm(request.POST)
+    if form.is_valid():
+        category = form.save()
+        return JsonResponse(
+            {
+                "success": True,
+                "category": {
+                    "id": category.pk,
+                    "name": category.name,
+                },
+            }
+        )
+    return JsonResponse({"success": False, "errors": form.errors}, status=400)
 
 
 @login_required
@@ -407,6 +454,7 @@ class SupplierListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_title"] = "Suppliers"
+        context["active_page"] = "inventory"
         return context
 
 
@@ -416,10 +464,22 @@ def add_supplier(request):
     if request.method == "POST":
         form = SupplierForm(request.POST)
         if form.is_valid():
-            form.save()
+            supplier = form.save()
             messages.success(request, "Supplier added successfully!")
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "supplier": {
+                            "id": supplier.pk,
+                            "name": supplier.name,
+                        },
+                    }
+                )
             return redirect("inventory:supplier-list")
         else:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "errors": form.errors}, status=400)
             for error in form.errors.values():
                 messages.error(request, error)
     else:
@@ -427,6 +487,25 @@ def add_supplier(request):
 
     context = {"form": form, "page_title": "Add Supplier"}
     return render(request, "inventory/add_supplier.html", context)
+
+
+@login_required
+@require_POST
+def supplier_quick_create_api(request):
+    """AJAX endpoint for quick supplier creation from the unified entry page."""
+    form = SupplierForm(request.POST)
+    if form.is_valid():
+        supplier = form.save()
+        return JsonResponse(
+            {
+                "success": True,
+                "supplier": {
+                    "id": supplier.pk,
+                    "name": supplier.name,
+                },
+            }
+        )
+    return JsonResponse({"success": False, "errors": form.errors}, status=400)
 
 
 @login_required
@@ -562,7 +641,6 @@ class PurchaseListView(LoginRequiredMixin, ListView):
 def edit_purchase(request, pk):
     """Edit purchase record"""
     purchase = get_object_or_404(Purchase, pk=pk)
-    old_quantity = purchase.quantity
 
     if request.method == "POST":
         form = PurchaseForm(request.POST, instance=purchase)
@@ -570,13 +648,6 @@ def edit_purchase(request, pk):
             purchase = form.save(commit=False)
             purchase.updated_by = request.user
             purchase.save()
-
-            # Update item stock if quantity changed
-            if old_quantity != purchase.quantity:
-                quantity_diff = purchase.quantity - old_quantity
-                purchase.item.current_stock += quantity_diff
-                purchase.item.save(update_fields=["current_stock"])
-                purchase.item.update_average_price()
 
             messages.success(request, "Purchase updated successfully!")
             return redirect("inventory:item-detail", pk=purchase.item.pk)

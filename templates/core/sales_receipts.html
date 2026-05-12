@@ -1,0 +1,391 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Sales Bills & Receipts{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/sales_receipts.css' %}?v={{ STATIC_VERSION }}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header dashboard-page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon dashboard-page-icon">BR</div>
+            <div>
+                <h1 class="page-title">Sales Bills & Receipts</h1>
+                <p class="page-subtitle">Create printable receipts for sold items and service work from one counter screen.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="receipt-workspace">
+    <div class="receipt-form-card">
+        <div class="section-head">
+            <div>
+                <h2>Create Bill</h2>
+                <p>Record customer details, add item or service lines, and generate a saved receipt.</p>
+            </div>
+        </div>
+
+        <form method="post" id="salesReceiptForm">
+            {% csrf_token %}
+
+            <div class="receipt-grid">
+                <div class="field-group">
+                    <label for="customer_name">Customer Name</label>
+                    <input type="text" id="customer_name" name="customer_name" class="form-control" required>
+                </div>
+                <div class="field-group">
+                    <label for="customer_phone">Customer Phone</label>
+                    <input type="text" id="customer_phone" name="customer_phone" class="form-control" placeholder="Optional mobile number">
+                </div>
+                <div class="field-group">
+                    <label for="sale_date">Bill Date</label>
+                    <input type="date" id="sale_date" name="sale_date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                </div>
+                <div class="field-group">
+                    <label for="payment_mode">Payment Mode</label>
+                    <select id="payment_mode" name="payment_mode" class="form-control">
+                        {% for value, label in payment_modes %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field-group field-group-wide">
+                    <label for="customer_address">Customer Address</label>
+                    <textarea id="customer_address" name="customer_address" class="form-control" rows="2" placeholder="Optional address"></textarea>
+                </div>
+            </div>
+
+            <div class="line-items-shell">
+                <div class="line-items-head">
+                    <h3>Bill Lines</h3>
+                    <button type="button" class="mini-link-btn" id="addLineBtn">Add Line</button>
+                </div>
+
+                <div id="lineItemsContainer">
+                    <div class="line-item-row" data-line-row>
+                        <div class="field-group">
+                            <label>Type</label>
+                            <select name="line_type[]" class="form-control line-type">
+                                <option value="item">Item</option>
+                                <option value="service">Service</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label>Catalog Item</label>
+                            <select name="sales_item_id[]" class="form-control sales-item-select">
+                                <option value="">Custom / Service</option>
+                                {% for item in available_items %}
+                                <option value="{{ item.id }}" data-name="{{ item.item_name }}" data-stock="{{ item.quantity }}" data-rate="{{ item.purchase_rate }}">
+                                    {{ item.item_name }} (Stock {{ item.quantity }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field-group line-description-group">
+                            <label>Description</label>
+                            <input type="text" name="description[]" class="form-control line-description" placeholder="Item or service description" required>
+                        </div>
+                        <div class="field-group field-group-xs">
+                            <label>Qty</label>
+                            <input type="number" name="quantity[]" class="form-control line-quantity" min="1" value="1" required>
+                        </div>
+                        <div class="field-group field-group-sm">
+                            <label>Rate</label>
+                            <input type="number" name="unit_price[]" class="form-control line-rate" min="0" step="0.01" value="0" required>
+                        </div>
+                        <div class="field-group field-group-sm">
+                            <label>Amount</label>
+                            <input type="text" class="form-control line-total" value="Rs. 0.00" readonly>
+                        </div>
+                        <div class="line-row-actions">
+                            <button type="button" class="remove-line-btn" data-remove-line>Remove</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="receipt-grid receipt-grid-footer">
+                <div class="field-group field-group-wide">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Optional service notes, warranty details, or delivery remarks"></textarea>
+                </div>
+                <div class="field-group">
+                    <label for="discount_amount">Discount</label>
+                    <input type="number" id="discount_amount" name="discount_amount" class="form-control" min="0" step="0.01" value="0">
+                </div>
+            </div>
+
+            <div class="bill-totals">
+                <div class="total-chip">
+                    <span>Subtotal</span>
+                    <strong id="subtotalValue">Rs. 0.00</strong>
+                </div>
+                <div class="total-chip">
+                    <span>Grand Total</span>
+                    <strong id="grandTotalValue">Rs. 0.00</strong>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Generate Receipt</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="receipt-side-panel">
+        <div class="receipt-preview-card">
+            <div class="section-head">
+                <div>
+                    <h2>Receipt Preview</h2>
+                    <p>Saved receipt details ready for print.</p>
+                </div>
+                {% if selected_receipt %}
+                <button type="button" class="mini-link-btn" onclick="window.print()">Print</button>
+                {% endif %}
+            </div>
+
+            {% if selected_receipt %}
+            <div class="receipt-print-shell" id="salesReceiptPrintArea">
+                <div class="print-brand">
+                    <strong>Shri Samarth Sales and Services</strong>
+                    <span>Computer items, accessories, and service billing</span>
+                </div>
+                <div class="receipt-meta-grid">
+                    <div><span>Receipt No</span><strong>{{ selected_receipt.receipt_no }}</strong></div>
+                    <div><span>Date</span><strong>{{ selected_receipt.sale_date|date:"d M Y" }}</strong></div>
+                    <div><span>Customer</span><strong>{{ selected_receipt.customer_name }}</strong></div>
+                    <div><span>Payment</span><strong>{{ selected_receipt.payment_mode }}</strong></div>
+                    <div><span>Phone</span><strong>{{ selected_receipt.customer_phone|default:"-" }}</strong></div>
+                    <div><span>Created By</span><strong>{{ selected_receipt.created_by.username|default:"System" }}</strong></div>
+                </div>
+                {% if selected_receipt.customer_address %}
+                <div class="receipt-address">
+                    <span>Address</span>
+                    <strong>{{ selected_receipt.customer_address }}</strong>
+                </div>
+                {% endif %}
+                <table class="receipt-lines-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Qty</th>
+                            <th>Rate</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in selected_receipt.lines.all %}
+                        <tr>
+                            <td>{{ line.description }}</td>
+                            <td>{{ line.get_line_type_display }}</td>
+                            <td>{{ line.quantity }}</td>
+                            <td>Rs. {{ line.unit_price|floatformat:2 }}</td>
+                            <td>Rs. {{ line.line_total|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="receipt-summary">
+                    <div><span>Subtotal</span><strong>Rs. {{ selected_receipt.subtotal|floatformat:2 }}</strong></div>
+                    <div><span>Discount</span><strong>Rs. {{ selected_receipt.discount_amount|floatformat:2 }}</strong></div>
+                    <div class="receipt-summary-grand"><span>Grand Total</span><strong>Rs. {{ selected_receipt.grand_total|floatformat:2 }}</strong></div>
+                </div>
+                {% if selected_receipt.notes %}
+                <div class="receipt-notes">
+                    <span>Notes</span>
+                    <p>{{ selected_receipt.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="empty-preview">
+                <p>No receipt selected yet.</p>
+                <p>Create a bill to view the printable receipt here.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="receipt-history-card">
+            <div class="section-head">
+                <div>
+                    <h2>Recent Receipts</h2>
+                    <p>Quick access to the latest saved sales bills.</p>
+                </div>
+            </div>
+            <div class="history-list">
+                {% for receipt in recent_receipts %}
+                <a href="{% url 'sales_receipts' %}?receipt={{ receipt.id }}" class="history-card {% if selected_receipt and selected_receipt.id == receipt.id %}active{% endif %}">
+                    <div class="history-topline">
+                        <strong>{{ receipt.receipt_no }}</strong>
+                        <span>Rs. {{ receipt.grand_total|floatformat:2 }}</span>
+                    </div>
+                    <div class="history-meta">{{ receipt.customer_name }} • {{ receipt.sale_date|date:"d M Y" }}</div>
+                    <div class="history-meta">{{ receipt.lines.count }} line{{ receipt.lines.count|pluralize }} • {{ receipt.payment_mode }}</div>
+                </a>
+                {% empty %}
+                <div class="empty-preview">
+                    <p>No sales receipts created yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<template id="lineItemTemplate">
+    <div class="line-item-row" data-line-row>
+        <div class="field-group">
+            <label>Type</label>
+            <select name="line_type[]" class="form-control line-type">
+                <option value="item">Item</option>
+                <option value="service">Service</option>
+            </select>
+        </div>
+        <div class="field-group">
+            <label>Catalog Item</label>
+            <select name="sales_item_id[]" class="form-control sales-item-select">
+                <option value="">Custom / Service</option>
+                {% for item in available_items %}
+                <option value="{{ item.id }}" data-name="{{ item.item_name }}" data-stock="{{ item.quantity }}" data-rate="{{ item.purchase_rate }}">
+                    {{ item.item_name }} (Stock {{ item.quantity }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field-group line-description-group">
+            <label>Description</label>
+            <input type="text" name="description[]" class="form-control line-description" placeholder="Item or service description" required>
+        </div>
+        <div class="field-group field-group-xs">
+            <label>Qty</label>
+            <input type="number" name="quantity[]" class="form-control line-quantity" min="1" value="1" required>
+        </div>
+        <div class="field-group field-group-sm">
+            <label>Rate</label>
+            <input type="number" name="unit_price[]" class="form-control line-rate" min="0" step="0.01" value="0" required>
+        </div>
+        <div class="field-group field-group-sm">
+            <label>Amount</label>
+            <input type="text" class="form-control line-total" value="Rs. 0.00" readonly>
+        </div>
+        <div class="line-row-actions">
+            <button type="button" class="remove-line-btn" data-remove-line>Remove</button>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const lineItemsContainer = document.getElementById('lineItemsContainer');
+    const template = document.getElementById('lineItemTemplate');
+    const addLineBtn = document.getElementById('addLineBtn');
+    const discountInput = document.getElementById('discount_amount');
+    const subtotalValue = document.getElementById('subtotalValue');
+    const grandTotalValue = document.getElementById('grandTotalValue');
+
+    function toNumber(value) {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function formatCurrency(value) {
+        return `Rs. ${value.toFixed(2)}`;
+    }
+
+    function updateLineTotal(row) {
+        const quantity = toNumber(row.querySelector('.line-quantity')?.value);
+        const rate = toNumber(row.querySelector('.line-rate')?.value);
+        const total = quantity * rate;
+        const totalInput = row.querySelector('.line-total');
+        if (totalInput) {
+            totalInput.value = formatCurrency(total);
+        }
+        return total;
+    }
+
+    function updateReceiptTotals() {
+        const rows = lineItemsContainer.querySelectorAll('[data-line-row]');
+        let subtotal = 0;
+        rows.forEach(row => {
+            subtotal += updateLineTotal(row);
+        });
+        const discount = toNumber(discountInput?.value);
+        const grandTotal = Math.max(subtotal - discount, 0);
+        subtotalValue.textContent = formatCurrency(subtotal);
+        grandTotalValue.textContent = formatCurrency(grandTotal);
+    }
+
+    function bindRow(row) {
+        const itemSelect = row.querySelector('.sales-item-select');
+        const descriptionInput = row.querySelector('.line-description');
+        const rateInput = row.querySelector('.line-rate');
+        const quantityInput = row.querySelector('.line-quantity');
+        const removeBtn = row.querySelector('[data-remove-line]');
+
+        if (itemSelect) {
+            itemSelect.addEventListener('change', function() {
+                const option = itemSelect.options[itemSelect.selectedIndex];
+                if (option && option.value) {
+                    if (descriptionInput && !descriptionInput.value.trim()) {
+                        descriptionInput.value = option.dataset.name || '';
+                    }
+                    if (rateInput && toNumber(rateInput.value) === 0) {
+                        rateInput.value = option.dataset.rate || '0';
+                    }
+                }
+                updateReceiptTotals();
+            });
+        }
+
+        [rateInput, quantityInput, descriptionInput].forEach(function(input) {
+            if (input) {
+                input.addEventListener('input', updateReceiptTotals);
+            }
+        });
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                const rows = lineItemsContainer.querySelectorAll('[data-line-row]');
+                if (rows.length === 1) {
+                    row.querySelectorAll('input').forEach(input => {
+                        if (input.type === 'number') {
+                            input.value = input.classList.contains('line-quantity') ? '1' : '0';
+                        } else if (!input.readOnly) {
+                            input.value = '';
+                        }
+                    });
+                    if (itemSelect) itemSelect.value = '';
+                } else {
+                    row.remove();
+                }
+                updateReceiptTotals();
+            });
+        }
+    }
+
+    if (addLineBtn && template && lineItemsContainer) {
+        addLineBtn.addEventListener('click', function() {
+            const clone = template.content.firstElementChild.cloneNode(true);
+            lineItemsContainer.appendChild(clone);
+            bindRow(clone);
+            updateReceiptTotals();
+        });
+    }
+
+    lineItemsContainer.querySelectorAll('[data-line-row]').forEach(bindRow);
+    if (discountInput) {
+        discountInput.addEventListener('input', updateReceiptTotals);
+    }
+    updateReceiptTotals();
+})();
+</script>
+{% endblock %}

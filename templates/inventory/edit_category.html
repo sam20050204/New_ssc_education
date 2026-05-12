@@ -72,27 +72,3 @@
 </div>
 
 {% endblock %}
-{% load static %}
-
-{% block page_title %}Edit Category{% endblock %}
-
-{% block content %}
-{{ block.super }}
-
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="form-section">
-            <h2>Edit Category: {{ category.name }}</h2>
-            <form method="post">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <hr>
-                <div class="d-flex gap-2 justify-content-end">
-                    <a href="{% url 'inventory:category-list' %}" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endblock %}

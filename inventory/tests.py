@@ -16,7 +16,13 @@ from inventory.models import (
     Inventory,
     LowStockAlert,
 )
-from inventory.forms import ItemForm, CategoryForm, SupplierForm, PurchaseForm
+from inventory.forms import (
+    ItemForm,
+    CategoryForm,
+    SupplierForm,
+    PurchaseForm,
+    InventoryEntryForm,
+)
 
 
 class CategoryModelTest(TestCase):
@@ -253,6 +259,67 @@ class CategoryFormTest(TestCase):
         })
         self.assertFalse(form.is_valid())
 
+    def test_case_insensitive_duplicate_category_validation(self):
+        """Test category duplicates are blocked case-insensitively."""
+        Category.objects.create(name="Laptops")
+        form = CategoryForm(data={'name': 'lApToPs'})
+        self.assertFalse(form.is_valid())
+
+
+class SupplierFormTest(TestCase):
+    """Test SupplierForm"""
+
+    def test_case_insensitive_duplicate_supplier_validation(self):
+        Supplier.objects.create(name="Dell India")
+        form = SupplierForm(data={'name': 'dell india'})
+        self.assertFalse(form.is_valid())
+
+
+class InventoryEntryFormTest(TestCase):
+    """Test unified inventory entry form."""
+
+    def setUp(self):
+        self.category = Category.objects.create(name="Laptops")
+        self.item = Item.objects.create(
+            name="Dell XPS 13",
+            category=self.category,
+            selling_price=Decimal("80000.00"),
+        )
+
+    def test_existing_item_is_resolved_case_insensitively(self):
+        form = InventoryEntryForm(
+            data={
+                'item_name': 'dell xps 13',
+                'category': self.category.pk,
+                'purchase_date': '2026-05-11',
+                'purchase_rate': '60000.00',
+                'quantity': 2,
+                'selling_price': '82000.00',
+                'minimum_stock': 5,
+                'maximum_stock': 50,
+                'gst_percentage': '18.00',
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['resolved_item'].pk, self.item.pk)
+
+    def test_maximum_stock_must_exceed_minimum_stock(self):
+        form = InventoryEntryForm(
+            data={
+                'item_name': 'HP Pavilion 15',
+                'category': self.category.pk,
+                'purchase_date': '2026-05-11',
+                'purchase_rate': '40000.00',
+                'quantity': 1,
+                'selling_price': '50000.00',
+                'minimum_stock': 10,
+                'maximum_stock': 10,
+                'gst_percentage': '18.00',
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('maximum_stock', form.errors)
+
 
 class InventoryViewTest(TestCase):
     """Test Inventory Views"""
@@ -302,13 +369,16 @@ class InventoryViewTest(TestCase):
         """Test add item view GET request"""
         response = self.client.get(reverse('inventory:add-item'))
         self.assertEqual(response.status_code, 200)
-        self.assertIn('item_form', response.context)
+        self.assertIn('form', response.context)
 
     def test_add_item_view_post(self):
         """Test add item view POST request"""
         data = {
-            'name': 'HP Pavilion 15',
+            'item_name': 'HP Pavilion 15',
             'category': self.category.id,
+            'sku': '',
+            'description': 'Laptop for office work',
+            'specifications': '16GB RAM / 512GB SSD',
             'selling_price': Decimal('50000.00'),
             'minimum_stock': 5,
             'maximum_stock': 50,
@@ -317,9 +387,57 @@ class InventoryViewTest(TestCase):
             'purchase_date': '2024-05-11',
             'quantity': 10,
             'purchase_rate': Decimal('40000.00'),
+            'batch_number': 'HP-01',
+            'invoice_number': 'INV-1001',
         }
         response = self.client.post(reverse('inventory:add-item'), data)
         self.assertEqual(response.status_code, 302)  # Redirect on success
+        self.assertTrue(Item.objects.filter(name='HP Pavilion 15').exists())
+
+    def test_add_item_view_post_reuses_existing_item(self):
+        """Test unified entry adds purchase against an existing item."""
+        data = {
+            'existing_item_id': self.item.pk,
+            'item_name': 'Dell XPS 13',
+            'category': self.category.id,
+            'selling_price': Decimal('82000.00'),
+            'minimum_stock': 5,
+            'maximum_stock': 50,
+            'gst_percentage': Decimal('18.00'),
+            'supplier': '',
+            'purchase_date': '2026-05-11',
+            'quantity': 3,
+            'purchase_rate': Decimal('60000.00'),
+        }
+        response = self.client.post(reverse('inventory:add-item'), data)
+        self.assertEqual(response.status_code, 302)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.current_stock, 3)
+
+    def test_item_insights_api(self):
+        """Test item insights endpoint returns analytics payload."""
+        Purchase.objects.create(
+            item=self.item,
+            quantity=2,
+            purchase_rate=Decimal("60000.00"),
+        )
+        response = self.client.get(
+            reverse('inventory:item-insights-api', args=[self.item.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['item']['id'], self.item.pk)
+
+    def test_category_quick_create_api(self):
+        """Test modal category creation endpoint."""
+        response = self.client.post(
+            reverse('inventory:category-quick-create-api'),
+            {'name': 'Printers'},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Category.objects.filter(name='Printers').exists())
 
     def test_login_required(self):
         """Test login is required"""
