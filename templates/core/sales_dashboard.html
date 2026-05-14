@@ -33,6 +33,58 @@
 {% block content %}
 <section class="dashboard-view">
     <div class="stats-grid dashboard-stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Daily Profit</span>
+            </div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">Rs. {{ daily_profit_summary.daily_profit|floatformat:0 }}</div>
+                    <div class="stat-label">Today</div>
+                    <p class="stat-description">Profit recorded in the daily sales register for the current day.</p>
+                    <div class="stat-period"><a href="{% url 'daily_sales_register' %}" style="color: #2563eb; text-decoration: none;">Open Daily Sales →</a></div>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Weekly Profit</span>
+            </div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">Rs. {{ daily_profit_summary.weekly_profit|floatformat:0 }}</div>
+                    <div class="stat-label">This Week</div>
+                    <p class="stat-description">Running profit for the current week based on daily sales entries.</p>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Monthly Profit</span>
+            </div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">Rs. {{ daily_profit_summary.monthly_profit|floatformat:0 }}</div>
+                    <div class="stat-label">This Month</div>
+                    <p class="stat-description">Profit for the current month from counter sales and service work.</p>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-topline">
+                <span class="stat-chip">Yearly Profit</span>
+            </div>
+            <div class="stat-card-main">
+                <div class="stat-copy">
+                    <div class="stat-number">Rs. {{ daily_profit_summary.yearly_profit|floatformat:0 }}</div>
+                    <div class="stat-label">This Year</div>
+                    <p class="stat-description">Total yearly profit captured through the daily sales register.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-grid dashboard-stats-grid">
         <div class="stat-card stat-card-sales">
             <div class="stat-card-topline">
                 <span class="stat-chip">Revenue</span>
@@ -57,8 +109,8 @@
             <div class="stat-card-main">
                 <div class="stat-copy">
                     <div class="stat-number">{{ total_items|default:0 }}</div>
-                    <div class="stat-label">Sales Items</div>
-                    <p class="stat-description">Total number of unique products and services available for sale.</p>
+                    <div class="stat-label">Inventory Items</div>
+                    <p class="stat-description">Total number of active inventory products available for billing.</p>
                     <div class="stat-period"><a href="{% url 'inventory:dashboard' %}" style="color: #2563eb; text-decoration: none;">Open Inventory →</a></div>
                 </div>
                 <div class="stat-visual stat-visual-items">
@@ -137,7 +189,7 @@
                     <h3>Recent Sales Activity</h3>
                     <p class="chart-subtitle">Latest transactions and sales operations.</p>
                 </div>
-                <a href="{% url 'sales_receipts' %}" class="mini-link-btn">Open Billing</a>
+                <a href="{% url 'daily_sales_register' %}" class="mini-link-btn">Open Daily Sales</a>
             </div>
             <div class="activity-list">
                 {% for receipt in recent_sales_receipts %}

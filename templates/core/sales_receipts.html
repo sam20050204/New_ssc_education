@@ -27,7 +27,12 @@
         <div class="section-head">
             <div>
                 <h2>Create Bill</h2>
-                <p>Record customer details, add item or service lines, and generate a saved receipt.</p>
+                <p>Record customer details, add inventory-backed item lines or service lines, and generate a saved receipt.</p>
+            </div>
+            <div class="section-badges">
+                <a href="{% url 'sales_receipt_history' %}" class="info-badge info-badge-link">View receipt history</a>
+                <span class="info-badge">Live inventory linked</span>
+                <span class="info-badge">Selling price autofill</span>
             </div>
         </div>
 
@@ -66,40 +71,42 @@
                     <h3>Bill Lines</h3>
                     <button type="button" class="mini-link-btn" id="addLineBtn">Add Line</button>
                 </div>
+                <p class="line-items-note">Item lines deduct stock from inventory. Service lines remain standalone and do not affect stock.</p>
 
                 <div id="lineItemsContainer">
                     <div class="line-item-row" data-line-row>
-                        <div class="field-group">
+                        <div class="field-group line-type-group">
                             <label>Type</label>
                             <select name="line_type[]" class="form-control line-type">
                                 <option value="item">Item</option>
                                 <option value="service">Service</option>
                             </select>
                         </div>
-                        <div class="field-group">
-                            <label>Catalog Item</label>
-                            <select name="sales_item_id[]" class="form-control sales-item-select">
-                                <option value="">Custom / Service</option>
+                        <div class="field-group inventory-group">
+                            <label>Inventory Item</label>
+                            <select name="inventory_item_id[]" class="form-control sales-item-select">
+                                <option value="">Select inventory item</option>
                                 {% for item in available_items %}
-                                <option value="{{ item.id }}" data-name="{{ item.item_name }}" data-stock="{{ item.quantity }}" data-rate="{{ item.purchase_rate }}">
-                                    {{ item.item_name }} (Stock {{ item.quantity }})
+                                <option value="{{ item.id }}" data-name="{{ item.name }}" data-stock="{{ item.current_stock }}" data-rate="{{ item.selling_price }}" data-sku="{{ item.sku }}">
+                                    {{ item.name }} (Stock {{ item.current_stock }})
                                 </option>
                                 {% endfor %}
                             </select>
+                            <div class="item-stock-note" data-item-stock-note>Select an inventory item to use live stock and selling price.</div>
                         </div>
                         <div class="field-group line-description-group">
                             <label>Description</label>
                             <input type="text" name="description[]" class="form-control line-description" placeholder="Item or service description" required>
                         </div>
-                        <div class="field-group field-group-xs">
+                        <div class="field-group field-group-xs quantity-group">
                             <label>Qty</label>
                             <input type="number" name="quantity[]" class="form-control line-quantity" min="1" value="1" required>
                         </div>
-                        <div class="field-group field-group-sm">
+                        <div class="field-group field-group-sm rate-group">
                             <label>Rate</label>
                             <input type="number" name="unit_price[]" class="form-control line-rate" min="0" step="0.01" value="0" required>
                         </div>
-                        <div class="field-group field-group-sm">
+                        <div class="field-group field-group-sm amount-group">
                             <label>Amount</label>
                             <input type="text" class="form-control line-total" value="Rs. 0.00" readonly>
                         </div>
@@ -146,30 +153,58 @@
                     <p>Saved receipt details ready for print.</p>
                 </div>
                 {% if selected_receipt %}
-                <button type="button" class="mini-link-btn" onclick="window.print()">Print</button>
+                <div class="section-badges">
+                    <a href="{% url 'sales_receipt_history' %}?receipt={{ selected_receipt.id }}" class="info-badge info-badge-link">Open history</a>
+                    <form method="post" action="{% url 'delete_sales_receipt' selected_receipt.id %}" class="inline-action-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'sales_receipts' %}">
+                        <button
+                            type="submit"
+                            class="info-badge info-badge-danger"
+                            onclick="return confirm('Delete receipt {{ selected_receipt.receipt_no }}? This will restore inventory stock for item lines.')"
+                        >
+                            Delete receipt
+                        </button>
+                    </form>
+                    <button type="button" class="mini-link-btn" onclick="window.print()">Print</button>
+                </div>
                 {% endif %}
             </div>
 
             {% if selected_receipt %}
             <div class="receipt-print-shell" id="salesReceiptPrintArea">
-                <div class="print-brand">
-                    <strong>Shri Samarth Sales and Services</strong>
-                    <span>Computer items, accessories, and service billing</span>
+                <div class="receipt-header">
+                    <div class="institute-name">Shri Samarth Sales and Services</div>
+                    <div class="institute-details">
+                        Computer items, accessories, software, and service billing
+                    </div>
                 </div>
-                <div class="receipt-meta-grid">
-                    <div><span>Receipt No</span><strong>{{ selected_receipt.receipt_no }}</strong></div>
-                    <div><span>Date</span><strong>{{ selected_receipt.sale_date|date:"d M Y" }}</strong></div>
-                    <div><span>Customer</span><strong>{{ selected_receipt.customer_name }}</strong></div>
-                    <div><span>Payment</span><strong>{{ selected_receipt.payment_mode }}</strong></div>
-                    <div><span>Phone</span><strong>{{ selected_receipt.customer_phone|default:"-" }}</strong></div>
-                    <div><span>Created By</span><strong>{{ selected_receipt.created_by.username|default:"System" }}</strong></div>
+
+                <div class="receipt-title">Sales Bill Receipt</div>
+
+                <div class="receipt-info">
+                    <span class="receipt-label">Receipt No:</span>
+                    <span class="receipt-value">{{ selected_receipt.receipt_no }}</span>
+                    <span class="receipt-label">Bill Date:</span>
+                    <span class="receipt-value">{{ selected_receipt.sale_date|date:"d M Y" }}</span>
+                    <span class="receipt-label">Customer Name:</span>
+                    <span class="receipt-value">{{ selected_receipt.customer_name }}</span>
+                    <span class="receipt-label">Customer Phone:</span>
+                    <span class="receipt-value">{{ selected_receipt.customer_phone|default:"-" }}</span>
+                    <span class="receipt-label">Payment Mode:</span>
+                    <span class="receipt-value">{{ selected_receipt.payment_mode }}</span>
+                    <span class="receipt-label">Prepared By:</span>
+                    <span class="receipt-value">{{ selected_receipt.created_by.username|default:"System" }}</span>
+                    {% if selected_receipt.customer_address %}
+                    <span class="receipt-label">Customer Address:</span>
+                    <span class="receipt-value">{{ selected_receipt.customer_address }}</span>
+                    {% endif %}
+                    <span class="receipt-label">Total Lines:</span>
+                    <span class="receipt-value">{{ selected_receipt.lines.count }} line{{ selected_receipt.lines.count|pluralize }}</span>
                 </div>
-                {% if selected_receipt.customer_address %}
-                <div class="receipt-address">
-                    <span>Address</span>
-                    <strong>{{ selected_receipt.customer_address }}</strong>
-                </div>
-                {% endif %}
+
+                <hr class="receipt-divider">
+
                 <table class="receipt-lines-table">
                     <thead>
                         <tr>
@@ -192,17 +227,38 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                <div class="receipt-summary">
-                    <div><span>Subtotal</span><strong>Rs. {{ selected_receipt.subtotal|floatformat:2 }}</strong></div>
-                    <div><span>Discount</span><strong>Rs. {{ selected_receipt.discount_amount|floatformat:2 }}</strong></div>
-                    <div class="receipt-summary-grand"><span>Grand Total</span><strong>Rs. {{ selected_receipt.grand_total|floatformat:2 }}</strong></div>
+
+                <div class="amount-section">
+                    <div class="amount-row">
+                        <span>Subtotal</span>
+                        <strong>Rs. {{ selected_receipt.subtotal|floatformat:2 }}</strong>
+                    </div>
+                    <div class="amount-row">
+                        <span>Discount</span>
+                        <strong>Rs. {{ selected_receipt.discount_amount|floatformat:2 }}</strong>
+                    </div>
+                    <div class="amount-row paid">
+                        <span>Grand Total</span>
+                        <strong>Rs. {{ selected_receipt.grand_total|floatformat:2 }}</strong>
+                    </div>
+                    {% if selected_receipt_amount_in_words %}
+                    <div class="amount-in-words">
+                        <strong>Amount in words:</strong> {{ selected_receipt_amount_in_words|title }} only.
+                    </div>
+                    {% endif %}
                 </div>
+
                 {% if selected_receipt.notes %}
                 <div class="receipt-notes">
                     <span>Notes</span>
                     <p>{{ selected_receipt.notes }}</p>
                 </div>
                 {% endif %}
+
+                <div class="receipt-footer">
+                    <p>Thank you for your business.</p>
+                    <small>This is a computer-generated sales bill.</small>
+                </div>
             </div>
             {% else %}
             <div class="empty-preview">
@@ -212,66 +268,43 @@
             {% endif %}
         </div>
 
-        <div class="receipt-history-card">
-            <div class="section-head">
-                <div>
-                    <h2>Recent Receipts</h2>
-                    <p>Quick access to the latest saved sales bills.</p>
-                </div>
-            </div>
-            <div class="history-list">
-                {% for receipt in recent_receipts %}
-                <a href="{% url 'sales_receipts' %}?receipt={{ receipt.id }}" class="history-card {% if selected_receipt and selected_receipt.id == receipt.id %}active{% endif %}">
-                    <div class="history-topline">
-                        <strong>{{ receipt.receipt_no }}</strong>
-                        <span>Rs. {{ receipt.grand_total|floatformat:2 }}</span>
-                    </div>
-                    <div class="history-meta">{{ receipt.customer_name }} • {{ receipt.sale_date|date:"d M Y" }}</div>
-                    <div class="history-meta">{{ receipt.lines.count }} line{{ receipt.lines.count|pluralize }} • {{ receipt.payment_mode }}</div>
-                </a>
-                {% empty %}
-                <div class="empty-preview">
-                    <p>No sales receipts created yet.</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
     </div>
 </section>
 
 <template id="lineItemTemplate">
     <div class="line-item-row" data-line-row>
-        <div class="field-group">
+        <div class="field-group line-type-group">
             <label>Type</label>
             <select name="line_type[]" class="form-control line-type">
                 <option value="item">Item</option>
                 <option value="service">Service</option>
             </select>
         </div>
-        <div class="field-group">
-            <label>Catalog Item</label>
-            <select name="sales_item_id[]" class="form-control sales-item-select">
-                <option value="">Custom / Service</option>
+        <div class="field-group inventory-group">
+            <label>Inventory Item</label>
+            <select name="inventory_item_id[]" class="form-control sales-item-select">
+                <option value="">Select inventory item</option>
                 {% for item in available_items %}
-                <option value="{{ item.id }}" data-name="{{ item.item_name }}" data-stock="{{ item.quantity }}" data-rate="{{ item.purchase_rate }}">
-                    {{ item.item_name }} (Stock {{ item.quantity }})
+                <option value="{{ item.id }}" data-name="{{ item.name }}" data-stock="{{ item.current_stock }}" data-rate="{{ item.selling_price }}" data-sku="{{ item.sku }}">
+                    {{ item.name }} (Stock {{ item.current_stock }})
                 </option>
                 {% endfor %}
             </select>
+            <div class="item-stock-note" data-item-stock-note>Select an inventory item to use live stock and selling price.</div>
         </div>
         <div class="field-group line-description-group">
             <label>Description</label>
             <input type="text" name="description[]" class="form-control line-description" placeholder="Item or service description" required>
         </div>
-        <div class="field-group field-group-xs">
+        <div class="field-group field-group-xs quantity-group">
             <label>Qty</label>
             <input type="number" name="quantity[]" class="form-control line-quantity" min="1" value="1" required>
         </div>
-        <div class="field-group field-group-sm">
+        <div class="field-group field-group-sm rate-group">
             <label>Rate</label>
             <input type="number" name="unit_price[]" class="form-control line-rate" min="0" step="0.01" value="0" required>
         </div>
-        <div class="field-group field-group-sm">
+        <div class="field-group field-group-sm amount-group">
             <label>Amount</label>
             <input type="text" class="form-control line-total" value="Rs. 0.00" readonly>
         </div>
@@ -325,11 +358,37 @@
     }
 
     function bindRow(row) {
+        const lineTypeSelect = row.querySelector('.line-type');
         const itemSelect = row.querySelector('.sales-item-select');
         const descriptionInput = row.querySelector('.line-description');
         const rateInput = row.querySelector('.line-rate');
         const quantityInput = row.querySelector('.line-quantity');
         const removeBtn = row.querySelector('[data-remove-line]');
+        const stockNote = row.querySelector('[data-item-stock-note]');
+
+        function setDefaultStockNote(text) {
+            if (stockNote) {
+                stockNote.textContent = text;
+            }
+        }
+
+        function syncLineMode() {
+            const isService = lineTypeSelect && lineTypeSelect.value === 'service';
+            if (itemSelect) {
+                itemSelect.disabled = isService;
+                if (isService) {
+                    itemSelect.value = '';
+                }
+            }
+            if (quantityInput && isService) {
+                quantityInput.removeAttribute('max');
+            }
+            setDefaultStockNote(
+                isService
+                    ? 'Service lines do not affect inventory stock.'
+                    : 'Select an inventory item to use live stock and selling price.'
+            );
+        }
 
         if (itemSelect) {
             itemSelect.addEventListener('change', function() {
@@ -341,7 +400,28 @@
                     if (rateInput && toNumber(rateInput.value) === 0) {
                         rateInput.value = option.dataset.rate || '0';
                     }
+                    if (quantityInput) {
+                        quantityInput.max = option.dataset.stock || '';
+                        if (toNumber(quantityInput.value) > toNumber(option.dataset.stock)) {
+                            quantityInput.value = option.dataset.stock || '1';
+                        }
+                    }
+                    setDefaultStockNote(
+                        `SKU ${option.dataset.sku || '-'} | Stock ${option.dataset.stock || 0} | Selling price ${formatCurrency(toNumber(option.dataset.rate || 0))}`
+                    );
+                } else if (!(lineTypeSelect && lineTypeSelect.value === 'service')) {
+                    if (quantityInput) {
+                        quantityInput.removeAttribute('max');
+                    }
+                    setDefaultStockNote('Select an inventory item to use live stock and selling price.');
                 }
+                updateReceiptTotals();
+            });
+        }
+
+        if (lineTypeSelect) {
+            lineTypeSelect.addEventListener('change', function() {
+                syncLineMode();
                 updateReceiptTotals();
             });
         }
@@ -363,13 +443,21 @@
                             input.value = '';
                         }
                     });
-                    if (itemSelect) itemSelect.value = '';
+                    if (itemSelect) {
+                        itemSelect.value = '';
+                    }
+                    if (quantityInput) {
+                        quantityInput.removeAttribute('max');
+                    }
+                    syncLineMode();
                 } else {
                     row.remove();
                 }
                 updateReceiptTotals();
             });
         }
+
+        syncLineMode();
     }
 
     if (addLineBtn && template && lineItemsContainer) {

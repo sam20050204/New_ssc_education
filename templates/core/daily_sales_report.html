@@ -1,0 +1,212 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Daily Sales Reports{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/sales_receipts.css' %}?v={{ STATIC_VERSION }}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header dashboard-page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon dashboard-page-icon">DR</div>
+            <div>
+                <h1 class="page-title">Daily Sales Reports</h1>
+                <p class="page-subtitle">Review older day-wise sales totals and profit across daily, weekly, monthly, and yearly periods.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="receipt-history-workspace">
+    <div class="receipt-history-card receipt-history-browser">
+        <div class="section-head">
+            <div>
+                <h2>Report Filters</h2>
+                <p>Select a date to inspect that day and its surrounding week, month, and year.</p>
+            </div>
+            <div class="section-badges">
+                <a href="{% url 'daily_sales_register' %}" class="info-badge info-badge-link">Open daily sales</a>
+            </div>
+        </div>
+
+        <form method="get" class="history-filters">
+            <div class="field-group">
+                <label for="date">Focus Date</label>
+                <input type="date" id="date" name="date" class="form-control" value="{{ selected_date|date:'Y-m-d' }}">
+            </div>
+            <div class="field-group">
+                <label for="from_date">From Date</label>
+                <input type="date" id="from_date" name="from_date" class="form-control" value="{{ from_date|date:'Y-m-d' }}">
+            </div>
+            <div class="field-group">
+                <label for="to_date">To Date</label>
+                <input type="date" id="to_date" name="to_date" class="form-control" value="{{ to_date|date:'Y-m-d' }}">
+            </div>
+            <div class="history-filter-actions">
+                <button type="submit" class="btn btn-primary">Apply</button>
+                <a href="{% url 'daily_sales_report' %}" class="btn btn-secondary">Reset</a>
+            </div>
+        </form>
+
+        <div class="profit-summary-grid report-profit-grid">
+            <div class="profit-summary-card">
+                <span>{{ selected_date|date:"d M Y" }}</span>
+                <strong>Rs. {{ day_summary.profit|default:0|floatformat:2 }}</strong>
+                <small>{{ day_summary.entries|default:0 }} entr{{ day_summary.entries|default:0|pluralize:"y,ies" }}</small>
+            </div>
+            <div class="profit-summary-card">
+                <span>Week Of {{ selected_date|date:"d M" }}</span>
+                <strong>Rs. {{ week_summary.profit|default:0|floatformat:2 }}</strong>
+                <small>{{ week_summary.entries|default:0 }} entr{{ week_summary.entries|default:0|pluralize:"y,ies" }}</small>
+            </div>
+            <div class="profit-summary-card">
+                <span>{{ selected_date|date:"F Y" }}</span>
+                <strong>Rs. {{ month_summary.profit|default:0|floatformat:2 }}</strong>
+                <small>{{ month_summary.entries|default:0 }} entr{{ month_summary.entries|default:0|pluralize:"y,ies" }}</small>
+            </div>
+            <div class="profit-summary-card">
+                <span>Year {{ selected_date|date:"Y" }}</span>
+                <strong>Rs. {{ year_summary.profit|default:0|floatformat:2 }}</strong>
+                <small>{{ year_summary.entries|default:0 }} entr{{ year_summary.entries|default:0|pluralize:"y,ies" }}</small>
+            </div>
+        </div>
+
+        <div class="table-shell">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Entries</th>
+                        <th>Revenue</th>
+                        <th>Cost</th>
+                        <th>Profit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in page_obj %}
+                    <tr>
+                        <td>
+                            <a href="?date={{ row.sale_date|date:'Y-m-d' }}&from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}" class="report-table-link">
+                                {{ row.sale_date|date:"d M Y" }}
+                            </a>
+                        </td>
+                        <td>{{ row.entry_count }}</td>
+                        <td>Rs. {{ row.total_revenue|floatformat:2 }}</td>
+                        <td>Rs. {{ row.total_cost|floatformat:2 }}</td>
+                        <td>Rs. {{ row.total_profit|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="history-empty-state">
+                                <strong>No daily sales found for this range.</strong>
+                                <p>Try widening the date range to review older records.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="history-pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&date={{ selected_date|date:'Y-m-d' }}&from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}">Previous</a>
+            {% endif %}
+            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&date={{ selected_date|date:'Y-m-d' }}&from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}">Next</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="receipt-preview-card">
+        <div class="section-head">
+            <div>
+                <h2>Selected Day Entries</h2>
+                <p>Tabular view of all entries and lines recorded on {{ selected_date|date:"d M Y" }}.</p>
+            </div>
+        </div>
+
+        <div class="table-shell">
+            <table class="report-table day-detail-table">
+                <thead>
+                    <tr>
+                        <th>Entry Date</th>
+                        <th>Payment</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Qty</th>
+                        <th>Revenue</th>
+                        <th>Cost</th>
+                        <th>Profit</th>
+                        <th>Receipt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if selected_day_entries %}
+                {% for entry in selected_day_entries %}
+                    {% for line in entry.lines.all %}
+                    <tr>
+                        <td>{{ entry.sale_date|date:"d M Y" }}</td>
+                        <td>{{ entry.payment_mode }}</td>
+                        <td>
+                            <strong>{{ line.description }}</strong>
+                            {% if entry.notes %}
+                            <div class="report-table-note">{{ entry.notes }}</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ line.get_line_type_display }}</td>
+                        <td>{{ line.quantity }}</td>
+                        <td>Rs. {{ line.line_total|floatformat:2 }}</td>
+                        <td>Rs. {{ line.unit_cost|floatformat:2 }}</td>
+                        <td>Rs. {{ line.line_profit|floatformat:2 }}</td>
+                        <td>{% if line.sales_receipt %}{{ line.sales_receipt.receipt_no }}{% else %}-{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="report-table-summary-row">
+                        <td colspan="5"><strong>Entry Total</strong></td>
+                        <td><strong>Rs. {{ entry.total_amount|floatformat:2 }}</strong></td>
+                        <td><strong>Rs. {{ entry.total_cost|floatformat:2 }}</strong></td>
+                        <td><strong>Rs. {{ entry.total_profit|floatformat:2 }}</strong></td>
+                        <td>
+                            <div>{{ entry.lines.count }} line{{ entry.lines.count|pluralize }}</div>
+                            {% if not entry.has_receipt_lines %}
+                            <div class="report-table-note">
+                                <a href="{% url 'daily_sales_register' %}?entry={{ entry.id }}&edit={{ entry.id }}" class="report-table-link">Edit</a>
+                                |
+                                <form method="post" action="{% url 'delete_daily_sales_entry' entry.id %}" class="inline-action-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{% url 'daily_sales_report' %}?date={{ selected_date|date:'Y-m-d' }}&from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}">
+                                    <button type="submit" class="table-link-button" onclick="return confirm('Delete this daily sales entry?');">Delete</button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <div class="report-table-note">Manage receipt-linked lines from bills/receipts.</div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="9">
+                            <div class="empty-preview">
+                                <p>No entries recorded for {{ selected_date|date:"d M Y" }}.</p>
+                                <p>Pick another date from the table to inspect older records.</p>
+                            </div>
+                        </td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

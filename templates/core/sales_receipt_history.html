@@ -1,0 +1,229 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Receipt History{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/sales_receipts.css' %}?v={{ STATIC_VERSION }}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header dashboard-page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon dashboard-page-icon">RH</div>
+            <div>
+                <h1 class="page-title">Receipt History</h1>
+                <p class="page-subtitle">Browse saved billing records, filter by customer or receipt number, and reopen any receipt instantly.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="receipt-history-workspace">
+    <div class="receipt-history-card receipt-history-browser">
+        <div class="section-head">
+            <div>
+                <h2>Saved Receipts</h2>
+                <p>{{ total_receipts }} receipt{{ total_receipts|pluralize }} matched your current filters.</p>
+            </div>
+            <div class="section-badges">
+                <a href="{% url 'sales_receipts' %}" class="info-badge info-badge-link">Create new bill</a>
+            </div>
+        </div>
+
+        <div class="history-summary-bar">
+            <div class="history-summary-chip">
+                <span>Matching Receipts</span>
+                <strong>{{ total_receipts }}</strong>
+            </div>
+            <div class="history-summary-chip">
+                <span>Selected Payment Mode</span>
+                <strong>{{ selected_payment_mode|default:"All modes" }}</strong>
+            </div>
+        </div>
+
+        <form method="get" class="history-filters">
+            <div class="field-group history-search-group">
+                <label for="search">Search</label>
+                <input
+                    type="search"
+                    id="search"
+                    name="search"
+                    class="form-control"
+                    value="{{ search_query }}"
+                    placeholder="Receipt no, customer name, or phone"
+                >
+            </div>
+            <div class="field-group history-filter-group">
+                <label for="payment_mode">Payment Mode</label>
+                <select id="payment_mode" name="payment_mode" class="form-control">
+                    <option value="">All payment modes</option>
+                    {% for value, label in payment_modes %}
+                    <option value="{{ value }}" {% if selected_payment_mode == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="history-filter-actions">
+                <button type="submit" class="btn btn-primary">Apply</button>
+                <a href="{% url 'sales_receipt_history' %}" class="btn btn-secondary">Reset</a>
+            </div>
+        </form>
+
+        <div class="history-list history-list-compact">
+            {% for receipt in page_obj %}
+            <a
+                href="{% url 'sales_receipt_history' %}?receipt={{ receipt.id }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if selected_payment_mode %}&payment_mode={{ selected_payment_mode|urlencode }}{% endif %}{% if page_obj.number %}&page={{ page_obj.number }}{% endif %}"
+                class="history-card {% if selected_receipt and selected_receipt.id == receipt.id %}active{% endif %}"
+            >
+                <div class="history-topline">
+                    <strong>{{ receipt.receipt_no }}</strong>
+                    <span>Rs. {{ receipt.grand_total|floatformat:2 }}</span>
+                </div>
+                <div class="history-meta">{{ receipt.customer_name }} &bull; {{ receipt.sale_date|date:"d M Y" }}</div>
+                <div class="history-meta">{{ receipt.lines.count }} line{{ receipt.lines.count|pluralize }} &bull; {{ receipt.payment_mode }}</div>
+            </a>
+            {% empty %}
+            <div class="history-empty-state">
+                <strong>No receipts matched the current filters.</strong>
+                <p>Try a broader search, change the payment mode, or reset the filters to view more results.</p>
+                <a href="{% url 'sales_receipt_history' %}" class="btn btn-secondary">Clear Filters</a>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="history-pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if selected_payment_mode %}&payment_mode={{ selected_payment_mode|urlencode }}{% endif %}">Previous</a>
+            {% endif %}
+            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if selected_payment_mode %}&payment_mode={{ selected_payment_mode|urlencode }}{% endif %}">Next</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="receipt-preview-card">
+            <div class="section-head">
+                <div>
+                    <h2>Receipt Preview</h2>
+                    <p>Review the selected bill and print when needed.</p>
+                </div>
+            {% if selected_receipt %}
+            <div class="section-badges">
+                <a href="{% url 'sales_receipts' %}?receipt={{ selected_receipt.id }}" class="info-badge info-badge-link">Open in billing</a>
+                <form method="post" action="{% url 'delete_sales_receipt' selected_receipt.id %}" class="inline-action-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button
+                        type="submit"
+                        class="info-badge info-badge-danger"
+                        onclick="return confirm('Delete receipt {{ selected_receipt.receipt_no }}? This will restore inventory stock for item lines.')"
+                    >
+                        Delete receipt
+                    </button>
+                </form>
+                <button type="button" class="mini-link-btn" onclick="window.print()">Print</button>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if selected_receipt %}
+        <div class="receipt-print-shell" id="salesReceiptPrintArea">
+            <div class="receipt-header">
+                <div class="institute-name">Shri Samarth Sales and Services</div>
+                <div class="institute-details">
+                    Computer items, accessories, software, and service billing
+                </div>
+            </div>
+
+            <div class="receipt-title">Sales Bill Receipt</div>
+
+            <div class="receipt-info">
+                <span class="receipt-label">Receipt No:</span>
+                <span class="receipt-value">{{ selected_receipt.receipt_no }}</span>
+                <span class="receipt-label">Bill Date:</span>
+                <span class="receipt-value">{{ selected_receipt.sale_date|date:"d M Y" }}</span>
+                <span class="receipt-label">Customer Name:</span>
+                <span class="receipt-value">{{ selected_receipt.customer_name }}</span>
+                <span class="receipt-label">Customer Phone:</span>
+                <span class="receipt-value">{{ selected_receipt.customer_phone|default:"-" }}</span>
+                <span class="receipt-label">Payment Mode:</span>
+                <span class="receipt-value">{{ selected_receipt.payment_mode }}</span>
+                <span class="receipt-label">Prepared By:</span>
+                <span class="receipt-value">{{ selected_receipt.created_by.username|default:"System" }}</span>
+                {% if selected_receipt.customer_address %}
+                <span class="receipt-label">Customer Address:</span>
+                <span class="receipt-value">{{ selected_receipt.customer_address }}</span>
+                {% endif %}
+                <span class="receipt-label">Total Lines:</span>
+                <span class="receipt-value">{{ selected_receipt.lines.count }} line{{ selected_receipt.lines.count|pluralize }}</span>
+            </div>
+
+            <hr class="receipt-divider">
+
+            <table class="receipt-lines-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Qty</th>
+                        <th>Rate</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for line in selected_receipt.lines.all %}
+                    <tr>
+                        <td>{{ line.description }}</td>
+                        <td>{{ line.get_line_type_display }}</td>
+                        <td>{{ line.quantity }}</td>
+                        <td>Rs. {{ line.unit_price|floatformat:2 }}</td>
+                        <td>Rs. {{ line.line_total|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="amount-section">
+                <div class="amount-row">
+                    <span>Subtotal</span>
+                    <strong>Rs. {{ selected_receipt.subtotal|floatformat:2 }}</strong>
+                </div>
+                <div class="amount-row">
+                    <span>Discount</span>
+                    <strong>Rs. {{ selected_receipt.discount_amount|floatformat:2 }}</strong>
+                </div>
+                <div class="amount-row paid">
+                    <span>Grand Total</span>
+                    <strong>Rs. {{ selected_receipt.grand_total|floatformat:2 }}</strong>
+                </div>
+                {% if selected_receipt_amount_in_words %}
+                <div class="amount-in-words">
+                    <strong>Amount in words:</strong> {{ selected_receipt_amount_in_words|title }} only.
+                </div>
+                {% endif %}
+            </div>
+            {% if selected_receipt.notes %}
+            <div class="receipt-notes">
+                <span>Notes</span>
+                <p>{{ selected_receipt.notes }}</p>
+            </div>
+            {% endif %}
+            <div class="receipt-footer">
+                <p>Thank you for your business.</p>
+                <small>This is a computer-generated sales bill.</small>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-preview">
+            <p>No receipt selected yet.</p>
+            <p>Choose a record from the history list to preview it here.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,483 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Daily Sales Register{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/sales_receipts.css' %}?v={{ STATIC_VERSION }}">
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header dashboard-page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon dashboard-page-icon">DS</div>
+            <div>
+                <h1 class="page-title">Daily Sales Register</h1>
+                <p class="page-subtitle">Record counter sales and service jobs without creating customer-wise receipts.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="receipt-workspace">
+    <div class="receipt-form-card">
+        <div class="section-head">
+            <div>
+                <h2>Daily Sales Entry</h2>
+                <p>Add sold items and service work for the day. Inventory items reduce stock automatically.</p>
+            </div>
+            <div class="section-badges">
+                <a href="{% url 'daily_sales_report' %}" class="info-badge info-badge-link">Open daily reports</a>
+                <span class="info-badge">Inventory auto deduct</span>
+                <span class="info-badge">Service cost supported</span>
+            </div>
+        </div>
+
+        <div class="profit-summary-grid">
+            <div class="profit-summary-card">
+                <span>Today Profit</span>
+                <strong>Rs. {{ profit_summary.daily_profit|floatformat:2 }}</strong>
+            </div>
+            <div class="profit-summary-card">
+                <span>This Week</span>
+                <strong>Rs. {{ profit_summary.weekly_profit|floatformat:2 }}</strong>
+            </div>
+            <div class="profit-summary-card">
+                <span>This Month</span>
+                <strong>Rs. {{ profit_summary.monthly_profit|floatformat:2 }}</strong>
+            </div>
+            <div class="profit-summary-card">
+                <span>This Year</span>
+                <strong>Rs. {{ profit_summary.yearly_profit|floatformat:2 }}</strong>
+            </div>
+        </div>
+
+        <form method="post" id="dailySalesForm">
+            {% csrf_token %}
+            {% if editing_entry %}
+            <input type="hidden" name="entry_id" value="{{ editing_entry.id }}">
+            {% endif %}
+            {% if editing_entry %}
+            <div class="history-empty-state compact-state">
+                <strong>Editing daily entry for {{ editing_entry.sale_date|date:"d M Y" }}</strong>
+                <p>Update the lines below and save to replace this daily entry.</p>
+            </div>
+            {% endif %}
+            <div class="receipt-grid">
+                <div class="field-group">
+                    <label for="sale_date">Entry Date</label>
+                    <input type="date" id="sale_date" name="sale_date" class="form-control" value="{% if editing_entry %}{{ editing_entry.sale_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" required>
+                </div>
+                <div class="field-group">
+                    <label for="payment_mode">Payment Mode</label>
+                    <select id="payment_mode" name="payment_mode" class="form-control">
+                        {% for value, label in payment_modes %}
+                        <option value="{{ value }}" {% if editing_entry and editing_entry.payment_mode == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="line-items-shell">
+                <div class="line-items-head">
+                    <h3>Sales and Service Lines</h3>
+                    <button type="button" class="mini-link-btn" id="addDailyLineBtn">Add Line</button>
+                </div>
+                <p class="line-items-note">Use item lines for inventory sales and service lines for repairs, installation, or labour charges.</p>
+
+                <div id="dailyLineItemsContainer">
+                    {% for line in daily_form_lines %}
+                    <div class="line-item-row daily-line-item-row" data-daily-line-row>
+                        <div class="field-group line-type-group">
+                            <label>Type</label>
+                            <select name="line_type[]" class="form-control daily-line-type">
+                                <option value="item" {% if line.line_type == 'item' %}selected{% endif %}>Item</option>
+                                <option value="service" {% if line.line_type == 'service' %}selected{% endif %}>Service</option>
+                            </select>
+                        </div>
+                        <div class="field-group inventory-group">
+                            <label>Inventory Item</label>
+                            <select name="inventory_item_id[]" class="form-control daily-item-select">
+                                <option value="">Select inventory item</option>
+                                {% for item in available_items %}
+                                <option value="{{ item.id }}" data-name="{{ item.name }}" data-stock="{{ item.current_stock }}" data-rate="{{ item.selling_price }}" data-cost="{{ item.average_purchase_rate }}" data-sku="{{ item.sku }}" {% if line.inventory_item_id == item.id|stringformat:'s' %}selected{% endif %}>
+                                    {{ item.name }} (Stock {{ item.current_stock }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="item-stock-note" data-daily-item-stock-note>Select inventory item to use stock, selling rate, and cost price.</div>
+                        </div>
+                        <div class="field-group line-description-group">
+                            <label>Description</label>
+                            <input type="text" name="description[]" class="form-control daily-line-description" placeholder="Item sold or service work" value="{{ line.description }}" required>
+                        </div>
+                        <div class="field-group field-group-xs quantity-group">
+                            <label>Qty</label>
+                            <input type="number" name="quantity[]" class="form-control daily-line-quantity" min="1" value="{{ line.quantity }}" required>
+                        </div>
+                        <div class="field-group field-group-sm rate-group">
+                            <label>Rate</label>
+                            <input type="number" name="unit_price[]" class="form-control daily-line-rate" min="0" step="0.01" value="{{ line.unit_price }}" required>
+                        </div>
+                        <div class="field-group field-group-sm cost-group">
+                            <label>Cost</label>
+                            <input type="number" name="unit_cost[]" class="form-control daily-line-cost" min="0" step="0.01" value="{{ line.unit_cost }}">
+                        </div>
+                        <div class="field-group field-group-sm amount-group">
+                            <label>Amount</label>
+                            <input type="text" class="form-control daily-line-total" value="Rs. 0.00" readonly>
+                        </div>
+                        <div class="line-row-actions">
+                            <button type="button" class="remove-line-btn" data-remove-daily-line>Remove</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="receipt-grid receipt-grid-footer">
+                <div class="field-group field-group-wide">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Optional remarks about the day's sales or service work">{% if editing_entry %}{{ editing_entry.notes }}{% endif %}</textarea>
+                </div>
+            </div>
+
+            <div class="bill-totals">
+                <div class="total-chip">
+                    <span>Total Revenue</span>
+                    <strong id="dailyRevenueValue">Rs. 0.00</strong>
+                </div>
+                <div class="total-chip">
+                    <span>Total Cost</span>
+                    <strong id="dailyCostValue">Rs. 0.00</strong>
+                </div>
+                <div class="total-chip">
+                    <span>Total Profit</span>
+                    <strong id="dailyProfitValue">Rs. 0.00</strong>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                {% if editing_entry %}
+                <a href="{% url 'daily_sales_register' %}?entry={{ editing_entry.id }}" class="btn btn-secondary">Cancel Edit</a>
+                {% endif %}
+                <button type="submit" class="btn btn-primary">{% if editing_entry %}Update Daily Entry{% else %}Save Daily Entry{% endif %}</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="receipt-side-panel">
+        <div class="receipt-preview-card">
+            <div class="section-head">
+                <div>
+                    <h2>Entry Preview</h2>
+                    <p>Review saved daily entry details and profit break-up.</p>
+                </div>
+            </div>
+
+            {% if selected_entry %}
+            <div class="receipt-print-shell">
+                <div class="print-brand">
+                    <strong>Daily Sales Summary</strong>
+                    <span>{{ selected_entry.sale_date|date:"d M Y" }} &bull; {{ selected_entry.payment_mode }}</span>
+                </div>
+                <div class="receipt-status-row">
+                    {% if not selected_entry_has_receipt_lines %}
+                    <a href="{% url 'daily_sales_register' %}?entry={{ selected_entry.id }}&edit={{ selected_entry.id }}" class="info-badge info-badge-link">Edit Entry</a>
+                    <form method="post" action="{% url 'delete_daily_sales_entry' selected_entry.id %}" class="inline-action-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'daily_sales_register' %}">
+                        <button type="submit" class="info-badge info-badge-danger" onclick="return confirm('Delete this daily sales entry?');">Delete Entry</button>
+                    </form>
+                    {% else %}
+                    <span class="receipt-status-chip subtle">Receipt-linked entry</span>
+                    {% endif %}
+                </div>
+                <div class="receipt-status-row">
+                    <span class="receipt-status-chip">{{ selected_entry.lines.count }} line{{ selected_entry.lines.count|pluralize }}</span>
+                    <span class="receipt-status-chip subtle">Profit Rs. {{ selected_entry.total_profit|floatformat:2 }}</span>
+                </div>
+                <div class="day-entry-lines day-entry-lines-embedded">
+                    {% for line in selected_entry.lines.all %}
+                    <div class="day-entry-line">
+                        <div class="day-entry-line-top">
+                            <strong>{{ line.description }}</strong>
+                            <span>Rs. {{ line.line_total|floatformat:2 }}</span>
+                        </div>
+                        <div class="history-meta">
+                            {{ line.get_line_type_display }} &bull; Qty {{ line.quantity }} &bull; Profit Rs. {{ line.line_profit|floatformat:2 }}
+                            {% if line.sales_receipt %}&bull; Receipt {{ line.sales_receipt.receipt_no }}{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <table class="receipt-lines-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Qty</th>
+                            <th>Revenue</th>
+                            <th>Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in selected_entry.lines.all %}
+                        <tr>
+                            <td>{{ line.description }}</td>
+                            <td>{{ line.get_line_type_display }}</td>
+                            <td>{{ line.quantity }}</td>
+                            <td>Rs. {{ line.line_total|floatformat:2 }}</td>
+                            <td>Rs. {{ line.line_profit|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="receipt-summary">
+                    <div><span>Total Revenue</span><strong>Rs. {{ selected_entry.total_amount|floatformat:2 }}</strong></div>
+                    <div><span>Total Cost</span><strong>Rs. {{ selected_entry.total_cost|floatformat:2 }}</strong></div>
+                    <div class="receipt-summary-grand"><span>Total Profit</span><strong>Rs. {{ selected_entry.total_profit|floatformat:2 }}</strong></div>
+                </div>
+                {% if selected_entry.notes %}
+                <div class="receipt-notes">
+                    <span>Notes</span>
+                    <p>{{ selected_entry.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="empty-preview">
+                <p>No daily entry selected yet.</p>
+                <p>Save a daily sales entry to review it here.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="receipt-history-card">
+            <div class="section-head">
+                <div>
+                    <h2>Recent Daily Entries</h2>
+                    <p>Latest sales and service register records.</p>
+                </div>
+            </div>
+            <div class="history-list">
+                {% for entry in recent_daily_entries %}
+                <a href="{% url 'daily_sales_register' %}?entry={{ entry.id }}" class="history-card {% if selected_entry and selected_entry.id == entry.id %}active{% endif %}">
+                    <div class="history-topline">
+                        <strong>{{ entry.sale_date|date:"d M Y" }}</strong>
+                        <span>Rs. {{ entry.total_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="history-meta">{{ entry.lines.count }} line{{ entry.lines.count|pluralize }} &bull; {{ entry.payment_mode }}</div>
+                    <div class="history-meta">Profit Rs. {{ entry.total_profit|floatformat:2 }}</div>
+                </a>
+                {% empty %}
+                <div class="empty-preview">
+                    <p>No daily sales entries yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<template id="dailyLineItemTemplate">
+    <div class="line-item-row daily-line-item-row" data-daily-line-row>
+        <div class="field-group line-type-group">
+            <label>Type</label>
+            <select name="line_type[]" class="form-control daily-line-type">
+                <option value="item">Item</option>
+                <option value="service">Service</option>
+            </select>
+        </div>
+        <div class="field-group inventory-group">
+            <label>Inventory Item</label>
+            <select name="inventory_item_id[]" class="form-control daily-item-select">
+                <option value="">Select inventory item</option>
+                {% for item in available_items %}
+                <option value="{{ item.id }}" data-name="{{ item.name }}" data-stock="{{ item.current_stock }}" data-rate="{{ item.selling_price }}" data-cost="{{ item.average_purchase_rate }}" data-sku="{{ item.sku }}">
+                    {{ item.name }} (Stock {{ item.current_stock }})
+                </option>
+                {% endfor %}
+            </select>
+            <div class="item-stock-note" data-daily-item-stock-note>Select inventory item to use stock, selling rate, and cost price.</div>
+        </div>
+        <div class="field-group line-description-group">
+            <label>Description</label>
+            <input type="text" name="description[]" class="form-control daily-line-description" placeholder="Item sold or service work" required>
+        </div>
+        <div class="field-group field-group-xs quantity-group">
+            <label>Qty</label>
+            <input type="number" name="quantity[]" class="form-control daily-line-quantity" min="1" value="1" required>
+        </div>
+        <div class="field-group field-group-sm rate-group">
+            <label>Rate</label>
+            <input type="number" name="unit_price[]" class="form-control daily-line-rate" min="0" step="0.01" value="0" required>
+        </div>
+        <div class="field-group field-group-sm cost-group">
+            <label>Cost</label>
+            <input type="number" name="unit_cost[]" class="form-control daily-line-cost" min="0" step="0.01" value="0">
+        </div>
+        <div class="field-group field-group-sm amount-group">
+            <label>Amount</label>
+            <input type="text" class="form-control daily-line-total" value="Rs. 0.00" readonly>
+        </div>
+        <div class="line-row-actions">
+            <button type="button" class="remove-line-btn" data-remove-daily-line>Remove</button>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const lineItemsContainer = document.getElementById('dailyLineItemsContainer');
+    const template = document.getElementById('dailyLineItemTemplate');
+    const addLineBtn = document.getElementById('addDailyLineBtn');
+    const revenueValue = document.getElementById('dailyRevenueValue');
+    const costValue = document.getElementById('dailyCostValue');
+    const profitValue = document.getElementById('dailyProfitValue');
+
+    function toNumber(value) {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function formatCurrency(value) {
+        return `Rs. ${value.toFixed(2)}`;
+    }
+
+    function updateTotals() {
+        let totalRevenue = 0;
+        let totalCost = 0;
+        lineItemsContainer.querySelectorAll('[data-daily-line-row]').forEach(function(row) {
+            const quantity = toNumber(row.querySelector('.daily-line-quantity')?.value);
+            const rate = toNumber(row.querySelector('.daily-line-rate')?.value);
+            const cost = toNumber(row.querySelector('.daily-line-cost')?.value);
+            const lineRevenue = quantity * rate;
+            const lineCost = quantity * cost;
+            const totalInput = row.querySelector('.daily-line-total');
+            if (totalInput) {
+                totalInput.value = formatCurrency(lineRevenue);
+            }
+            totalRevenue += lineRevenue;
+            totalCost += lineCost;
+        });
+
+        revenueValue.textContent = formatCurrency(totalRevenue);
+        costValue.textContent = formatCurrency(totalCost);
+        profitValue.textContent = formatCurrency(totalRevenue - totalCost);
+    }
+
+    function bindRow(row) {
+        const typeSelect = row.querySelector('.daily-line-type');
+        const itemSelect = row.querySelector('.daily-item-select');
+        const descriptionInput = row.querySelector('.daily-line-description');
+        const quantityInput = row.querySelector('.daily-line-quantity');
+        const rateInput = row.querySelector('.daily-line-rate');
+        const costInput = row.querySelector('.daily-line-cost');
+        const stockNote = row.querySelector('[data-daily-item-stock-note]');
+        const removeBtn = row.querySelector('[data-remove-daily-line]');
+
+        function syncLineMode() {
+            const isService = typeSelect && typeSelect.value === 'service';
+            itemSelect.disabled = isService;
+            if (isService) {
+                itemSelect.value = '';
+                quantityInput.removeAttribute('max');
+                if (stockNote) {
+                    stockNote.textContent = 'Service lines do not touch inventory. Enter your own service cost if needed.';
+                }
+            } else if (stockNote) {
+                stockNote.textContent = 'Select inventory item to use stock, selling rate, and cost price.';
+            }
+        }
+
+        if (itemSelect) {
+            itemSelect.addEventListener('change', function() {
+                const option = itemSelect.options[itemSelect.selectedIndex];
+                if (option && option.value) {
+                    if (!descriptionInput.value.trim()) {
+                        descriptionInput.value = option.dataset.name || '';
+                    }
+                    if (toNumber(rateInput.value) === 0) {
+                        rateInput.value = option.dataset.rate || '0';
+                    }
+                    costInput.value = option.dataset.cost || '0';
+                    quantityInput.max = option.dataset.stock || '';
+                    if (toNumber(quantityInput.value) > toNumber(option.dataset.stock)) {
+                        quantityInput.value = option.dataset.stock || '1';
+                    }
+                    if (stockNote) {
+                        stockNote.textContent = `SKU ${option.dataset.sku || '-'} | Stock ${option.dataset.stock || 0} | Cost ${formatCurrency(toNumber(option.dataset.cost || 0))}`;
+                    }
+                }
+                updateTotals();
+            });
+        }
+
+        if (typeSelect) {
+            typeSelect.addEventListener('change', function() {
+                if (typeSelect.value === 'service') {
+                    costInput.removeAttribute('readonly');
+                    costInput.value = costInput.value || '0';
+                } else {
+                    costInput.setAttribute('readonly', 'readonly');
+                    if (itemSelect.value) {
+                        const option = itemSelect.options[itemSelect.selectedIndex];
+                        costInput.value = option.dataset.cost || '0';
+                    }
+                }
+                syncLineMode();
+                updateTotals();
+            });
+        }
+
+        [descriptionInput, quantityInput, rateInput, costInput].forEach(function(input) {
+            if (input) {
+                input.addEventListener('input', updateTotals);
+            }
+        });
+
+        removeBtn.addEventListener('click', function() {
+            const rows = lineItemsContainer.querySelectorAll('[data-daily-line-row]');
+            if (rows.length === 1) {
+                row.querySelectorAll('input').forEach(function(input) {
+                    if (input.type === 'number') {
+                        input.value = input.classList.contains('daily-line-quantity') ? '1' : '0';
+                    } else if (!input.readOnly) {
+                        input.value = '';
+                    }
+                });
+                itemSelect.value = '';
+                typeSelect.value = 'item';
+                syncLineMode();
+            } else {
+                row.remove();
+            }
+            updateTotals();
+        });
+
+        syncLineMode();
+        if (typeSelect.value === 'item') {
+            costInput.setAttribute('readonly', 'readonly');
+        }
+    }
+
+    if (addLineBtn && template && lineItemsContainer) {
+        addLineBtn.addEventListener('click', function() {
+            const clone = template.content.firstElementChild.cloneNode(true);
+            lineItemsContainer.appendChild(clone);
+            bindRow(clone);
+            updateTotals();
+        });
+    }
+
+    lineItemsContainer.querySelectorAll('[data-daily-line-row]').forEach(bindRow);
+    updateTotals();
+})();
+</script>
+{% endblock %}

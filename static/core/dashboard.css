@@ -198,12 +198,12 @@ textarea {
 }
 
 .sidebar-group {
-    margin-bottom: 22px;
+    margin-bottom: 14px;
 }
 
 .sidebar-label {
-    padding: 0 12px 10px;
-    font-size: 11px;
+    padding: 0 12px 8px;
+    font-size: 13px;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -217,11 +217,13 @@ textarea {
     gap: 12px;
     border: 0;
     width: 100%;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     border-radius: 14px;
-    padding: 13px 14px;
+    padding: 12px 14px;
     background: transparent;
     color: var(--sidebar-text);
+    font-size: 16px;
+    font-weight: 600;
     cursor: pointer;
     transition: background 0.35s cubic-bezier(0.4, 0, 0.2, 1), color 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -268,21 +270,21 @@ textarea {
 
 .submenu {
     display: grid;
-    gap: 6px;
+    gap: 4px;
     max-height: 0;
     overflow: hidden;
-    padding-left: 12px;
+    padding-left: 10px;
     transition: max-height 0.25s ease;
 }
 
 .submenu.open {
     max-height: 520px;
-    margin-top: 6px;
+    margin-top: 4px;
 }
 
 .submenu-item {
-    padding: 11px 14px;
-    font-size: 13px;
+    padding: 10px 14px;
+    font-size: 15px;
 }
 
 .app-stage {

@@ -571,6 +571,13 @@ class SalesReceiptLine(models.Model):
     receipt = models.ForeignKey(SalesReceipt, on_delete=models.CASCADE, related_name="lines")
     line_type = models.CharField(max_length=20, choices=LINE_TYPE_CHOICES, default="service")
     sales_item = models.ForeignKey(SalesItem, null=True, blank=True, on_delete=models.SET_NULL, related_name="receipt_lines")
+    inventory_item = models.ForeignKey(
+        "inventory.Item",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="sales_receipt_lines",
+    )
     description = models.CharField(max_length=255)
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
@@ -581,6 +588,78 @@ class SalesReceiptLine(models.Model):
 
     def __str__(self):
         return f"{self.receipt.receipt_no} - {self.description}"
+
+
+class DailySalesEntry(models.Model):
+    """Daily counter sales/service register without customer-wise receipts."""
+
+    PAYMENT_MODE_CHOICES = PAYMENT_MODE_CHOICES
+
+    sale_date = models.DateField(default=date.today, db_index=True)
+    payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, default="Cash")
+    notes = models.TextField(blank=True)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)], default=0)
+    total_cost = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)], default=0)
+    total_profit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    created_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="daily_sales_entries",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-sale_date", "-created_at"]
+        verbose_name = "Daily Sales Entry"
+        verbose_name_plural = "Daily Sales Entries"
+        indexes = [
+            models.Index(fields=["sale_date"]),
+            models.Index(fields=["payment_mode"]),
+        ]
+
+    def __str__(self):
+        return f"Daily Entry {self.sale_date} - {self.total_amount}"
+
+
+class DailySalesLine(models.Model):
+    """Individual lines recorded in the daily sales/service register."""
+
+    LINE_TYPE_CHOICES = [
+        ("item", "Item"),
+        ("service", "Service"),
+    ]
+
+    entry = models.ForeignKey(DailySalesEntry, on_delete=models.CASCADE, related_name="lines")
+    line_type = models.CharField(max_length=20, choices=LINE_TYPE_CHOICES, default="service")
+    inventory_item = models.ForeignKey(
+        "inventory.Item",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="daily_sales_lines",
+    )
+    sales_receipt = models.ForeignKey(
+        "SalesReceipt",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="daily_sales_lines",
+    )
+    description = models.CharField(max_length=255)
+    quantity = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], default=0)
+    line_total = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    line_profit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.entry.sale_date} - {self.description}"
 
 class Batch(models.Model):
     """Predefined batch timings for theory and practical sessions"""

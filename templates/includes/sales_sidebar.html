@@ -26,8 +26,17 @@
 
         <div class="sidebar-group">
             <div class="sidebar-label">Sales Management</div>
+            <a href="{% url 'daily_sales_register' %}" class="menu-item {% if active_page == 'daily_sales_register' %}active{% endif %}" data-menu-label="daily sales service profit register counter sales">
+                <i class="fa-solid fa-cash-register"></i><span>Daily Sales</span>
+            </a>
+            <a href="{% url 'daily_sales_report' %}" class="menu-item {% if active_page == 'daily_sales_report' %}active{% endif %}" data-menu-label="daily sales reports historical profit dates day wise weekly monthly yearly">
+                <i class="fa-solid fa-calendar-days"></i><span>Daily Reports</span>
+            </a>
             <a href="{% url 'sales_receipts' %}" class="menu-item {% if active_page == 'sales_receipts' %}active{% endif %}" data-menu-label="bills receipts sales invoice billing">
                 <i class="fa-solid fa-receipt"></i><span>Bills & Receipts</span>
+            </a>
+            <a href="{% url 'sales_receipt_history' %}" class="menu-item {% if active_page == 'sales_receipt_history' %}active{% endif %}" data-menu-label="receipt history sales history billing records">
+                <i class="fa-solid fa-clock-rotate-left"></i><span>Receipt History</span>
             </a>
         </div>
 

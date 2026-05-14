@@ -24,7 +24,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import F, Prefetch, Q, Sum, Count
 from django.db.models.functions import ExtractYear
 from django.http import HttpResponse, JsonResponse
@@ -37,6 +37,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
 from openpyxl.styles import Alignment, Font, PatternFill
 from PIL import Image
+from inventory.models import Item as InventoryItem
 
 from .audit_logs import log_audit_event
 from .constants import TIME_SLOT_CHOICES, TIME_SLOT_DISPLAY_MAP, TIME_SLOT_VALUES
@@ -48,6 +49,8 @@ from .models import (
     CommentEntry,
     CommunicationThread,
     Course,
+    DailySalesEntry,
+    DailySalesLine,
     Enquiry,
     FeePayment,
     Notification,
@@ -3501,8 +3504,8 @@ def sales_services_dashboard(request):
     
     selected_year = request.GET.get("year", "")
     
-    items = SalesItem.objects.all()
-    receipts = SalesReceipt.objects.prefetch_related("lines").all()
+    items = InventoryItem.objects.filter(is_active=True)
+    receipts = SalesReceipt.objects.prefetch_related("lines__inventory_item", "lines__sales_item").all()
     if selected_year:
         items = items.filter(created_at__year=selected_year)
         receipts = receipts.filter(sale_date__year=selected_year)
@@ -3513,9 +3516,12 @@ def sales_services_dashboard(request):
     total_cost = Decimal("0")
     for receipt in receipts:
         for line in receipt.lines.all():
-            if line.sales_item:
+            if line.inventory_item:
+                total_cost += (line.inventory_item.average_purchase_rate or Decimal("0")) * line.quantity
+            elif line.sales_item:
                 total_cost += (line.sales_item.purchase_rate or Decimal("0")) * line.quantity
     total_profit = total_revenue - total_cost
+    daily_profit_summary = _get_daily_profit_summary()
     
     context = {
         "active_page": "sales_dashboard",
@@ -3526,6 +3532,7 @@ def sales_services_dashboard(request):
         "total_orders": total_orders,
         "total_profit": total_profit,
         "recent_sales_receipts": receipts.order_by("-sale_date", "-created_at")[:8],
+        "daily_profit_summary": daily_profit_summary,
         "current_mode": "sales",
     }
     return render(request, "core/sales_dashboard.html", context)
@@ -3579,11 +3586,218 @@ def add_sales_item(request):
     return redirect("sales_items")
 
 
+def _sales_receipt_queryset():
+    return SalesReceipt.objects.select_related("created_by").prefetch_related("lines__inventory_item", "lines__sales_item")
+
+
+def _get_selected_sales_receipt(receipt_id):
+    if not receipt_id:
+        return None
+
+    try:
+        return _sales_receipt_queryset().get(id=int(receipt_id))
+    except (SalesReceipt.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+def _sales_receipt_amount_in_words(receipt):
+    if not receipt:
+        return ""
+    try:
+        return number_to_words(float(receipt.grand_total or 0))
+    except (TypeError, ValueError):
+        return ""
+
+
+def _daily_sales_queryset():
+    return DailySalesEntry.objects.select_related("created_by").prefetch_related("lines__inventory_item", "lines__sales_receipt")
+
+
+def _get_selected_daily_sales_entry(entry_id):
+    if not entry_id:
+        return None
+
+    try:
+        return _daily_sales_queryset().get(id=int(entry_id))
+    except (DailySalesEntry.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+def _daily_sales_entry_has_receipt_lines(entry):
+    return entry.lines.filter(sales_receipt__isnull=False).exists()
+
+
+def _restore_daily_sales_entry_inventory(entry):
+    inventory_adjustments = {}
+    for line in entry.lines.filter(sales_receipt__isnull=True, line_type="item", inventory_item__isnull=False):
+        inventory_adjustments[line.inventory_item_id] = inventory_adjustments.get(line.inventory_item_id, 0) + line.quantity
+
+    if not inventory_adjustments:
+        return
+
+    items_by_id = {
+        item.id: item for item in InventoryItem.objects.select_for_update().filter(id__in=inventory_adjustments.keys())
+    }
+    for item_id, quantity in inventory_adjustments.items():
+        item = items_by_id.get(item_id)
+        if item is None:
+            continue
+        item.current_stock += quantity
+        item.save(update_fields=["current_stock", "updated_at"])
+
+
+def _recalculate_daily_sales_entry(entry):
+    totals = entry.lines.aggregate(
+        total_amount=Sum("line_total"),
+        total_cost=Sum(models.F("unit_cost") * models.F("quantity"), output_field=models.DecimalField(max_digits=12, decimal_places=2)),
+        total_profit=Sum("line_profit"),
+    )
+    entry.total_amount = totals["total_amount"] or Decimal("0")
+    entry.total_cost = totals["total_cost"] or Decimal("0")
+    entry.total_profit = totals["total_profit"] or Decimal("0")
+    entry.save(update_fields=["total_amount", "total_cost", "total_profit", "updated_at"])
+    return entry
+
+
+def _get_or_create_daily_sales_entry(*, sale_date, payment_mode, notes="", created_by=None):
+    entry = (
+        DailySalesEntry.objects.select_for_update()
+        .filter(sale_date=sale_date, payment_mode=payment_mode)
+        .order_by("created_at", "id")
+        .first()
+    )
+    created_new_entry = entry is None
+
+    if entry is None:
+        entry = DailySalesEntry.objects.create(
+            sale_date=sale_date,
+            payment_mode=payment_mode,
+            notes=notes,
+            total_amount=Decimal("0"),
+            total_cost=Decimal("0"),
+            total_profit=Decimal("0"),
+            created_by=created_by,
+        )
+    elif notes:
+        existing_notes = (entry.notes or "").strip()
+        if existing_notes:
+            if notes not in existing_notes:
+                entry.notes = f"{existing_notes}\n{notes}"
+                entry.save(update_fields=["notes", "updated_at"])
+        else:
+            entry.notes = notes
+            entry.save(update_fields=["notes", "updated_at"])
+
+    return entry, created_new_entry
+
+
+def _sync_sales_receipt_to_daily_sales_entry(receipt):
+    existing_entries = list(
+        DailySalesEntry.objects.filter(lines__sales_receipt=receipt).distinct()
+    )
+    if existing_entries:
+        DailySalesLine.objects.filter(sales_receipt=receipt).delete()
+        for existing_entry in existing_entries:
+            _recalculate_daily_sales_entry(existing_entry)
+
+    entry, _ = _get_or_create_daily_sales_entry(
+        sale_date=receipt.sale_date,
+        payment_mode=receipt.payment_mode,
+        notes=f"Sales receipt {receipt.receipt_no}",
+        created_by=receipt.created_by,
+    )
+
+    for line in receipt.lines.all():
+        unit_cost = Decimal("0")
+        if line.line_type == "item" and line.inventory_item_id:
+            unit_cost = line.inventory_item.average_purchase_rate or Decimal("0")
+        line_cost = unit_cost * line.quantity
+        DailySalesLine.objects.create(
+            entry=entry,
+            sales_receipt=receipt,
+            line_type=line.line_type,
+            inventory_item=line.inventory_item,
+            description=line.description,
+            quantity=line.quantity,
+            unit_price=line.unit_price,
+            unit_cost=unit_cost,
+            line_total=line.line_total,
+            line_profit=line.line_total - line_cost,
+        )
+
+    _recalculate_daily_sales_entry(entry)
+    return entry
+
+
+def _ensure_sales_receipts_synced(*, from_date, to_date):
+    receipts = (
+        SalesReceipt.objects.filter(sale_date__gte=from_date, sale_date__lte=to_date)
+        .prefetch_related("lines__inventory_item", "daily_sales_lines")
+        .order_by("sale_date", "created_at", "id")
+    )
+    for receipt in receipts:
+        if receipt.daily_sales_lines.exists():
+            continue
+        _sync_sales_receipt_to_daily_sales_entry(receipt)
+
+
+def _build_daily_sales_form_lines(source_entry=None):
+    if source_entry is None:
+        return [
+            {
+                "line_type": "item",
+                "inventory_item_id": "",
+                "description": "",
+                "quantity": 1,
+                "unit_price": Decimal("0"),
+                "unit_cost": Decimal("0"),
+            }
+        ]
+
+    lines = []
+    for line in source_entry.lines.filter(sales_receipt__isnull=True).order_by("id"):
+        lines.append(
+            {
+                "line_type": line.line_type,
+                "inventory_item_id": str(line.inventory_item_id or ""),
+                "description": line.description,
+                "quantity": line.quantity,
+                "unit_price": line.unit_price,
+                "unit_cost": line.unit_cost,
+            }
+        )
+    return lines or _build_daily_sales_form_lines()
+
+
+def _get_daily_profit_summary(reference_date=None):
+    today = reference_date or timezone.localdate()
+    week_start = today - timedelta(days=today.weekday())
+    month_start = today.replace(day=1)
+    year_start = today.replace(month=1, day=1)
+
+    entries = DailySalesEntry.objects.all()
+    return {
+        "daily_profit": entries.filter(sale_date=today).aggregate(total=Sum("total_profit"))["total"] or Decimal("0"),
+        "weekly_profit": entries.filter(sale_date__gte=week_start, sale_date__lte=today).aggregate(total=Sum("total_profit"))["total"] or Decimal("0"),
+        "monthly_profit": entries.filter(sale_date__gte=month_start, sale_date__lte=today).aggregate(total=Sum("total_profit"))["total"] or Decimal("0"),
+        "yearly_profit": entries.filter(sale_date__gte=year_start, sale_date__lte=today).aggregate(total=Sum("total_profit"))["total"] or Decimal("0"),
+    }
+
+
+def _parse_date_or_default(raw_value, default_value):
+    if not raw_value:
+        return default_value
+    try:
+        return dt.strptime(raw_value, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return default_value
+
+
 @login_required
 @roles_required(ROLE_SUPER_ADMIN, ROLE_ADMIN)
 def sales_receipts(request):
     """Create and review bills/receipts for items and services."""
-    available_items = SalesItem.objects.all().order_by("item_name")
+    available_items = InventoryItem.objects.filter(is_active=True).select_related("category").order_by("name")
 
     if request.method == "POST":
         customer_name = request.POST.get("customer_name", "").strip()
@@ -3595,7 +3809,7 @@ def sales_receipts(request):
         discount_raw = request.POST.get("discount_amount", "0").strip() or "0"
 
         line_types = request.POST.getlist("line_type[]")
-        sales_item_ids = request.POST.getlist("sales_item_id[]")
+        inventory_item_ids = request.POST.getlist("inventory_item_id[]")
         descriptions = request.POST.getlist("description[]")
         quantities = request.POST.getlist("quantity[]")
         unit_prices = request.POST.getlist("unit_price[]")
@@ -3619,12 +3833,12 @@ def sales_receipts(request):
             with transaction.atomic():
                 for index in range(row_count):
                     line_type = (line_types[index] if index < len(line_types) else "service").strip() or "service"
-                    sales_item_id = (sales_item_ids[index] if index < len(sales_item_ids) else "").strip()
+                    inventory_item_id = (inventory_item_ids[index] if index < len(inventory_item_ids) else "").strip()
                     description = (descriptions[index] if index < len(descriptions) else "").strip()
                     quantity_raw = (quantities[index] if index < len(quantities) else "").strip()
                     unit_price_raw = (unit_prices[index] if index < len(unit_prices) else "").strip()
 
-                    if not any([description, quantity_raw, unit_price_raw, sales_item_id]):
+                    if not any([description, quantity_raw, unit_price_raw, inventory_item_id]):
                         continue
 
                     quantity_value = int(quantity_raw)
@@ -3635,13 +3849,16 @@ def sales_receipts(request):
                         raise ValueError(f"Line {index + 1}: unit price cannot be negative.")
 
                     sales_item = None
-                    if line_type == "item" and sales_item_id:
-                        sales_item = SalesItem.objects.select_for_update().get(id=int(sales_item_id))
+                    inventory_item = None
+                    if line_type == "item":
+                        if not inventory_item_id:
+                            raise ValueError(f"Line {index + 1}: select an inventory item for item lines.")
+                        inventory_item = InventoryItem.objects.select_for_update().get(id=int(inventory_item_id))
                         if not description:
-                            description = sales_item.item_name
-                        if sales_item.quantity < quantity_value:
+                            description = inventory_item.name
+                        if inventory_item.current_stock < quantity_value:
                             raise ValueError(
-                                f"Line {index + 1}: only {sales_item.quantity} units available for {sales_item.item_name}."
+                                f"Line {index + 1}: only {inventory_item.current_stock} units available for {inventory_item.name}."
                             )
                     elif not description:
                         raise ValueError(f"Line {index + 1}: description is required.")
@@ -3652,6 +3869,7 @@ def sales_receipts(request):
                         {
                             "line_type": line_type if line_type in {"item", "service"} else "service",
                             "sales_item": sales_item,
+                            "inventory_item": inventory_item,
                             "description": description,
                             "quantity": quantity_value,
                             "unit_price": unit_price_value,
@@ -3681,36 +3899,474 @@ def sales_receipts(request):
 
                 for line in prepared_lines:
                     SalesReceiptLine.objects.create(receipt=receipt, **line)
-                    if line["line_type"] == "item" and line["sales_item"]:
-                        line["sales_item"].quantity -= line["quantity"]
-                        line["sales_item"].save(update_fields=["quantity", "updated_at"])
+                    if line["line_type"] == "item" and line["inventory_item"]:
+                        line["inventory_item"].current_stock -= line["quantity"]
+                        line["inventory_item"].save(update_fields=["current_stock", "updated_at"])
+
+                receipt = SalesReceipt.objects.prefetch_related("lines__inventory_item").get(id=receipt.id)
+                _sync_sales_receipt_to_daily_sales_entry(receipt)
 
             messages.success(request, f"Sales receipt {receipt.receipt_no} created successfully.")
             return redirect(f"{reverse('sales_receipts')}?receipt={receipt.id}")
-        except SalesItem.DoesNotExist:
-            messages.error(request, "One of the selected sales items no longer exists.")
+        except InventoryItem.DoesNotExist:
+            messages.error(request, "One of the selected inventory items no longer exists.")
         except (InvalidOperation, TypeError, ValueError) as exc:
             messages.error(request, f"Unable to create bill: {exc}")
 
     selected_receipt = None
     receipt_id = request.GET.get("receipt", "").strip()
     if receipt_id:
-        try:
-            selected_receipt = SalesReceipt.objects.prefetch_related("lines__sales_item").get(id=int(receipt_id))
-        except (SalesReceipt.DoesNotExist, ValueError, TypeError):
+        selected_receipt = _get_selected_sales_receipt(receipt_id)
+        if selected_receipt is None:
             messages.error(request, "Requested receipt was not found.")
 
-    recent_receipts = SalesReceipt.objects.prefetch_related("lines").all()[:12]
     context = {
         "active_page": "sales_receipts",
         "current_mode": "sales",
         "available_items": available_items,
-        "recent_receipts": recent_receipts,
         "selected_receipt": selected_receipt,
+        "selected_receipt_amount_in_words": _sales_receipt_amount_in_words(selected_receipt),
         "payment_modes": SalesReceipt.PAYMENT_MODE_CHOICES,
         "today": timezone.localdate(),
     }
     return render(request, "core/sales_receipts.html", context)
+
+
+@login_required
+@roles_required(ROLE_SUPER_ADMIN, ROLE_ADMIN)
+def daily_sales_register(request):
+    """Record daily counter sales and service work without customer receipts."""
+    available_items = InventoryItem.objects.filter(is_active=True).select_related("category").order_by("name")
+    selected_entry = None
+    entry_id = request.GET.get("entry", "").strip()
+    if entry_id:
+        selected_entry = _get_selected_daily_sales_entry(entry_id)
+        if selected_entry is None:
+            messages.error(request, "Requested daily entry was not found.")
+
+    editing_entry = None
+    edit_entry_id = request.GET.get("edit", "").strip()
+    if edit_entry_id:
+        editing_entry = _get_selected_daily_sales_entry(edit_entry_id)
+        if editing_entry is None:
+            messages.error(request, "Requested daily entry for editing was not found.")
+        elif _daily_sales_entry_has_receipt_lines(editing_entry):
+            messages.error(request, "Receipt-linked daily entries must be changed from the original bill/receipt.")
+            editing_entry = None
+
+    if request.method == "POST":
+        edit_entry_id = request.POST.get("entry_id", "").strip()
+        sale_date_raw = request.POST.get("sale_date", "").strip()
+        payment_mode = request.POST.get("payment_mode", "Cash").strip() or "Cash"
+        notes = request.POST.get("notes", "").strip()
+
+        line_types = request.POST.getlist("line_type[]")
+        inventory_item_ids = request.POST.getlist("inventory_item_id[]")
+        descriptions = request.POST.getlist("description[]")
+        quantities = request.POST.getlist("quantity[]")
+        unit_prices = request.POST.getlist("unit_price[]")
+        unit_costs = request.POST.getlist("unit_cost[]")
+
+        try:
+            sale_date_value = dt.strptime(sale_date_raw, "%Y-%m-%d").date() if sale_date_raw else timezone.localdate()
+            row_count = max(
+                len(line_types),
+                len(inventory_item_ids),
+                len(descriptions),
+                len(quantities),
+                len(unit_prices),
+                len(unit_costs),
+            )
+            if row_count == 0:
+                raise ValueError("Add at least one sale or service line.")
+
+            prepared_lines = []
+
+            with transaction.atomic():
+                edit_target_entry = None
+                if edit_entry_id:
+                    edit_target_entry = (
+                        DailySalesEntry.objects.select_for_update()
+                        .prefetch_related("lines__inventory_item", "lines__sales_receipt")
+                        .get(id=int(edit_entry_id))
+                    )
+                    if _daily_sales_entry_has_receipt_lines(edit_target_entry):
+                        raise ValueError("Receipt-linked daily entries must be changed from the original bill/receipt.")
+                    duplicate_entry = (
+                        DailySalesEntry.objects.select_for_update()
+                        .filter(sale_date=sale_date_value, payment_mode=payment_mode)
+                        .exclude(id=edit_target_entry.id)
+                        .first()
+                    )
+                    if duplicate_entry:
+                        raise ValueError("Another daily sales entry already exists for this date and payment mode.")
+                    _restore_daily_sales_entry_inventory(edit_target_entry)
+
+                for index in range(row_count):
+                    line_type = (line_types[index] if index < len(line_types) else "service").strip() or "service"
+                    inventory_item_id = (inventory_item_ids[index] if index < len(inventory_item_ids) else "").strip()
+                    description = (descriptions[index] if index < len(descriptions) else "").strip()
+                    quantity_raw = (quantities[index] if index < len(quantities) else "").strip()
+                    unit_price_raw = (unit_prices[index] if index < len(unit_prices) else "").strip()
+                    unit_cost_raw = (unit_costs[index] if index < len(unit_costs) else "").strip() or "0"
+
+                    if not any([inventory_item_id, description, quantity_raw, unit_price_raw, unit_cost_raw not in {"", "0", "0.00"}]):
+                        continue
+
+                    quantity_value = int(quantity_raw)
+                    unit_price_value = Decimal(unit_price_raw)
+                    if quantity_value <= 0:
+                        raise ValueError(f"Line {index + 1}: quantity must be greater than zero.")
+                    if unit_price_value < 0:
+                        raise ValueError(f"Line {index + 1}: rate cannot be negative.")
+
+                    inventory_item = None
+                    unit_cost_value = Decimal("0")
+                    if line_type == "item":
+                        if not inventory_item_id:
+                            raise ValueError(f"Line {index + 1}: select an inventory item for item lines.")
+                        inventory_item = InventoryItem.objects.select_for_update().get(id=int(inventory_item_id))
+                        if inventory_item.current_stock < quantity_value:
+                            raise ValueError(
+                                f"Line {index + 1}: only {inventory_item.current_stock} units available for {inventory_item.name}."
+                            )
+                        if not description:
+                            description = inventory_item.name
+                        unit_cost_value = inventory_item.average_purchase_rate or Decimal("0")
+                    else:
+                        if not description:
+                            raise ValueError(f"Line {index + 1}: description is required for service lines.")
+                        unit_cost_value = Decimal(unit_cost_raw)
+                        if unit_cost_value < 0:
+                            raise ValueError(f"Line {index + 1}: service cost cannot be negative.")
+
+                    line_total = unit_price_value * quantity_value
+                    line_cost = unit_cost_value * quantity_value
+                    line_profit = line_total - line_cost
+
+                    prepared_lines.append(
+                        {
+                            "line_type": "item" if line_type == "item" else "service",
+                            "inventory_item": inventory_item,
+                            "description": description,
+                            "quantity": quantity_value,
+                            "unit_price": unit_price_value,
+                            "unit_cost": unit_cost_value,
+                            "line_total": line_total,
+                            "line_profit": line_profit,
+                        }
+                    )
+
+                if not prepared_lines:
+                    raise ValueError("Add at least one valid sale or service line.")
+
+                if edit_target_entry is not None:
+                    entry = edit_target_entry
+                    entry.lines.filter(sales_receipt__isnull=True).delete()
+                    entry.sale_date = sale_date_value
+                    entry.payment_mode = payment_mode
+                    entry.notes = notes
+                    entry.created_by = request.user
+                    entry.save(update_fields=["sale_date", "payment_mode", "notes", "created_by", "updated_at"])
+                    created_new_entry = False
+                else:
+                    entry, created_new_entry = _get_or_create_daily_sales_entry(
+                        sale_date=sale_date_value,
+                        payment_mode=payment_mode,
+                        notes=notes,
+                        created_by=request.user,
+                    )
+
+                for line in prepared_lines:
+                    DailySalesLine.objects.create(entry=entry, **line)
+                    if line["line_type"] == "item" and line["inventory_item"]:
+                        line["inventory_item"].current_stock -= line["quantity"]
+                        line["inventory_item"].save(update_fields=["current_stock", "updated_at"])
+
+                _recalculate_daily_sales_entry(entry)
+
+            if created_new_entry:
+                messages.success(request, f"Daily sales entry for {sale_date_value.strftime('%d %b %Y')} saved successfully.")
+            elif edit_entry_id:
+                messages.success(request, f"Daily sales entry for {sale_date_value.strftime('%d %b %Y')} updated successfully.")
+            else:
+                messages.success(
+                    request,
+                    f"Daily sales entry for {sale_date_value.strftime('%d %b %Y')} updated without creating a duplicate record.",
+                )
+            return redirect(f"{reverse('daily_sales_register')}?entry={entry.id}")
+        except InventoryItem.DoesNotExist:
+            messages.error(request, "One of the selected inventory items no longer exists.")
+        except DailySalesEntry.DoesNotExist:
+            messages.error(request, "The daily sales entry you tried to edit no longer exists.")
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            messages.error(request, f"Unable to save daily sales entry: {exc}")
+
+    context = {
+        "active_page": "daily_sales_register",
+        "current_mode": "sales",
+        "available_items": available_items,
+        "selected_entry": selected_entry,
+        "selected_entry_has_receipt_lines": bool(selected_entry and _daily_sales_entry_has_receipt_lines(selected_entry)),
+        "editing_entry": editing_entry,
+        "editing_entry_has_receipt_lines": bool(editing_entry and _daily_sales_entry_has_receipt_lines(editing_entry)),
+        "daily_form_lines": _build_daily_sales_form_lines(editing_entry),
+        "payment_modes": DailySalesEntry.PAYMENT_MODE_CHOICES,
+        "today": timezone.localdate(),
+        "profit_summary": _get_daily_profit_summary(),
+        "recent_daily_entries": _daily_sales_queryset()[:12],
+    }
+    return render(request, "core/daily_sales_register.html", context)
+
+
+@login_required
+@roles_required(ROLE_SUPER_ADMIN, ROLE_ADMIN)
+def daily_sales_report(request):
+    """View historical day-wise daily sales and profit summaries."""
+    today = timezone.localdate()
+    selected_date = _parse_date_or_default(request.GET.get("date", "").strip(), today)
+    from_date = _parse_date_or_default(request.GET.get("from_date", "").strip(), selected_date.replace(day=1))
+    to_date = _parse_date_or_default(request.GET.get("to_date", "").strip(), today)
+
+    if from_date > to_date:
+        from_date, to_date = to_date, from_date
+
+    _ensure_sales_receipts_synced(from_date=from_date, to_date=to_date)
+
+    daily_rows = (
+        DailySalesEntry.objects.filter(sale_date__gte=from_date, sale_date__lte=to_date)
+        .values("sale_date")
+        .annotate(
+            entry_count=Count("id"),
+            total_revenue=Sum("total_amount"),
+            total_cost=Sum("total_cost"),
+            total_profit=Sum("total_profit"),
+        )
+        .order_by("-sale_date")
+    )
+
+    paginator = Paginator(daily_rows, 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    selected_day_rows = _daily_sales_queryset().filter(sale_date=selected_date)
+    week_start = selected_date - timedelta(days=selected_date.weekday())
+    week_end = week_start + timedelta(days=6)
+    month_start = selected_date.replace(day=1)
+    if selected_date.month == 12:
+        next_month_start = selected_date.replace(year=selected_date.year + 1, month=1, day=1)
+    else:
+        next_month_start = selected_date.replace(month=selected_date.month + 1, day=1)
+    month_end = next_month_start - timedelta(days=1)
+    year_start = selected_date.replace(month=1, day=1)
+    year_end = selected_date.replace(month=12, day=31)
+
+    def aggregate_summary(queryset):
+        return queryset.aggregate(
+            revenue=Sum("total_amount"),
+            cost=Sum("total_cost"),
+            profit=Sum("total_profit"),
+            entries=Count("id"),
+        )
+
+    day_summary = aggregate_summary(selected_day_rows)
+    week_summary = aggregate_summary(_daily_sales_queryset().filter(sale_date__gte=week_start, sale_date__lte=week_end))
+    month_summary = aggregate_summary(_daily_sales_queryset().filter(sale_date__gte=month_start, sale_date__lte=month_end))
+    year_summary = aggregate_summary(_daily_sales_queryset().filter(sale_date__gte=year_start, sale_date__lte=year_end))
+
+    selected_day_entries = list(selected_day_rows[:12])
+    for entry in selected_day_entries:
+        entry.has_receipt_lines = _daily_sales_entry_has_receipt_lines(entry)
+
+    context = {
+        "active_page": "daily_sales_report",
+        "current_mode": "sales",
+        "selected_date": selected_date,
+        "from_date": from_date,
+        "to_date": to_date,
+        "page_obj": page_obj,
+        "day_summary": day_summary,
+        "week_summary": week_summary,
+        "month_summary": month_summary,
+        "year_summary": year_summary,
+        "selected_day_entries": selected_day_entries,
+    }
+    return render(request, "core/daily_sales_report.html", context)
+
+
+@login_required
+@roles_required(ROLE_SUPER_ADMIN, ROLE_ADMIN)
+@require_http_methods(["POST"])
+def delete_daily_sales_entry(request, entry_id):
+    """Delete a manual daily sales entry and restore deducted inventory stock."""
+    entry = get_object_or_404(
+        DailySalesEntry.objects.prefetch_related("lines__inventory_item", "lines__sales_receipt"),
+        id=entry_id,
+    )
+
+    if _daily_sales_entry_has_receipt_lines(entry):
+        messages.error(request, "Receipt-linked daily entries must be deleted from the original bill/receipt.")
+        return redirect(request.POST.get("next") or reverse("daily_sales_register"))
+
+    sale_date = entry.sale_date
+    payment_mode = entry.payment_mode
+    line_count = entry.lines.count()
+
+    with transaction.atomic():
+        locked_entry = (
+            DailySalesEntry.objects.select_for_update()
+            .prefetch_related("lines__inventory_item", "lines__sales_receipt")
+            .get(id=entry.id)
+        )
+        if _daily_sales_entry_has_receipt_lines(locked_entry):
+            messages.error(request, "Receipt-linked daily entries must be deleted from the original bill/receipt.")
+            return redirect(request.POST.get("next") or reverse("daily_sales_register"))
+        _restore_daily_sales_entry_inventory(locked_entry)
+        locked_entry.delete()
+
+        log_audit_event(
+            action="sales.daily_entry_deleted",
+            actor=request.user,
+            target=entry,
+            request=request,
+            metadata={
+                "sale_date": sale_date.isoformat(),
+                "payment_mode": payment_mode,
+                "line_count": line_count,
+            },
+        )
+
+    messages.success(request, f"Daily sales entry for {sale_date.strftime('%d %b %Y')} deleted successfully.")
+
+    next_url = request.POST.get("next", "").strip()
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+    return redirect("daily_sales_register")
+
+
+@login_required
+@roles_required(ROLE_SUPER_ADMIN, ROLE_ADMIN)
+def sales_receipt_history(request):
+    """Browse saved sales receipts on a dedicated history page."""
+    search_query = request.GET.get("search", "").strip()
+    payment_mode = request.GET.get("payment_mode", "").strip()
+    receipt_id = request.GET.get("receipt", "").strip()
+
+    receipts = _sales_receipt_queryset().all()
+
+    if search_query:
+        receipts = receipts.filter(
+            Q(receipt_no__icontains=search_query)
+            | Q(customer_name__icontains=search_query)
+            | Q(customer_phone__icontains=search_query)
+        )
+
+    if payment_mode:
+        receipts = receipts.filter(payment_mode=payment_mode)
+
+    paginator = Paginator(receipts, 12)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    selected_receipt = _get_selected_sales_receipt(receipt_id)
+    if receipt_id and selected_receipt is None:
+        messages.error(request, "Requested receipt was not found.")
+
+    if selected_receipt and payment_mode and selected_receipt.payment_mode != payment_mode:
+        selected_receipt = None
+    elif selected_receipt and search_query:
+        searchable_values = [
+            selected_receipt.receipt_no,
+            selected_receipt.customer_name,
+            selected_receipt.customer_phone or "",
+        ]
+        lowered_query = search_query.lower()
+        if not any(lowered_query in value.lower() for value in searchable_values):
+            selected_receipt = None
+
+    if selected_receipt is None and page_obj.object_list:
+        selected_receipt = page_obj.object_list[0]
+
+    context = {
+        "active_page": "sales_receipt_history",
+        "current_mode": "sales",
+        "page_obj": page_obj,
+        "selected_receipt": selected_receipt,
+        "selected_receipt_amount_in_words": _sales_receipt_amount_in_words(selected_receipt),
+        "payment_modes": SalesReceipt.PAYMENT_MODE_CHOICES,
+        "search_query": search_query,
+        "selected_payment_mode": payment_mode,
+        "total_receipts": receipts.count(),
+    }
+    return render(request, "core/sales_receipt_history.html", context)
+
+
+@login_required
+@roles_required(ROLE_SUPER_ADMIN, ROLE_ADMIN)
+@require_http_methods(["POST"])
+def delete_sales_receipt(request, receipt_id):
+    """Delete a sales receipt and restore deducted stock for inventory-backed lines."""
+    receipt = get_object_or_404(
+        SalesReceipt.objects.prefetch_related("lines__inventory_item", "lines__sales_item", "daily_sales_lines"),
+        id=receipt_id,
+    )
+
+    receipt_no = receipt.receipt_no
+    customer_name = receipt.customer_name
+
+    with transaction.atomic():
+        inventory_adjustments = {}
+        line_count = 0
+
+        for line in receipt.lines.all():
+            line_count += 1
+            if line.line_type == "item" and line.inventory_item_id:
+                inventory_adjustments[line.inventory_item_id] = (
+                    inventory_adjustments.get(line.inventory_item_id, 0) + line.quantity
+                )
+
+        if inventory_adjustments:
+            items_by_id = {
+                item.id: item
+                for item in InventoryItem.objects.select_for_update().filter(id__in=inventory_adjustments.keys())
+            }
+            for item_id, quantity in inventory_adjustments.items():
+                item = items_by_id.get(item_id)
+                if item is None:
+                    continue
+                item.current_stock += quantity
+                item.save(update_fields=["current_stock", "updated_at"])
+
+        affected_entry_ids = list(receipt.daily_sales_lines.values_list("entry_id", flat=True).distinct())
+        receipt.daily_sales_lines.all().delete()
+        for entry_id in affected_entry_ids:
+            entry = DailySalesEntry.objects.filter(id=entry_id).first()
+            if entry is None:
+                continue
+            if entry.lines.exists():
+                _recalculate_daily_sales_entry(entry)
+            else:
+                entry.delete()
+
+        log_audit_event(
+            action="sales.receipt_deleted",
+            actor=request.user,
+            target=receipt,
+            request=request,
+            metadata={
+                "receipt_no": receipt_no,
+                "customer_name": customer_name,
+                "line_count": line_count,
+                "restored_inventory_items": inventory_adjustments,
+            },
+        )
+
+        receipt.delete()
+
+    messages.success(request, f"Sales receipt {receipt_no} deleted successfully.")
+
+    next_url = request.POST.get("next", "").strip()
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+    return redirect("sales_receipt_history")
 
 
 # ================= PAYMENT TRACKING PAGE =================
