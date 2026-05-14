@@ -65,9 +65,6 @@ def current_mode(request):
     sales_paths = [
         '/sales',          # Sales dashboard and items
         '/inventory',      # Inventory module
-        '/fees',           # Fee payment section
-        '/payment-tracking',  # Payment tracking section
-        '/receipts',       # Receipts section
     ]
     
     # Check if current path matches any sales-related paths
@@ -75,5 +72,5 @@ def current_mode(request):
         if path.startswith(sales_path):
             return {'current_mode': 'sales'}
     
-    # Default to education mode
+    # Default to education mode (includes fees, payment-tracking, receipts)
     return {'current_mode': 'education'}

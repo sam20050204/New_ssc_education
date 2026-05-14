@@ -1,13 +1,13 @@
 @echo off
 setlocal
 REM ========================================
-REM SSC Education ERP Launcher Script
-REM Starts Django with local development settings
+REM Network Server Launcher Script
+REM Start Django Server for Network Access
 REM ========================================
 
 echo.
 echo ============================================
-echo  SSC Education ERP - Server Launcher
+echo  SSC Education - Network Server Launcher
 echo ============================================
 echo.
 
@@ -27,92 +27,115 @@ echo [OK] Project directory: %CD%
 echo [OK] Django project files found
 echo.
 
-REM Warn if .env is missing. Development can still boot from defaults,
-REM but local overrides like ADMIN_URL or security toggles will be absent.
-if exist .env (
-    echo [OK] Configuration file .env found
-) else (
-    echo [WARN] .env not found. Using settings defaults and any persisted local secret key.
-)
-echo.
-
-REM Prefer the project's virtual environment, then fall back to PATH
-set "PYTHON_EXE=%~dp0venv\Scripts\python.exe"
-if exist "%PYTHON_EXE%" (
-    echo [OK] Using virtual environment Python
-) else (
-    set "PYTHON_EXE=python"
-    echo [WARN] venv\Scripts\python.exe not found, using Python from PATH
-)
-
-REM Use development settings by default
-set "DJANGO_SETTINGS_MODULE=Project.settings.dev"
-
-REM Ensure runtime directories exist for logging and uploaded files
-if not exist logs (
-    mkdir logs
-    echo [OK] Created logs directory
-)
-if not exist media (
-    mkdir media
-    echo [OK] Created media directory
-)
-
-REM Run checks before startup
-echo Running Django system checks...
-"%PYTHON_EXE%" manage.py check
-if errorlevel 1 (
-    echo.
-    echo ERROR: Django system checks failed
-    pause
-    exit /b 1
-)
-
-REM Apply migrations so the new ERP foundation models are available
-echo Running database migrations...
-"%PYTHON_EXE%" manage.py migrate
-if errorlevel 1 (
-    echo.
-    echo ERROR: Database migration failed
-    pause
-    exit /b 1
-)
-
 REM Display server information
 echo ============================================
 echo  SERVER INFORMATION
 echo ============================================
 echo Server IP Address: 0.0.0.0 (accessible on all network interfaces)
 echo Server Port: 8000
-echo Local access URL: http://127.0.0.1:8000 or http://localhost:8000
-echo Health URL: http://127.0.0.1:8000/health/
+echo Access URL: http://127.0.0.1:8000 or http://localhost:8000
 echo.
-echo To open this website from another computer, find this PC's LAN IP with:
-echo        ipconfig
-echo Then open: http://YOUR_LAN_IP:8000
-echo.
-netsh advfirewall firewall show rule name="SSC Education Django 8000" >nul 2>&1
-if errorlevel 1 (
-    echo [WARN] Windows Firewall may still be blocking inbound traffic on port 8000.
-    echo [WARN] Run this command in an Administrator terminal once:
-    echo        netsh advfirewall firewall add rule name^="SSC Education Django 8000" dir^=in action^=allow protocol^=TCP localport^=8000
-) else (
-    echo [OK] Firewall rule "SSC Education Django 8000" already exists.
-)
+echo Make sure firewall allows port 8000 for network access!
 echo.
 
+REM Attempt to locate a Python executable in common virtualenvs or PATH
 echo Starting Django development server...
 echo Press CTRL+C to stop the server
 echo.
 
-"%PYTHON_EXE%" manage.py runserver 0.0.0.0:8000
+setlocal enabledelayedexpansion
 
-if errorlevel 1 (
-    echo.
-    echo ERROR: Failed to start server
-    echo Make sure Python is installed and dependencies are available
-    pause
-    exit /b 1
+set "PY_CAND="
+if exist "%~dp0.venv\Scripts\python.exe" set "PY_CAND=%~dp0.venv\Scripts\python.exe"
+if not defined PY_CAND if exist "%~dp0venv\Scripts\python.exe" set "PY_CAND=%~dp0venv\Scripts\python.exe"
+if not defined PY_CAND if exist "%~dp0env\Scripts\python.exe" set "PY_CAND=%~dp0env\Scripts\python.exe"
+
+if not defined PY_CAND (
+    for /f "delims=" %%P in ('where python 2^>nul') do (
+        if not defined PY_CAND set "PY_CAND=%%P"
+    )
 )
 
+if not defined PY_CAND (
+    for /f "delims=" %%Q in ('where py 2^>nul') do (
+        if not defined PY_CAND set "PY_CAND=py"
+    )
+)
+
+if defined PY_CAND (
+    echo Using Python: %PY_CAND%
+    echo.
+    
+    REM Check if virtual environment is active, if not try to activate it
+    if exist "%~dp0.venv\Scripts\activate.bat" (
+        echo Activating virtual environment from .venv...
+        call "%~dp0.venv\Scripts\activate.bat"
+    ) else if exist "%~dp0venv\Scripts\activate.bat" (
+        echo Activating virtual environment from venv...
+        call "%~dp0venv\Scripts\activate.bat"
+    ) else if exist "%~dp0env\Scripts\activate.bat" (
+        echo Activating virtual environment from env...
+        call "%~dp0env\Scripts\activate.bat"
+    )
+    
+    echo.
+    echo Checking dependencies...
+    if "%PY_CAND%"=="py" (
+        py -3 -m pip list >nul 2>&1 || (
+            echo ERROR: pip not found. Virtual environment may not be properly set up.
+            pause
+            exit /b 1
+        )
+    ) else (
+        "%PY_CAND%" -m pip list >nul 2>&1 || (
+            echo ERROR: pip not found. Virtual environment may not be properly set up.
+            pause
+            exit /b 1
+        )
+    )
+    
+    echo [OK] Dependencies available
+    echo.
+    
+    echo Running database migrations...
+    if "%PY_CAND%"=="py" (
+        py -3 manage.py migrate
+    ) else (
+        "%PY_CAND%" manage.py migrate
+    )
+    
+    if errorlevel 1 (
+        echo.
+        echo ERROR: Database migration failed. See output above.
+        pause
+        exit /b 1
+    )
+    
+    echo.
+    echo ============================================
+    echo  Starting Django Development Server
+    echo ============================================
+    echo.
+    if "%PY_CAND%"=="py" (
+        py -3 manage.py runserver 0.0.0.0:8000
+    ) else (
+        "%PY_CAND%" manage.py runserver 0.0.0.0:8000
+    )
+    if errorlevel 1 (
+        echo.
+        echo ERROR: Server exited with an error. See output above.
+        pause
+        exit /b 1
+    )
+    exit /b 0
+)
+
+echo.
+echo ERROR: Could not find a Python executable.
+echo Please install Python 3 and ensure one of the following is available:
+echo  - A virtual environment at .venv\Scripts\python.exe or venv\Scripts\python.exe
+echo  - The 'python' command on your PATH (run 'where python' to check)
+echo  - The 'py' launcher (Windows Python launcher) which supports 'py -3'
+echo.
 pause
+exit /b 1
