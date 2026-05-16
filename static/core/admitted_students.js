@@ -83,49 +83,31 @@ let currentPaymentHistory = [];
 // ===================== DUPLICATE DETECTION =====================
 function markDuplicateStudents() {
     const studentCards = document.querySelectorAll('.student-card');
-    const seenMobiles = {};
-    const seenEmails = {};
     const seenFullNames = {};
     const duplicateIds = new Set();
+
+    function normalizeValue(value) {
+        return (value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
     
     // First pass: identify duplicates
     studentCards.forEach(card => {
-        const mobile = card.getAttribute('data-mobile')?.trim();
-        const email = card.getAttribute('data-email')?.trim();
+        const storedFullName = normalizeValue(card.getAttribute('data-fullname'));
         
-        // Create full name from surname + student_name + father_name (as displayed)
-        const surname = card.getAttribute('data-surname')?.trim() || '';
-        const studentName = card.getAttribute('data-studentname')?.trim() || '';
-        const fatherName = card.getAttribute('data-fathername')?.trim() || '';
-        const fullNameCombo = `${surname} ${studentName} ${fatherName}`.replace(/\s+/g, ' ').trim();
+        // Fall back to the displayed split name if full_name is empty on the record.
+        const surname = normalizeValue(card.getAttribute('data-surname'));
+        const studentName = normalizeValue(card.getAttribute('data-studentname'));
+        const fatherName = normalizeValue(card.getAttribute('data-fathername'));
+        const fallbackFullName = normalizeValue(`${surname} ${studentName} ${fatherName}`);
+        const fullNameKey = storedFullName || fallbackFullName;
         
-        // Check for mobile duplicates
-        if (mobile && mobile !== '') {
-            if (seenMobiles[mobile]) {
-                duplicateIds.add(seenMobiles[mobile]);
+        // Check for duplicates by the stored full_name field.
+        if (fullNameKey) {
+            if (seenFullNames[fullNameKey]) {
+                duplicateIds.add(seenFullNames[fullNameKey]);
                 duplicateIds.add(card.getAttribute('data-student-id'));
             } else {
-                seenMobiles[mobile] = card.getAttribute('data-student-id');
-            }
-        }
-        
-        // Check for email duplicates
-        if (email && email !== '') {
-            if (seenEmails[email]) {
-                duplicateIds.add(seenEmails[email]);
-                duplicateIds.add(card.getAttribute('data-student-id'));
-            } else {
-                seenEmails[email] = card.getAttribute('data-student-id');
-            }
-        }
-        
-        // Check for full name duplicates (surname + student_name + father_name)
-        if (fullNameCombo && fullNameCombo !== '') {
-            if (seenFullNames[fullNameCombo]) {
-                duplicateIds.add(seenFullNames[fullNameCombo]);
-                duplicateIds.add(card.getAttribute('data-student-id'));
-            } else {
-                seenFullNames[fullNameCombo] = card.getAttribute('data-student-id');
+                seenFullNames[fullNameKey] = card.getAttribute('data-student-id');
             }
         }
     });

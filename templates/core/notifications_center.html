@@ -41,9 +41,9 @@
             <button type="submit" class="action-btn primary btn-sm">Apply</button>
         </form>
 
-        <div class="activity-list activity-list-wide" data-notification-list>
+        <div class="activity-list activity-list-wide" data-notification-center-list>
             {% for item in notification_items %}
-            <div class="activity-card {% if not item.is_read %}activity-card-unread{% endif %}" data-notification-item data-notification-id="{{ item.id }}">
+            <div class="activity-card {% if not item.is_read %}activity-card-unread{% endif %}" data-notification-item data-notification-id="{{ item.id }}" data-notification-link="{{ item.link_url|default:'' }}">
                 <div class="activity-pill priority-{{ item.priority }}">{{ item.get_priority_display }}</div>
                 <div class="activity-copy">
                     <strong>{{ item.title }}</strong>

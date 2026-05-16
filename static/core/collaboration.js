@@ -20,16 +20,37 @@
         badge.classList.toggle('hidden', !count);
     }
 
-    function renderNotifications(items, unreadCount) {
-        const list = document.querySelector('[data-notification-list]');
-        const summary = document.querySelector('[data-notification-summary]');
-        if (summary) {
-            summary.textContent = `${unreadCount} unread`;
+    function getNotificationMarkup(item, variant) {
+        const containerClass = variant === 'center'
+            ? `activity-card ${item.is_read ? '' : 'activity-card-unread'}`
+            : `collaboration-item ${item.is_read ? '' : 'is-unread'}`;
+        const linkAttr = item.link_url ? ` data-notification-link="${item.link_url}"` : '';
+
+        if (variant === 'center') {
+            return `
+                <div class="${containerClass}" data-notification-item data-notification-id="${item.id}"${linkAttr}>
+                    <div class="activity-pill priority-${item.priority}">${item.priority_label || item.priority}</div>
+                    <div class="activity-copy">
+                        <strong>${item.title}</strong>
+                        <p>${item.message}</p>
+                        <div class="activity-meta">
+                            <span>${item.category_label || item.category}</span>
+                            <span>${item.created_at}</span>
+                            ${item.actor ? `<span>By ${item.actor}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="activity-actions">
+                        ${item.link_url ? `<a href="${item.link_url}" class="mini-link-btn">${item.action_label || 'Open'}</a>` : ''}
+                        <button type="button" class="mini-link-btn" data-toggle-notification-read="${item.id}">
+                            ${item.is_read ? 'Mark Unread' : 'Mark Read'}
+                        </button>
+                    </div>
+                </div>
+            `;
         }
-        updateBadge('[data-notification-badge]', unreadCount);
-        if (!list) return;
-        list.innerHTML = items.length ? items.map(item => `
-            <div class="collaboration-item ${item.is_read ? '' : 'is-unread'}" data-notification-item data-notification-id="${item.id}">
+
+        return `
+            <div class="${containerClass}" data-notification-item data-notification-id="${item.id}"${linkAttr}>
                 <div class="collaboration-item-main">
                     <div class="priority-dot priority-${item.priority}"></div>
                     <div>
@@ -42,11 +63,34 @@
                     <i class="fa-solid fa-envelope-open-text"></i>
                 </button>
             </div>
-        `).join('') : '<div class="collaboration-empty">No notifications yet.</div>';
+        `;
+    }
+
+    function renderNotifications(items, unreadCount) {
+        const topbarList = document.querySelector('[data-notification-topbar-list]');
+        const centerList = document.querySelector('[data-notification-center-list]');
+        const summary = document.querySelector('[data-notification-summary]');
+        if (summary) {
+            summary.textContent = `${unreadCount} unread`;
+        }
+        updateBadge('[data-notification-badge]', unreadCount);
+        if (topbarList) {
+            topbarList.innerHTML = items.length
+                ? items.map(item => getNotificationMarkup(item, 'topbar')).join('')
+                : '<div class="collaboration-empty">No notifications yet.</div>';
+        }
+        if (centerList) {
+            centerList.innerHTML = items.length
+                ? items.map(item => getNotificationMarkup(item, 'center')).join('')
+                : '<div class="collaboration-empty">No notifications yet.</div>';
+        }
     }
 
     async function refreshNotifications() {
-        const hasNotificationUi = document.querySelector('[data-notification-list]') || document.querySelector('[data-notification-badge]');
+        const hasNotificationUi =
+            document.querySelector('[data-notification-topbar-list]') ||
+            document.querySelector('[data-notification-center-list]') ||
+            document.querySelector('[data-notification-badge]');
         if (!hasNotificationUi) return;
         const data = await apiFetch('/api/notifications/?limit=8');
         renderNotifications(data.items, data.unread_count);
@@ -177,6 +221,20 @@
 
         if (event.target.closest('[data-mark-all-notifications]')) {
             await markAllNotificationsRead();
+            return;
+        }
+
+        const notificationItem = event.target.closest('[data-notification-item]');
+        if (notificationItem && !event.target.closest('[data-toggle-notification-read]')) {
+            const notificationId = notificationItem.getAttribute('data-notification-id');
+            const linkUrl = notificationItem.getAttribute('data-notification-link');
+            const isUnread = notificationItem.classList.contains('is-unread') || notificationItem.classList.contains('activity-card-unread');
+            if (notificationId && isUnread) {
+                await toggleNotificationRead(notificationId, true);
+            }
+            if (linkUrl) {
+                window.location.assign(linkUrl);
+            }
             return;
         }
 

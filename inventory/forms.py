@@ -61,9 +61,10 @@ class CategoryForm(forms.ModelForm):
         if not name:
             raise ValidationError("Category name cannot be empty.")
 
-        # Check for duplicates (case-insensitive)
+        # Active categories must still remain unique.
         existing = Category.objects.filter(
-            name__iexact=name
+            name__iexact=name,
+            is_active=True,
         ).exclude(pk=self.instance.pk if self.instance.pk else None)
 
         if existing.exists():
@@ -72,6 +73,25 @@ class CategoryForm(forms.ModelForm):
             )
 
         return name
+
+    def save(self, commit=True):
+        """Reactivate a soft-deleted category when the same name is reused."""
+        name = self.cleaned_data.get("name", "").strip()
+        existing_inactive = Category.objects.filter(
+            name__iexact=name,
+            is_active=False,
+        ).exclude(pk=self.instance.pk if self.instance.pk else None).first()
+
+        if existing_inactive:
+            existing_inactive.name = name
+            existing_inactive.description = self.cleaned_data.get("description")
+            existing_inactive.icon = self.cleaned_data.get("icon")
+            existing_inactive.is_active = True
+            if commit:
+                existing_inactive.save()
+            return existing_inactive
+
+        return super().save(commit=commit)
 
 
 class SupplierForm(forms.ModelForm):
@@ -421,6 +441,12 @@ class PurchaseForm(forms.ModelForm):
                 }
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["item"].queryset = Item.objects.filter(is_active=True).select_related("category").order_by("name")
+        self.fields["supplier"].queryset = Supplier.objects.filter(is_active=True).order_by("name")
+        self.fields["category"].queryset = Category.objects.filter(is_active=True).order_by("name")
 
     def clean(self):
         """Validate purchase form"""

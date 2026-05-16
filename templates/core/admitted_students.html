@@ -57,41 +57,6 @@
 
 {% block content %}
 <section class="students-dashboard">
-    <div class="summary-grid">
-        <article class="summary-card accent-indigo">
-            <div class="summary-head">
-                <span class="summary-icon"><i class="fa-solid fa-users"></i></span>
-                <span class="summary-label">Total Admitted Students</span>
-            </div>
-            <strong>{{ dashboard_metrics.total_students }}</strong>
-            <p>Current filtered student inventory across admissions, finance, and batches.</p>
-        </article>
-        <article class="summary-card accent-emerald">
-            <div class="summary-head">
-                <span class="summary-icon"><i class="fa-solid fa-user-check"></i></span>
-                <span class="summary-label">Active Students</span>
-            </div>
-            <strong>{{ dashboard_metrics.active_students }}</strong>
-            <p>{{ dashboard_metrics.retention_rate }}% retention rate in the active student pool.</p>
-        </article>
-        <article class="summary-card accent-amber">
-            <div class="summary-head">
-                <span class="summary-icon"><i class="fa-solid fa-wallet"></i></span>
-                <span class="summary-label">Pending Fees</span>
-            </div>
-            <strong>{{ dashboard_metrics.pending_fees }}</strong>
-            <p>{{ dashboard_metrics.fee_recovery_rate }}% fee recovery achieved on this student set.</p>
-        </article>
-        <article class="summary-card accent-violet">
-            <div class="summary-head">
-                <span class="summary-icon"><i class="fa-solid fa-medal"></i></span>
-                <span class="summary-label">Completed Students</span>
-            </div>
-            <strong>{{ dashboard_metrics.completed_students }}</strong>
-            <p>Course completions and batch closures from the current filtered result.</p>
-        </article>
-    </div>
-
     <div class="toolbar-shell glass-panel">
         <div class="toolbar-main">
             <div class="search-cluster">
@@ -424,20 +389,6 @@
             {% endif %}
         </div>
     </div>
-
-    {% if view_mode != 'compact' and page_obj and page_obj.has_other_pages %}
-    <div class="pagination-container">
-        {% if page_obj.has_previous %}
-        <a class="filter-btn secondary" href="?page=1&search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}">First</a>
-        <a class="filter-btn secondary" href="?page={{ page_obj.previous_page_number }}&search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}">Previous</a>
-        {% endif %}
-        <span class="summary-tag">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-        <a class="filter-btn secondary" href="?page={{ page_obj.next_page_number }}&search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}">Next</a>
-        <a class="filter-btn secondary" href="?page={{ page_obj.paginator.num_pages }}&search={{ search }}&month={{ month }}&year={{ year }}&course={{ course }}&batch_month={{ batch_month }}&batch_year={{ batch_year }}&sort={{ sort }}">Last</a>
-        {% endif %}
-    </div>
-    {% endif %}
 
     <div id="studentModal" class="modal">
         <div class="modal-content">

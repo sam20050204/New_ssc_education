@@ -290,6 +290,43 @@
             </div>
         </div>
     </div>
+
+    <div class="dashboard-bottom-metrics">
+        <div class="summary-grid dashboard-summary-grid">
+            <article class="summary-card accent-indigo">
+                <div class="summary-head">
+                    <span class="summary-icon"><i class="fa-solid fa-users"></i></span>
+                    <span class="summary-label">Total Admitted Students</span>
+                </div>
+                <strong>{{ dashboard_metrics.total_students }}</strong>
+                <p>Current filtered student inventory across admissions, finance, and batches.</p>
+            </article>
+            <article class="summary-card accent-emerald">
+                <div class="summary-head">
+                    <span class="summary-icon"><i class="fa-solid fa-user-check"></i></span>
+                    <span class="summary-label">Active Students</span>
+                </div>
+                <strong>{{ dashboard_metrics.active_students }}</strong>
+                <p>{{ dashboard_metrics.retention_rate }}% retention rate in the active student pool.</p>
+            </article>
+            <article class="summary-card accent-amber">
+                <div class="summary-head">
+                    <span class="summary-icon"><i class="fa-solid fa-wallet"></i></span>
+                    <span class="summary-label">Pending Fees</span>
+                </div>
+                <strong>{{ dashboard_metrics.pending_fees }}</strong>
+                <p>{{ dashboard_metrics.fee_recovery_rate }}% fee recovery achieved on this student set.</p>
+            </article>
+            <article class="summary-card accent-violet">
+                <div class="summary-head">
+                    <span class="summary-icon"><i class="fa-solid fa-medal"></i></span>
+                    <span class="summary-label">Completed Students</span>
+                </div>
+                <strong>{{ dashboard_metrics.completed_students }}</strong>
+                <p>Course completions and batch closures from the current filtered result.</p>
+            </article>
+        </div>
+    </div>
 </section>
 
 <script>

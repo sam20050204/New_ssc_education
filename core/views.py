@@ -311,6 +311,7 @@ def dashboard(request):
     # Filter students by admission year if selected
     if selected_year:
         students = students.filter(admission_date__year=selected_year)
+    students = list(students)
 
     enquiries = Enquiry.objects.all()
     if selected_year:
@@ -328,11 +329,33 @@ def dashboard(request):
     klic_count = sum(
         1 for course_name in display_courses if course_name and course_name.lower() not in {"ms-cit", "practice"}
     )
+    total_admissions = len(students)
+
+    total_fee_value = Decimal("0")
+    total_paid_value = Decimal("0")
+    total_remaining_value = Decimal("0")
+    active_students_count = 0
+    completed_students_count = 0
+    pending_fee_count = 0
 
     course_distribution = {}
     admission_month_counter = Counter()
     top_batch_counter = Counter()
     for student in students:
+        total_fees = student.total_fees or Decimal("0")
+        paid_fees = student.paid_fees or Decimal("0")
+        remaining_fees = student.remaining_fees or Decimal("0")
+
+        total_fee_value += total_fees
+        total_paid_value += paid_fees
+        total_remaining_value += remaining_fees
+        if student.batch_status == "active":
+            active_students_count += 1
+        else:
+            completed_students_count += 1
+        if remaining_fees > 0:
+            pending_fee_count += 1
+
         course_name = get_display_course_name(student)
         course_distribution[course_name] = course_distribution.get(course_name, 0) + 1
         if student.admission_date:
@@ -378,12 +401,15 @@ def dashboard(request):
     dashboard_top_batches = top_batch_counter.most_common(5)
     dashboard_admission_trends = [{"label": label, "count": count} for label, count in admission_month_counter.items()]
     dashboard_admission_trends.sort(key=lambda item: dt.strptime(item["label"], "%b").month)
+    fee_recovery_rate = round((total_paid_value / total_fee_value) * 100, 1) if total_fee_value > 0 else 0
+    retention_rate = round((active_students_count / total_admissions) * 100, 1) if total_admissions else 0
 
     context = {
         "enquiry_count": enquiry_count,
         "mscit_count": mscit_count,
         "practice_count": practice_count,
         "klic_count": klic_count,
+        "total_admissions": total_admissions,
         "available_years": available_years,
         "selected_year": selected_year,
         "active_page": "dashboard",
@@ -392,6 +418,16 @@ def dashboard(request):
         "dashboard_top_courses": dashboard_top_courses,
         "dashboard_top_batches": dashboard_top_batches,
         "dashboard_admission_trends": dashboard_admission_trends,
+        "dashboard_metrics": {
+            "total_students": total_admissions,
+            "active_students": active_students_count,
+            "pending_fees": pending_fee_count,
+            "completed_students": completed_students_count,
+            "fee_recovery_rate": fee_recovery_rate,
+            "retention_rate": retention_rate,
+            "revenue_collected": total_paid_value,
+            "revenue_pending": total_remaining_value,
+        },
         "current_mode": "education",
     }
 
@@ -1642,13 +1678,8 @@ def admitted_students(request):
     admission_trends = [{"label": label, "count": count} for label, count in month_counter.items()]
     admission_trends.sort(key=lambda item: dt.strptime(item["label"], "%b").month)
 
-    if view_mode == "compact":
-        paginator = Paginator(students, max(total_students, 1))
-        page_obj = paginator.get_page(1)
-    else:
-        paginator = Paginator(students, 25)
-        page_number = request.GET.get("page", 1)
-        page_obj = paginator.get_page(page_number)
+    paginator = Paginator(students, max(total_students, 1))
+    page_obj = paginator.get_page(1)
 
     return render(
         request,
@@ -3276,13 +3307,8 @@ def student_finance_details(request):
     elif sort_by == "profit":
         finance_data.sort(key=lambda x: float(x["profit"] or 0), reverse=True)
 
-    paginator = Paginator(finance_data, 25)
-    page_number = request.GET.get("page", 1)
-    page_obj = paginator.get_page(page_number)
-
     context = {
-        "finance_data": page_obj.object_list,
-        "page_obj": page_obj,
+        "finance_data": finance_data,
         "total_profit": total_profit,
         "total_learner_paid": total_learner_paid,
         "total_mkcl_paid": total_mkcl_paid,
@@ -5761,7 +5787,9 @@ def _serialize_notification(notification):
         "title": notification.title,
         "message": notification.message,
         "category": notification.category,
+        "category_label": notification.get_category_display(),
         "priority": notification.priority,
+        "priority_label": notification.get_priority_display(),
         "priority_style": NOTIFICATION_PRIORITY_STYLES.get(notification.priority, "info"),
         "is_read": notification.is_read,
         "action_label": notification.action_label,

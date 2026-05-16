@@ -67,9 +67,9 @@
                             </div>
                             <button type="button" class="mini-link-btn" data-mark-all-notifications>Mark all read</button>
                         </div>
-                        <div class="collaboration-list" data-notification-list>
+                        <div class="collaboration-list" data-notification-topbar-list>
                             {% for item in topbar_recent_notifications %}
-                            <div class="collaboration-item {% if not item.is_read %}is-unread{% endif %}" data-notification-item data-notification-id="{{ item.id }}">
+                            <div class="collaboration-item {% if not item.is_read %}is-unread{% endif %}" data-notification-item data-notification-id="{{ item.id }}" data-notification-link="{{ item.link_url|default:'' }}">
                                 <div class="collaboration-item-main">
                                     <div class="priority-dot priority-{{ item.priority }}"></div>
                                     <div>

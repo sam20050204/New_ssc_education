@@ -29,13 +29,47 @@
 
                 <div class="mb-3">
                     <label for="{{ form.item.id_for_label }}" class="form-label">
-                        Item <span class="text-danger">*</span>
+                        Existing Item
                     </label>
                     {{ form.item }}
                     {% if form.item.errors %}
                     <div class="invalid-feedback d-block">{{ form.item.errors.0 }}</div>
                     {% endif %}
-                    <div class="help-text">Select existing item or scroll below to create new</div>
+                    <div class="help-text">Select an existing item if it is already in inventory.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.item_name.id_for_label }}" class="form-label">
+                        New Item Name
+                    </label>
+                    {{ form.item_name }}
+                    {% if form.item_name.errors %}
+                    <div class="invalid-feedback d-block">{{ form.item_name.errors.0 }}</div>
+                    {% endif %}
+                    <div class="help-text">Use this when the purchased item is not yet in inventory.</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">
+                            Category
+                        </label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                        <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
+                        {% endif %}
+                        <div class="help-text">Choose the category where the new item should be added.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.new_category.id_for_label }}" class="form-label">
+                            Or Create New Category
+                        </label>
+                        {{ form.new_category }}
+                        {% if form.new_category.errors %}
+                        <div class="invalid-feedback d-block">{{ form.new_category.errors.0 }}</div>
+                        {% endif %}
+                        <div class="help-text">Leave blank if you selected an existing category.</div>
+                    </div>
                 </div>
 
                 <!-- Supplier Selection -->
@@ -175,6 +209,10 @@ function calculatePrices() {
 const quantityInput = document.querySelector('#quantity_input');
 const purchaseRateInput = document.querySelector('#purchase_rate_input');
 const sellingPriceInput = document.querySelector('#selling_price_input');
+const existingItemSelect = document.querySelector('#item_select');
+const newItemInput = document.querySelector('#item_autocomplete');
+const categorySelect = document.querySelector('#purchase_category_select');
+const newCategoryInput = document.querySelector('#purchase_new_category_input');
 
 if (quantityInput) quantityInput.addEventListener('change', calculatePrices);
 if (quantityInput) quantityInput.addEventListener('keyup', calculatePrices);
@@ -182,6 +220,37 @@ if (purchaseRateInput) purchaseRateInput.addEventListener('change', calculatePri
 if (purchaseRateInput) purchaseRateInput.addEventListener('keyup', calculatePrices);
 if (sellingPriceInput) sellingPriceInput.addEventListener('change', calculatePrices);
 if (sellingPriceInput) sellingPriceInput.addEventListener('keyup', calculatePrices);
+
+function syncPurchaseItemMode() {
+    const hasExistingItem = existingItemSelect && existingItemSelect.value;
+
+    if (newItemInput) {
+        newItemInput.disabled = !!hasExistingItem;
+        if (hasExistingItem) {
+            newItemInput.value = '';
+        }
+    }
+
+    if (categorySelect) {
+        categorySelect.disabled = !!hasExistingItem;
+        if (hasExistingItem) {
+            categorySelect.value = '';
+        }
+    }
+
+    if (newCategoryInput) {
+        newCategoryInput.disabled = !!hasExistingItem;
+        if (hasExistingItem) {
+            newCategoryInput.value = '';
+        }
+    }
+}
+
+if (existingItemSelect) {
+    existingItemSelect.addEventListener('change', syncPurchaseItemMode);
+}
+
+syncPurchaseItemMode();
 </script>
 
 <style>
