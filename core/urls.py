@@ -67,6 +67,7 @@ urlpatterns = [
     path("sales/", views.sales_services_dashboard, name="sales_services_dashboard"),
     path("sales/daily/", views.daily_sales_register, name="daily_sales_register"),
     path("sales/daily/reports/", views.daily_sales_report, name="daily_sales_report"),
+    path("sales/daily/export/csv/", views.export_daily_sales_csv, name="export_daily_sales_csv"),
     path("sales/daily/<int:entry_id>/delete/", views.delete_daily_sales_entry, name="delete_daily_sales_entry"),
     path("sales/items/", views.sales_items, name="sales_items"),
     path("sales/items/add/", views.add_sales_item, name="add_sales_item"),

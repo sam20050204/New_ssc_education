@@ -511,12 +511,30 @@ class SalesReceipt(models.Model):
         max_digits=12, decimal_places=2, validators=[MinValueValidator(0)], default=0
     )
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)], default=0)
+    idempotency_key = models.CharField(max_length=64, blank=True, db_index=True)
     created_by = models.ForeignKey(
         User,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="sales_receipts",
+    )
+    modified_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="modified_sales_receipts",
+    )
+    modification_reason = models.TextField(blank=True)
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="deleted_sales_receipts",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -561,7 +579,10 @@ class SalesReceipt(models.Model):
 
 
 class SalesReceiptLine(models.Model):
-    """Individual lines for a sales bill/receipt."""
+    """Individual lines for a sales bill/receipt.
+
+    sales_item is retained only for backward compatibility with legacy records.
+    """
 
     LINE_TYPE_CHOICES = [
         ("item", "Item"),
@@ -570,6 +591,7 @@ class SalesReceiptLine(models.Model):
 
     receipt = models.ForeignKey(SalesReceipt, on_delete=models.CASCADE, related_name="lines")
     line_type = models.CharField(max_length=20, choices=LINE_TYPE_CHOICES, default="service")
+    # Deprecated: use inventory_item (inventory.Item) instead. Will be removed in v2.
     sales_item = models.ForeignKey(SalesItem, null=True, blank=True, on_delete=models.SET_NULL, related_name="receipt_lines")
     inventory_item = models.ForeignKey(
         "inventory.Item",
@@ -581,6 +603,12 @@ class SalesReceiptLine(models.Model):
     description = models.CharField(max_length=255)
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    cost_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Purchase cost per unit frozen at time of sale",
+    )
     line_total = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
 
     class Meta:
@@ -608,6 +636,22 @@ class DailySalesEntry(models.Model):
         on_delete=models.SET_NULL,
         related_name="daily_sales_entries",
     )
+    modified_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="modified_daily_entries",
+    )
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="deleted_daily_entries",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -615,6 +659,7 @@ class DailySalesEntry(models.Model):
         ordering = ["-sale_date", "-created_at"]
         verbose_name = "Daily Sales Entry"
         verbose_name_plural = "Daily Sales Entries"
+        unique_together = [("sale_date", "payment_mode")]
         indexes = [
             models.Index(fields=["sale_date"]),
             models.Index(fields=["payment_mode"]),
@@ -652,7 +697,13 @@ class DailySalesLine(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], default=0)
-    line_total = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    cost_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Purchase cost per unit frozen at time of sale",
+    )
+    line_total = models.DecimalField(max_digits=12, decimal_places=2)
     line_profit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     class Meta:

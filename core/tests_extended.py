@@ -193,7 +193,8 @@ class ExtendedWorkflowTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("sales_receipt_history"))
-        self.assertFalse(SalesReceipt.objects.filter(id=receipt.id).exists())
+        receipt.refresh_from_db()
+        self.assertTrue(receipt.is_deleted)
         item.refresh_from_db()
         self.assertEqual(item.current_stock, 3)
         self.assertTrue(AuditLog.objects.filter(action="sales.receipt_deleted").exists())

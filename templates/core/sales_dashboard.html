@@ -3,6 +3,32 @@
 
 {% block title %}Sales & Services Dashboard{% endblock %}
 
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const trends = {{ monthly_trends_json|safe }};
+    const chartEl = document.getElementById('monthlyRevenueChart');
+    if (chartEl && window.Chart) {
+        new Chart(chartEl, {
+            type: 'line',
+            data: {
+                labels: trends.map(t => t.month),
+                datasets: [{
+                    label: 'Revenue',
+                    data: trends.map(t => t.revenue),
+                    borderColor: '#2563eb',
+                    tension: 0.3,
+                    fill: false,
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+    }
+});
+</script>
+{% endblock %}
+
 {% block page_heading %}
 <div class="page-header dashboard-page-header">
     <div class="page-header-content">
@@ -164,7 +190,7 @@
                 <span class="status-badge status-active">Live</span>
             </div>
             <div class="chart-canvas-wrap">
-                <p style="text-align: center; padding: 40px; color: var(--text-faint);">Sales trend chart coming soon...</p>
+                <canvas id="monthlyRevenueChart" height="120"></canvas>
             </div>
         </div>
 
@@ -177,7 +203,19 @@
                 <span class="status-badge status-pending">Analysis</span>
             </div>
             <div class="chart-canvas-wrap">
-                <p style="text-align: center; padding: 40px; color: var(--text-faint);">Top items analysis coming soon...</p>
+                {% if top_items %}
+                <div class="top-items-list">
+                    {% for item in top_items %}
+                    <div class="top-item-row">
+                        <strong>{{ item.inventory_item__name }}</strong>
+                        <span>{{ item.total_qty }} sold</span>
+                        <span>Rs. {{ item.total_revenue|floatformat:2 }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="text-align: center; padding: 40px; color: var(--text-faint);">No item sales available yet.</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -265,6 +303,22 @@
 
     .empty-state p {
         margin: 8px 0;
+    }
+
+    .top-items-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .top-item-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+        border: 1px solid #dbe4f0;
+        border-radius: 12px;
+        background: #f8fafc;
     }
 </style>
 

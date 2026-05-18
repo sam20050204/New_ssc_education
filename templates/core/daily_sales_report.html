@@ -31,6 +31,7 @@
             </div>
             <div class="section-badges">
                 <a href="{% url 'daily_sales_register' %}" class="info-badge info-badge-link">Open daily sales</a>
+                <a href="{% url 'export_daily_sales_csv' %}?from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}" class="info-badge info-badge-link">Export CSV</a>
             </div>
         </div>
 
@@ -207,6 +208,33 @@
                 </tbody>
             </table>
         </div>
+
+        {% if day_breakdown %}
+        <div class="table-shell" style="margin-top: 18px;">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Payment Mode</th>
+                        <th>Item Revenue</th>
+                        <th>Service Revenue</th>
+                        <th>Item Profit</th>
+                        <th>Service Profit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in day_breakdown %}
+                    <tr>
+                        <td>{{ row.payment_mode }}</td>
+                        <td>Rs. {{ row.item_revenue|default:0|floatformat:2 }}</td>
+                        <td>Rs. {{ row.service_revenue|default:0|floatformat:2 }}</td>
+                        <td>Rs. {{ row.item_profit|default:0|floatformat:2 }}</td>
+                        <td>Rs. {{ row.service_profit|default:0|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
     </div>
 </section>
 {% endblock %}

@@ -42,27 +42,27 @@
             <div class="receipt-grid">
                 <div class="field-group">
                     <label for="customer_name">Customer Name</label>
-                    <input type="text" id="customer_name" name="customer_name" class="form-control" required>
+                    <input type="text" id="customer_name" name="customer_name" class="form-control" value="{{ form_data.customer_name }}" required>
                 </div>
                 <div class="field-group">
                     <label for="customer_phone">Customer Phone</label>
-                    <input type="text" id="customer_phone" name="customer_phone" class="form-control" placeholder="Optional mobile number">
+                    <input type="text" id="customer_phone" name="customer_phone" class="form-control" value="{{ form_data.customer_phone }}" placeholder="Optional mobile number">
                 </div>
                 <div class="field-group">
                     <label for="sale_date">Bill Date</label>
-                    <input type="date" id="sale_date" name="sale_date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                    <input type="date" id="sale_date" name="sale_date" class="form-control" value="{{ form_data.sale_date }}" required>
                 </div>
                 <div class="field-group">
                     <label for="payment_mode">Payment Mode</label>
                     <select id="payment_mode" name="payment_mode" class="form-control">
                         {% for value, label in payment_modes %}
-                        <option value="{{ value }}">{{ label }}</option>
+                        <option value="{{ value }}" {% if form_data.payment_mode == value %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="field-group field-group-wide">
                     <label for="customer_address">Customer Address</label>
-                    <textarea id="customer_address" name="customer_address" class="form-control" rows="2" placeholder="Optional address"></textarea>
+                    <textarea id="customer_address" name="customer_address" class="form-control" rows="2" placeholder="Optional address">{{ form_data.customer_address }}</textarea>
                 </div>
             </div>
 
@@ -74,12 +74,13 @@
                 <p class="line-items-note">Item lines deduct stock from inventory. Service lines remain standalone and do not affect stock.</p>
 
                 <div id="lineItemsContainer">
+                    {% for line in form_lines %}
                     <div class="line-item-row" data-line-row>
                         <div class="field-group line-type-group">
                             <label>Type</label>
                             <select name="line_type[]" class="form-control line-type">
-                                <option value="item">Item</option>
-                                <option value="service">Service</option>
+                                <option value="item" {% if line.line_type == "item" %}selected{% endif %}>Item</option>
+                                <option value="service" {% if line.line_type == "service" %}selected{% endif %}>Service</option>
                             </select>
                         </div>
                         <div class="field-group inventory-group">
@@ -87,7 +88,7 @@
                             <select name="inventory_item_id[]" class="form-control sales-item-select">
                                 <option value="">Select inventory item</option>
                                 {% for item in available_items %}
-                                <option value="{{ item.id }}" data-name="{{ item.name }}" data-stock="{{ item.current_stock }}" data-rate="{{ item.selling_price }}" data-sku="{{ item.sku }}">
+                                <option value="{{ item.id }}" data-name="{{ item.name }}" data-stock="{{ item.current_stock }}" data-rate="{{ item.selling_price }}" data-sku="{{ item.sku }}" {% if line.inventory_item_id == item.id|stringformat:"s" %}selected{% endif %}>
                                     {{ item.name }} (Stock {{ item.current_stock }})
                                 </option>
                                 {% endfor %}
@@ -96,15 +97,15 @@
                         </div>
                         <div class="field-group line-description-group">
                             <label>Description</label>
-                            <input type="text" name="description[]" class="form-control line-description" placeholder="Item or service description" required>
+                            <input type="text" name="description[]" class="form-control line-description" value="{{ line.description }}" placeholder="Item or service description" required>
                         </div>
                         <div class="field-group field-group-xs quantity-group">
                             <label>Qty</label>
-                            <input type="number" name="quantity[]" class="form-control line-quantity" min="1" value="1" required>
+                            <input type="number" name="quantity[]" class="form-control line-quantity" min="1" value="{{ line.quantity }}" required>
                         </div>
                         <div class="field-group field-group-sm rate-group">
                             <label>Rate</label>
-                            <input type="number" name="unit_price[]" class="form-control line-rate" min="0" step="0.01" value="0" required>
+                            <input type="number" name="unit_price[]" class="form-control line-rate" min="0" step="0.01" value="{{ line.unit_price }}" required>
                         </div>
                         <div class="field-group field-group-sm amount-group">
                             <label>Amount</label>
@@ -114,17 +115,18 @@
                             <button type="button" class="remove-line-btn" data-remove-line>Remove</button>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
 
             <div class="receipt-grid receipt-grid-footer">
                 <div class="field-group field-group-wide">
                     <label for="notes">Notes</label>
-                    <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Optional service notes, warranty details, or delivery remarks"></textarea>
+                    <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Optional service notes, warranty details, or delivery remarks">{{ form_data.notes }}</textarea>
                 </div>
                 <div class="field-group">
                     <label for="discount_amount">Discount</label>
-                    <input type="number" id="discount_amount" name="discount_amount" class="form-control" min="0" step="0.01" value="0">
+                    <input type="number" id="discount_amount" name="discount_amount" class="form-control" min="0" step="0.01" value="{{ form_data.discount_amount }}">
                 </div>
             </div>
 
@@ -140,7 +142,8 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Generate Receipt</button>
+                <input type="hidden" name="idempotency_key" id="idempotency_key">
+                <button type="submit" class="btn btn-primary" id="salesReceiptSubmitBtn">Generate Receipt</button>
             </div>
         </form>
     </div>
@@ -324,12 +327,24 @@
 {% block extra_js %}
 <script>
 (function() {
+    const form = document.getElementById('salesReceiptForm');
     const lineItemsContainer = document.getElementById('lineItemsContainer');
     const template = document.getElementById('lineItemTemplate');
     const addLineBtn = document.getElementById('addLineBtn');
     const discountInput = document.getElementById('discount_amount');
     const subtotalValue = document.getElementById('subtotalValue');
     const grandTotalValue = document.getElementById('grandTotalValue');
+    const submitBtn = document.getElementById('salesReceiptSubmitBtn');
+    const idempotencyKeyInput = document.getElementById('idempotency_key');
+
+    if (idempotencyKeyInput && !idempotencyKeyInput.value) {
+        idempotencyKeyInput.value =
+            ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    }
+    if (submitBtn) {
+        submitBtn.disabled = false;
+    }
 
     function toNumber(value) {
         const parsed = parseFloat(value);
@@ -492,6 +507,11 @@
     lineItemsContainer.querySelectorAll('[data-line-row]').forEach(bindRow);
     if (discountInput) {
         discountInput.addEventListener('input', updateReceiptTotals);
+    }
+    if (form && submitBtn) {
+        form.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+        });
     }
     updateReceiptTotals();
 })();
