@@ -138,13 +138,13 @@
                     <div>
                         <a href="{% url 'inventory:supplier-detail' supplier.pk %}" class="supplier-name">{{ supplier.name }}</a>
                         <div class="supplier-meta">
-                            {% if supplier.contact_person %}{{ supplier.contact_person }}<br>{% endif %}
-                            {% if supplier.email %}{{ supplier.email }}{% else %}No email recorded{% endif %}
+                            {% if supplier.contact_person %}Shop: {{ supplier.contact_person }}<br>{% endif %}
+                            {% if supplier.address %}{{ supplier.address|truncatechars:60 }}{% else %}No address recorded{% endif %}
                         </div>
                     </div>
                     <div class="supplier-metric">
                         <strong>{% if supplier.phone %}{{ supplier.phone }}{% else %}-{% endif %}</strong>
-                        <small>{% if supplier.alternate_phone %}Alt {{ supplier.alternate_phone }}{% else %}Primary contact{% endif %}</small>
+                        <small>Mobile No</small>
                     </div>
                     <div class="supplier-metric">
                         <strong>{% if supplier.gst_number %}<code>{{ supplier.gst_number }}</code>{% else %}-{% endif %}</strong>

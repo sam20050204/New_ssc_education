@@ -63,17 +63,7 @@ urlpatterns = [
     path("student-finance-details/", views.student_finance_details, name="student_finance_details"),
     path("update-finance-detail/", views.update_finance_detail, name="update_finance_detail"),
     path("month-wise-admission/", views.month_wise_admission, name="month_wise_admission"),
-    # Sales and Services URLs
     path("sales/", views.sales_services_dashboard, name="sales_services_dashboard"),
-    path("sales/daily/", views.daily_sales_register, name="daily_sales_register"),
-    path("sales/daily/reports/", views.daily_sales_report, name="daily_sales_report"),
-    path("sales/daily/export/csv/", views.export_daily_sales_csv, name="export_daily_sales_csv"),
-    path("sales/daily/<int:entry_id>/delete/", views.delete_daily_sales_entry, name="delete_daily_sales_entry"),
-    path("sales/items/", views.sales_items, name="sales_items"),
-    path("sales/items/add/", views.add_sales_item, name="add_sales_item"),
-    path("sales/receipts/", views.sales_receipts, name="sales_receipts"),
-    path("sales/receipts/history/", views.sales_receipt_history, name="sales_receipt_history"),
-    path("sales/receipts/<int:receipt_id>/delete/", views.delete_sales_receipt, name="delete_sales_receipt"),
     # Timetable & Attendance Management URLs
     path("timetable/", views.student_timetable, name="student_timetable"),
     path("timetable/<int:student_id>/edit/", views.edit_student_batch, name="edit_student_batch"),

@@ -15,48 +15,37 @@ from .models import (
     Course,
     Enquiry,
     FeePayment,
-    SalesItem,
     Student,
     StudentFinanceDetail,
 )
 
 
-# Custom Admin Site Configuration
 class CustomAdminSite(admin.AdminSite):
     site_header = "SSC Education Management"
     site_title = "Admin Portal"
     index_title = "Welcome to Admin Dashboard"
 
     def index(self, request, extra_context=None):
-        """Customize admin dashboard"""
         extra_context = extra_context or {}
-
-        # Get statistics
-        total_enquiries = Enquiry.objects.count()
-        total_students = AdmittedStudent.objects.count()
-        total_revenue = FeePayment.objects.aggregate(Sum("amount"))["amount__sum"] or Decimal("0")
-        total_fees_collected = AdmittedStudent.objects.aggregate(Sum("paid_fees"))["paid_fees__sum"] or Decimal("0")
 
         extra_context.update(
             {
-                "total_enquiries": total_enquiries,
-                "total_students": total_students,
-                "total_revenue": total_revenue,
-                "total_fees_collected": total_fees_collected,
+                "total_enquiries": Enquiry.objects.count(),
+                "total_students": AdmittedStudent.objects.count(),
+                "total_revenue": FeePayment.objects.aggregate(Sum("amount"))["amount__sum"] or Decimal("0"),
+                "total_fees_collected": AdmittedStudent.objects.aggregate(Sum("paid_fees"))["paid_fees__sum"]
+                or Decimal("0"),
             }
         )
 
         return super().index(request, extra_context)
 
 
-# Register models with custom admin
 admin_site = CustomAdminSite(name="custom_admin")
 
 
 @admin.register(Enquiry, site=admin_site)
 class EnquiryAdmin(admin.ModelAdmin):
-    """Admin interface for Enquiry model"""
-
     list_display = ("name", "mobile", "course", "city", "created_at_formatted")
     list_filter = ("course", "city", "created_at")
     search_fields = ("name", "mobile", "course")
@@ -77,8 +66,6 @@ class EnquiryAdmin(admin.ModelAdmin):
 
 @admin.register(AdmittedStudent, site=admin_site)
 class AdmittedStudentAdmin(admin.ModelAdmin):
-    """Admin interface for AdmittedStudent model"""
-
     list_display = ("full_name", "course_display", "mobile_own", "admission_date", "fees_status")
     list_filter = ("course", "admission_date", "gender", "marital_status")
     search_fields = ("full_name", "mobile_own", "father_name")
@@ -102,8 +89,7 @@ class AdmittedStudentAdmin(admin.ModelAdmin):
     )
 
     def course_display(self, obj):
-        custom = obj.custom_course if obj.course == "Other" else obj.course
-        return custom
+        return obj.custom_course if obj.course == "Other" else obj.course
 
     course_display.short_description = "Course"
 
@@ -111,13 +97,13 @@ class AdmittedStudentAdmin(admin.ModelAdmin):
         percentage = obj.fees_percentage_paid
         if percentage >= 100:
             color = "green"
-            status = "✓ Paid"
+            status = "Paid"
         elif percentage >= 50:
             color = "orange"
-            status = "⚠ Partial"
+            status = "Partial"
         else:
             color = "red"
-            status = "✗ Pending"
+            status = "Pending"
         return format_html('<span style="color: {};">{} ({}%)</span>', color, status, int(percentage))
 
     fees_status.short_description = "Fees Status"
@@ -125,8 +111,6 @@ class AdmittedStudentAdmin(admin.ModelAdmin):
 
 @admin.register(Student, site=admin_site)
 class StudentAdmin(admin.ModelAdmin):
-    """Admin interface for Student model"""
-
     list_display = ("name", "phone", "course_name", "admission_date", "is_active")
     list_filter = ("is_active", "course", "admission_date")
     search_fields = ("name", "phone", "email")
@@ -150,16 +134,14 @@ class StudentAdmin(admin.ModelAdmin):
 
 @admin.register(Course, site=admin_site)
 class CourseAdmin(admin.ModelAdmin):
-    """Admin interface for Course model"""
-
     list_display = ("name", "duration", "student_count")
     search_fields = ("name",)
     readonly_fields = ("created_at", "updated_at")
 
     def student_count(self, obj):
-        count = obj.enrolled_students.count()
         return format_html(
-            '<span style="background-color: #e3f2fd; padding: 5px 10px; border-radius: 3px;">{}</span>', count
+            '<span style="background-color: #e3f2fd; padding: 5px 10px; border-radius: 3px;">{}</span>',
+            obj.enrolled_students.count(),
         )
 
     student_count.short_description = "Enrolled Students"
@@ -167,8 +149,6 @@ class CourseAdmin(admin.ModelAdmin):
 
 @admin.register(FeePayment, site=admin_site)
 class FeePaymentAdmin(admin.ModelAdmin):
-    """Admin interface for FeePayment model"""
-
     list_display = ("receipt_no", "student_link", "amount_formatted", "payment_mode", "payment_date")
     list_filter = ("payment_mode", "payment_date")
     search_fields = ("receipt_no", "student__full_name")
@@ -191,15 +171,13 @@ class FeePaymentAdmin(admin.ModelAdmin):
     student_link.short_description = "Student"
 
     def amount_formatted(self, obj):
-        return f"₹{obj.amount:,.2f}"
+        return f"Rs. {obj.amount:,.2f}"
 
     amount_formatted.short_description = "Amount"
 
 
 @admin.register(StudentFinanceDetail, site=admin_site)
 class StudentFinanceDetailAdmin(admin.ModelAdmin):
-    """Admin interface for StudentFinanceDetail model"""
-
     list_display = ("student_link", "total_installments", "total_mkcl_fees", "profit_formatted")
     readonly_fields = ("created_at", "updated_at", "total_mkcl_fees", "profit")
 
@@ -240,33 +218,13 @@ class StudentFinanceDetailAdmin(admin.ModelAdmin):
 
     def total_installments(self, obj):
         total = (obj.first_installment or 0) + (obj.second_installment or 0) + (obj.third_installment or 0)
-        return f"₹{total:,.2f}"
+        return f"Rs. {total:,.2f}"
 
     total_installments.short_description = "Total Installments"
 
     def profit_formatted(self, obj):
         profit = obj.profit
         color = "green" if profit >= 0 else "red"
-        return format_html('<span style="color: {};">₹{:,.2f}</span>', color, profit)
+        return format_html('<span style="color: {};">Rs. {:,.2f}</span>', color, profit)
 
     profit_formatted.short_description = "Profit"
-
-
-@admin.register(SalesItem, site=admin_site)
-class SalesItemAdmin(admin.ModelAdmin):
-    """Admin interface for SalesItem model"""
-
-    list_display = ("item_name", "quantity", "purchase_rate_formatted", "total_amount_formatted", "created_at")
-    list_filter = ("created_at",)
-    search_fields = ("item_name", "purchased_from")
-    readonly_fields = ("created_at", "updated_at")
-
-    def purchase_rate_formatted(self, obj):
-        return f"₹{obj.purchase_rate:,.2f}"
-
-    purchase_rate_formatted.short_description = "Purchase Rate"
-
-    def total_amount_formatted(self, obj):
-        return f"₹{obj.total_amount:,.2f}"
-
-    total_amount_formatted.short_description = "Total Amount"

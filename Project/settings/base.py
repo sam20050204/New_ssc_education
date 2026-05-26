@@ -73,7 +73,7 @@ INSTALLED_APPS = [
     
     # Local apps
     'core.apps.CoreConfig',
-    'inventory.apps.InventoryConfig',  # Sales & Inventory Management
+    'inventory.apps.InventoryConfig',
 ]
 
 # ==================== MIDDLEWARE ====================

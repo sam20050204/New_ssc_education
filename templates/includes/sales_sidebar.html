@@ -1,11 +1,10 @@
-{% load custom_filters %}
 <div class="sidebar-shell">
     <div class="sidebar-brand">
         <button id="sidebar-collapse-toggle-sales" class="sidebar-brand-toggle" type="button" aria-label="Toggle sidebar" title="Hide sidebar">
             <div class="sidebar-brand-mark">SA</div>
             <div class="sidebar-brand-copy">
                 <strong>Sales Suite</strong>
-                <span>Sales operations console</span>
+                <span>Sales & services dashboard</span>
             </div>
             <i class="fa-solid fa-chevron-left"></i>
         </button>
@@ -13,46 +12,33 @@
 
     <div class="sidebar-search">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="search" placeholder="Search menu..." oninput="filterSidebarMenu(this.value)">
+        <input type="search" placeholder="Search menu..." oninput="filterSalesSidebarMenu(this.value)">
     </div>
 
     <div class="sidebar-scroll" id="salesSidebarScroll">
         <div class="sidebar-group">
             <div class="sidebar-label">Dashboard</div>
-            <a href="{% url 'sales_services_dashboard' %}" class="menu-item {% if active_page == 'sales_dashboard' %}active{% endif %}" data-menu-label="sales dashboard">
+            <a href="{% url 'sales_services_dashboard' %}" class="menu-item {% if active_page == 'sales_dashboard' %}active{% endif %}" data-menu-label="sales dashboard services dashboard">
                 <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
             </a>
         </div>
 
         <div class="sidebar-group">
-            <div class="sidebar-label">Sales Management</div>
-            <a href="{% url 'daily_sales_register' %}" class="menu-item {% if active_page == 'daily_sales_register' %}active{% endif %}" data-menu-label="daily sales service profit register counter sales">
-                <i class="fa-solid fa-cash-register"></i><span>Daily Sales</span>
-            </a>
-            <a href="{% url 'daily_sales_report' %}" class="menu-item {% if active_page == 'daily_sales_report' %}active{% endif %}" data-menu-label="daily sales reports historical profit dates day wise weekly monthly yearly">
-                <i class="fa-solid fa-calendar-days"></i><span>Daily Reports</span>
-            </a>
-            <a href="{% url 'sales_receipts' %}" class="menu-item {% if active_page == 'sales_receipts' %}active{% endif %}" data-menu-label="bills receipts sales invoice billing">
-                <i class="fa-solid fa-receipt"></i><span>Bills & Receipts</span>
-            </a>
-            <a href="{% url 'sales_receipt_history' %}" class="menu-item {% if active_page == 'sales_receipt_history' %}active{% endif %}" data-menu-label="receipt history sales history billing records">
-                <i class="fa-solid fa-clock-rotate-left"></i><span>Receipt History</span>
-            </a>
-        </div>
-
-        <div class="sidebar-group">
             <div class="sidebar-label">Inventory</div>
-            <a href="{% url 'inventory:dashboard' %}" class="menu-item {% if active_page == 'inventory' %}active{% endif %}" data-menu-label="inventory stock management">
-                <i class="fa-solid fa-warehouse"></i><span>Inventory</span>
+            <a href="{% url 'inventory:add-item' %}" class="menu-item {% if active_page == 'inventory_add_item' %}active{% endif %}" data-menu-label="inventory add item product supplier purchase">
+                <i class="fa-solid fa-plus"></i><span>Add Item</span>
             </a>
-            <a href="{% url 'inventory:add-purchase' %}" class="menu-item" data-menu-label="record purchase inventory supplier stock">
-                <i class="fa-solid fa-cart-plus"></i><span>Record Purchase</span>
+            <a href="{% url 'inventory:category-list' %}" class="menu-item {% if active_page == 'inventory_categories' %}active{% endif %}" data-menu-label="inventory categories item category list">
+                <i class="fa-solid fa-layer-group"></i><span>Categories</span>
+            </a>
+            <a href="{% url 'inventory:supplier-list' %}" class="menu-item {% if active_page == 'inventory_suppliers' %}active{% endif %}" data-menu-label="inventory suppliers vendor supplier list">
+                <i class="fa-solid fa-truck-field"></i><span>Suppliers</span>
             </a>
         </div>
 
         <div class="sidebar-group">
             <div class="sidebar-label">Navigation</div>
-            <a href="{% url 'dashboard' %}" class="menu-item" data-menu-label="education dashboard crm">
+            <a href="{% url 'education_home' %}" class="menu-item" data-menu-label="computer education dashboard">
                 <i class="fa-solid fa-arrow-left"></i><span>Back to Education</span>
             </a>
         </div>
@@ -62,13 +48,13 @@
 <script>
 const salesSidebarScrollKey = 'sales-sidebar-scroll-top';
 
-function persistSidebarScroll() {
+function persistSalesSidebarScroll() {
     const sidebarScroll = document.getElementById('salesSidebarScroll');
     if (!sidebarScroll) return;
     localStorage.setItem(salesSidebarScrollKey, String(sidebarScroll.scrollTop || 0));
 }
 
-function filterSidebarMenu(query) {
+function filterSalesSidebarMenu(query) {
     const normalized = String(query || '').trim().toLowerCase();
     document.querySelectorAll('#salesSidebarScroll [data-menu-label]').forEach(function(item) {
         const visible = !normalized || item.getAttribute('data-menu-label').includes(normalized) || item.textContent.toLowerCase().includes(normalized);
@@ -84,11 +70,11 @@ document.addEventListener('DOMContentLoaded', function() {
             sidebarScroll.scrollTop = savedTop;
         }
 
-        sidebarScroll.addEventListener('scroll', persistSidebarScroll, { passive: true });
+        sidebarScroll.addEventListener('scroll', persistSalesSidebarScroll, { passive: true });
     }
 
     document.querySelectorAll('#salesSidebarScroll a').forEach(function(item) {
-        item.addEventListener('click', persistSidebarScroll);
+        item.addEventListener('click', persistSalesSidebarScroll);
     });
 });
 </script>

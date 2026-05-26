@@ -56,21 +56,8 @@ def collaboration_context(request):
 
 def current_mode(request):
     """
-    Add current mode (education or sales) to all templates.
-    Defaults to 'education' mode unless on a sales/finance page.
+    Keep the UI in education mode except for the retained sales dashboard.
     """
-    path = request.path
-    
-    # Define all paths that should be in 'sales' mode
-    sales_paths = [
-        '/sales',          # Sales dashboard and items
-        '/inventory',      # Inventory module
-    ]
-    
-    # Check if current path matches any sales-related paths
-    for sales_path in sales_paths:
-        if path.startswith(sales_path):
-            return {'current_mode': 'sales'}
-    
-    # Default to education mode (includes fees, payment-tracking, receipts)
-    return {'current_mode': 'education'}
+    if request.path.startswith("/sales") or request.path.startswith("/inventory"):
+        return {"current_mode": "sales"}
+    return {"current_mode": "education"}

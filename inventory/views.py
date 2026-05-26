@@ -141,7 +141,7 @@ def add_item(request):
         "category_form": CategoryForm(),
         "supplier_form": SupplierForm(),
         "page_title": "Add New Item",
-        "active_page": "inventory",
+        "active_page": "inventory_add_item",
     }
     return render(request, "inventory/add_item.html", context)
 
@@ -323,7 +323,7 @@ class CategoryListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_title"] = "Categories"
-        context["active_page"] = "inventory"
+        context["active_page"] = "inventory_categories"
         return context
 
 
@@ -359,7 +359,7 @@ def add_category(request):
     else:
         form = CategoryForm()
 
-    context = {"form": form, "page_title": "Add Category"}
+    context = {"form": form, "page_title": "Add Category", "active_page": "inventory_categories"}
     return render(request, "inventory/add_category.html", context)
 
 
@@ -403,6 +403,7 @@ def edit_category(request, pk):
         "form": form,
         "category": category,
         "page_title": f"Edit Category: {category.name}",
+        "active_page": "inventory_categories",
     }
     return render(request, "inventory/edit_category.html", context)
 
@@ -454,7 +455,7 @@ class SupplierListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_title"] = "Suppliers"
-        context["active_page"] = "inventory"
+        context["active_page"] = "inventory_suppliers"
         return context
 
 
@@ -485,7 +486,7 @@ def add_supplier(request):
     else:
         form = SupplierForm()
 
-    context = {"form": form, "page_title": "Add Supplier"}
+    context = {"form": form, "page_title": "Add Supplier", "active_page": "inventory_suppliers"}
     return render(request, "inventory/add_supplier.html", context)
 
 
@@ -529,6 +530,7 @@ def edit_supplier(request, pk):
         "form": form,
         "supplier": supplier,
         "page_title": f"Edit Supplier: {supplier.name}",
+        "active_page": "inventory_suppliers",
     }
     return render(request, "inventory/edit_supplier.html", context)
 
@@ -558,6 +560,7 @@ def supplier_detail(request, pk):
         "total_purchases": total_purchases,
         "total_spent": total_spent,
         "page_title": f"Supplier: {supplier.name}",
+        "active_page": "inventory_suppliers",
     }
 
     return render(request, "inventory/supplier_detail.html", context)

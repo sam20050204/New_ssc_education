@@ -38,64 +38,24 @@
                     </div>
                     <div class="col-md-4">
                         <label for="{{ form.contact_person.id_for_label }}" class="form-label">
-                            Contact Person
+                            Shop Name
                         </label>
                         {{ form.contact_person }}
                     </div>
                 </div>
 
-                <!-- Contact Details -->
-                <h5 class="form-section-title">Contact Details</h5>
-
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label for="{{ form.email.id_for_label }}" class="form-label">
-                            Email
-                        </label>
-                        {{ form.email }}
-                    </div>
-                    <div class="col-md-3">
                         <label for="{{ form.phone.id_for_label }}" class="form-label">
-                            Phone
+                            Mobile No
                         </label>
                         {{ form.phone }}
                     </div>
-                    <div class="col-md-3">
-                        <label for="{{ form.alternate_phone.id_for_label }}" class="form-label">
-                            Alternate Phone
+                    <div class="col-md-6">
+                        <label for="{{ form.address.id_for_label }}" class="form-label">
+                            Address
                         </label>
-                        {{ form.alternate_phone }}
-                    </div>
-                </div>
-
-                <!-- Address -->
-                <h5 class="form-section-title">Address</h5>
-
-                <div class="mb-3">
-                    <label for="{{ form.address.id_for_label }}" class="form-label">
-                        Address
-                    </label>
-                    {{ form.address }}
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label for="{{ form.city.id_for_label }}" class="form-label">
-                            City
-                        </label>
-                        {{ form.city }}
-                    </div>
-                    <div class="col-md-4">
-                        <label for="{{ form.state.id_for_label }}" class="form-label">
-                            State
-                        </label>
-                        {{ form.state }}
-                    </div>
-                    <div class="col-md-4">
-                        <label for="{{ form.pincode.id_for_label }}" class="form-label">
-                            Pincode
-                        </label>
-                        {{ form.pincode }}
+                        {{ form.address }}
                     </div>
                 </div>
 

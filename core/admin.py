@@ -6,7 +6,6 @@ from .admin_customization import (
     CustomAdminSite,
     EnquiryAdmin,
     FeePaymentAdmin,
-    SalesItemAdmin,
     StudentAdmin,
     StudentFinanceDetailAdmin,
 )
@@ -20,7 +19,6 @@ from .models import (
     Enquiry,
     FeePayment,
     LoginAttempt,
-    SalesItem,
     Student,
     StudentFinanceDetail,
 )
@@ -38,7 +36,6 @@ admin.site.register(Course, CourseAdmin)
 admin.site.register(Student, StudentAdmin)
 admin.site.register(FeePayment, FeePaymentAdmin)
 admin.site.register(StudentFinanceDetail, StudentFinanceDetailAdmin)
-admin.site.register(SalesItem, SalesItemAdmin)
 
 
 class AttendanceAdmin(admin.ModelAdmin):
