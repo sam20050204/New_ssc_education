@@ -1,287 +1,196 @@
 {% extends "inventory/base.html" %}
 {% load static %}
 
-{% block page_title %}Record Purchase{% endblock %}
+{% block page_title %}Add Stock / Record Purchase{% endblock %}
 
 {% block content %}
 {{ block.super }}
 
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="form-section">
-            <h2>Record Purchase</h2>
-            <p class="text-muted">Add a new purchase to update item stock and maintain price history</p>
-
-            {% if form.non_field_errors %}
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {% for error in form.non_field_errors %}
-                <div>{{ error }}</div>
-                {% endfor %}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endif %}
-
-            <form method="post">
-                {% csrf_token %}
-
-                <!-- Item Selection -->
-                <h5 class="form-section-title">Item Details</h5>
-
-                <div class="mb-3">
-                    <label for="{{ form.item.id_for_label }}" class="form-label">
-                        Existing Item
-                    </label>
-                    {{ form.item }}
-                    {% if form.item.errors %}
-                    <div class="invalid-feedback d-block">{{ form.item.errors.0 }}</div>
-                    {% endif %}
-                    <div class="help-text">Select an existing item if it is already in inventory.</div>
+<div class="inventory-container">
+    <div class="form-workspace">
+        <div class="form-hero">
+            <section class="form-hero-primary">
+                <h2>Add Stock / Record Purchase</h2>
+                <p>Record fresh stock against an existing inventory item with purchase price, quantity, supplier, and selling price in one flow.</p>
+                <div class="hero-pill-row">
+                    <span class="hero-pill"><i class="fas fa-warehouse"></i> Stock movement</span>
+                    <span class="hero-pill"><i class="fas fa-file-invoice-dollar"></i> Cost capture</span>
+                    <span class="hero-pill"><i class="fas fa-chart-line"></i> Margin update</span>
                 </div>
-
-                <div class="mb-3">
-                    <label for="{{ form.item_name.id_for_label }}" class="form-label">
-                        New Item Name
-                    </label>
-                    {{ form.item_name }}
-                    {% if form.item_name.errors %}
-                    <div class="invalid-feedback d-block">{{ form.item_name.errors.0 }}</div>
-                    {% endif %}
-                    <div class="help-text">Use this when the purchased item is not yet in inventory.</div>
+            </section>
+            <aside class="form-hero-side">
+                <h3>Entry notes</h3>
+                <div class="mini-checklist">
+                    <div><i class="fas fa-circle-check"></i><span>Select only items that already exist in the item register.</span></div>
+                    <div><i class="fas fa-circle-check"></i><span>The total amount and profit update automatically while you type.</span></div>
+                    <div><i class="fas fa-circle-check"></i><span>A supplier can be added quickly if the current one is missing.</span></div>
                 </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="{{ form.category.id_for_label }}" class="form-label">
-                            Category
-                        </label>
-                        {{ form.category }}
-                        {% if form.category.errors %}
-                        <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
-                        {% endif %}
-                        <div class="help-text">Choose the category where the new item should be added.</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="{{ form.new_category.id_for_label }}" class="form-label">
-                            Or Create New Category
-                        </label>
-                        {{ form.new_category }}
-                        {% if form.new_category.errors %}
-                        <div class="invalid-feedback d-block">{{ form.new_category.errors.0 }}</div>
-                        {% endif %}
-                        <div class="help-text">Leave blank if you selected an existing category.</div>
-                    </div>
-                </div>
-
-                <!-- Supplier Selection -->
-                <div class="mb-3">
-                    <label for="{{ form.supplier.id_for_label }}" class="form-label">
-                        Supplier
-                    </label>
-                    <div class="input-group">
-                        {{ form.supplier }}
-                        <a href="{% url 'inventory:add-supplier' %}" class="btn btn-outline-secondary" target="_blank">
-                            <i class="fas fa-plus"></i> New
-                        </a>
-                    </div>
-                    <div class="help-text">Optional - leave blank if no supplier information</div>
-                </div>
-
-                <!-- Purchase Date -->
-                <div class="mb-3">
-                    <label for="{{ form.purchase_date.id_for_label }}" class="form-label">
-                        Purchase Date <span class="text-danger">*</span>
-                    </label>
-                    {{ form.purchase_date }}
-                    {% if form.purchase_date.errors %}
-                    <div class="invalid-feedback d-block">{{ form.purchase_date.errors.0 }}</div>
-                    {% endif %}
-                </div>
-
-                <!-- Pricing Information -->
-                <h5 class="form-section-title">Pricing Information</h5>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label for="{{ form.quantity.id_for_label }}" class="form-label">
-                            Quantity <span class="text-danger">*</span>
-                        </label>
-                        {{ form.quantity }}
-                        {% if form.quantity.errors %}
-                        <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-4">
-                        <label for="{{ form.purchase_rate.id_for_label }}" class="form-label">
-                            Purchase Rate (per unit) <span class="text-danger">*</span>
-                        </label>
-                        {{ form.purchase_rate }}
-                        {% if form.purchase_rate.errors %}
-                        <div class="invalid-feedback d-block">{{ form.purchase_rate.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Total Cost</label>
-                        <div class="calculation-display" id="total-cost-display">
-                            ₹ 0.00
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="{{ form.selling_price.id_for_label }}" class="form-label">
-                            Selling Price (per unit)
-                        </label>
-                        {{ form.selling_price }}
-                        <small class="form-text text-muted">Can be updated later in item details</small>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Expected Profit per Unit</label>
-                        <div class="calculation-display" id="profit-display">
-                            ₹ 0.00
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Batch Information -->
-                <h5 class="form-section-title">Batch & Tracking</h5>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="{{ form.batch_number.id_for_label }}" class="form-label">
-                            Batch Number
-                        </label>
-                        {{ form.batch_number }}
-                    </div>
-                    <div class="col-md-6">
-                        <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
-                            Expiry Date
-                        </label>
-                        {{ form.expiry_date }}
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="{{ form.invoice_number.id_for_label }}" class="form-label">
-                        Invoice/Bill Number
-                    </label>
-                    {{ form.invoice_number }}
-                </div>
-
-                <!-- Additional Notes -->
-                <div class="mb-3">
-                    <label for="{{ form.notes.id_for_label }}" class="form-label">
-                        Notes
-                    </label>
-                    {{ form.notes }}
-                    <small class="form-text text-muted">Any additional information about this purchase</small>
-                </div>
-
-                <hr class="my-4">
-
-                <div class="d-flex gap-2 justify-content-end">
-                    <a href="{% url 'inventory:purchase-list' %}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancel
-                    </a>
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-save"></i> Record Purchase
-                    </button>
-                </div>
-            </form>
+            </aside>
         </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <form method="post" class="form-layout">
+            {% csrf_token %}
+            {{ form.purchase_date }}
+
+            <div class="form-stack">
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Purchase Entry</h4>
+                                <p>Choose the item, confirm the category, and attach the supplier.</p>
+                            </div>
+                            <span class="section-badge">A</span>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label for="{{ form.item.id_for_label }}" class="form-label">Item Name <span class="text-danger">*</span></label>
+                                {{ form.item }}
+                                <div class="field-note">Item names come from the current inventory item list.</div>
+                                {% if form.item.errors %}<div class="invalid-feedback d-block">{{ form.item.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.category_name.id_for_label }}" class="form-label">Category</label>
+                                {{ form.category_name }}
+                            </div>
+                            <div class="field-span-2">
+                                <label for="{{ form.supplier.id_for_label }}" class="form-label">Purchase From</label>
+                                <div class="input-group">
+                                    {{ form.supplier }}
+                                    <a href="{% url 'inventory:add-supplier' %}" class="btn btn-outline-secondary" target="_blank">
+                                        <i class="fas fa-plus"></i> New
+                                    </a>
+                                </div>
+                                {% if form.supplier.errors %}<div class="invalid-feedback d-block">{{ form.supplier.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Cost and Quantity</h4>
+                                <p>Capture how much stock came in and how much it cost.</p>
+                            </div>
+                            <span class="section-badge">B</span>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label for="{{ form.quantity.id_for_label }}" class="form-label">Quantity <span class="text-danger">*</span></label>
+                                {{ form.quantity }}
+                                {% if form.quantity.errors %}<div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.purchase_rate.id_for_label }}" class="form-label">Purchase Price <span class="text-danger">*</span></label>
+                                {{ form.purchase_rate }}
+                                {% if form.purchase_rate.errors %}<div class="invalid-feedback d-block">{{ form.purchase_rate.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label class="form-label">Total Amount</label>
+                                <div class="metric-display" id="total-cost-display">Rs 0.00</div>
+                            </div>
+                            <div>
+                                <label for="{{ form.selling_price.id_for_label }}" class="form-label">Selling Price</label>
+                                {{ form.selling_price }}
+                                {% if form.selling_price.errors %}<div class="invalid-feedback d-block">{{ form.selling_price.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="form-stack">
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Live Summary</h4>
+                                <p>Commercial snapshot for this stock entry.</p>
+                            </div>
+                        </div>
+                        <div class="insight-list">
+                            <div class="insight-item">
+                                <label>Total Amount</label>
+                                <strong id="summary-total-cost">Rs 0.00</strong>
+                            </div>
+                            <div class="insight-item">
+                                <label>Expected Profit Per Unit</label>
+                                <strong id="profit-display">Rs 0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Save Actions</h4>
+                                <p>Save the stock entry or return to items.</p>
+                            </div>
+                        </div>
+                        <div class="action-bar">
+                            <a href="{% url 'inventory:item-list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> Save Stock Entry
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </form>
     </div>
 </div>
 
 <script>
-// Auto-calculate totals
 function calculatePrices() {
     const quantity = parseFloat(document.querySelector('#quantity_input').value) || 0;
     const purchaseRate = parseFloat(document.querySelector('#purchase_rate_input').value) || 0;
     const sellingPrice = parseFloat(document.querySelector('#selling_price_input').value) || 0;
+    const total = quantity * purchaseRate;
+    const profit = sellingPrice - purchaseRate;
 
-    const totalCost = quantity * purchaseRate;
-    const profitPerUnit = sellingPrice - purchaseRate;
-
-    document.querySelector('#total-cost-display').textContent = '₹ ' + totalCost.toFixed(2);
-    document.querySelector('#profit-display').textContent = '₹ ' + profitPerUnit.toFixed(2);
+    document.querySelector('#total-cost-display').textContent = 'Rs ' + total.toFixed(2);
+    document.querySelector('#summary-total-cost').textContent = 'Rs ' + total.toFixed(2);
+    document.querySelector('#profit-display').textContent = 'Rs ' + profit.toFixed(2);
 }
 
 const quantityInput = document.querySelector('#quantity_input');
 const purchaseRateInput = document.querySelector('#purchase_rate_input');
 const sellingPriceInput = document.querySelector('#selling_price_input');
-const existingItemSelect = document.querySelector('#item_select');
-const newItemInput = document.querySelector('#item_autocomplete');
-const categorySelect = document.querySelector('#purchase_category_select');
-const newCategoryInput = document.querySelector('#purchase_new_category_input');
+const itemSelect = document.querySelector('#item_select');
+const categoryDisplay = document.querySelector('#purchase_category_display');
+const itemCategoryMap = {
+    {% for item in form.fields.item.queryset %}
+    "{{ item.pk }}": "{{ item.category.name|escapejs }}",
+    {% endfor %}
+};
 
-if (quantityInput) quantityInput.addEventListener('change', calculatePrices);
-if (quantityInput) quantityInput.addEventListener('keyup', calculatePrices);
-if (purchaseRateInput) purchaseRateInput.addEventListener('change', calculatePrices);
-if (purchaseRateInput) purchaseRateInput.addEventListener('keyup', calculatePrices);
-if (sellingPriceInput) sellingPriceInput.addEventListener('change', calculatePrices);
-if (sellingPriceInput) sellingPriceInput.addEventListener('keyup', calculatePrices);
-
-function syncPurchaseItemMode() {
-    const hasExistingItem = existingItemSelect && existingItemSelect.value;
-
-    if (newItemInput) {
-        newItemInput.disabled = !!hasExistingItem;
-        if (hasExistingItem) {
-            newItemInput.value = '';
-        }
-    }
-
-    if (categorySelect) {
-        categorySelect.disabled = !!hasExistingItem;
-        if (hasExistingItem) {
-            categorySelect.value = '';
-        }
-    }
-
-    if (newCategoryInput) {
-        newCategoryInput.disabled = !!hasExistingItem;
-        if (hasExistingItem) {
-            newCategoryInput.value = '';
-        }
-    }
+function syncCategoryDisplay() {
+    if (!categoryDisplay) return;
+    categoryDisplay.value = itemCategoryMap[itemSelect ? itemSelect.value : ''] || '';
 }
 
-if (existingItemSelect) {
-    existingItemSelect.addEventListener('change', syncPurchaseItemMode);
-}
+if (quantityInput) quantityInput.addEventListener('input', calculatePrices);
+if (purchaseRateInput) purchaseRateInput.addEventListener('input', calculatePrices);
+if (sellingPriceInput) sellingPriceInput.addEventListener('input', calculatePrices);
+if (itemSelect) itemSelect.addEventListener('change', syncCategoryDisplay);
 
-syncPurchaseItemMode();
+syncCategoryDisplay();
+calculatePrices();
 </script>
-
-<style>
-    .form-section-title {
-        border-bottom: 2px solid #667eea;
-        padding-bottom: 15px;
-        margin-top: 30px;
-        margin-bottom: 20px;
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .form-section-title:first-of-type {
-        margin-top: 0;
-    }
-
-    .calculation-display {
-        background: #f0f4ff;
-        padding: 12px;
-        border-left: 4px solid #667eea;
-        border-radius: 4px;
-        font-weight: 500;
-        color: #667eea;
-    }
-
-    .help-text {
-        font-size: 13px;
-        color: #666;
-        margin-top: 5px;
-    }
-</style>
 
 {% endblock %}

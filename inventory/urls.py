@@ -31,6 +31,7 @@ urlpatterns = [
     path("suppliers/<int:pk>/edit/", views.edit_supplier, name="edit-supplier"),
 
     # Purchases
+    path("stock/add/", views.add_stock, name="add-stock"),
     path("purchases/", views.PurchaseListView.as_view(), name="purchase-list"),
     path("purchases/add/", views.add_purchase, name="add-purchase"),
     path("purchases/<int:pk>/edit/", views.edit_purchase, name="edit-purchase"),

@@ -1,0 +1,163 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Add New Item{% endblock %}
+
+{% block content %}
+{{ block.super }}
+
+<div class="inventory-container">
+    <div class="form-workspace">
+        <div class="form-hero">
+            <section class="form-hero-primary">
+                <h2>Add New Item</h2>
+                <p>Create a clean item master first, then use stock entry to record purchases, costs, and supplier activity separately.</p>
+                <div class="hero-pill-row">
+                    <span class="hero-pill"><i class="fas fa-box-open"></i> Item master</span>
+                    <span class="hero-pill"><i class="fas fa-image"></i> Image ready</span>
+                    <span class="hero-pill"><i class="fas fa-scale-balanced"></i> GST enabled</span>
+                </div>
+            </section>
+            <aside class="form-hero-side">
+                <h3>Before you save</h3>
+                <div class="mini-checklist">
+                    <div><i class="fas fa-circle-check"></i><span>Use a clear item name users can search quickly later.</span></div>
+                    <div><i class="fas fa-circle-check"></i><span>Pick the right category so stock and reports stay grouped properly.</span></div>
+                    <div><i class="fas fa-circle-check"></i><span>Upload an image if you want faster visual recognition in the item record.</span></div>
+                </div>
+            </aside>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="form-layout">
+            {% csrf_token %}
+
+            <div class="form-stack">
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Core Details</h4>
+                                <p>Define the item name, category, and optional visual asset.</p>
+                            </div>
+                            <span class="section-badge">A</span>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label for="{{ form.name.id_for_label }}" class="form-label">Item Name</label>
+                                {{ form.name }}
+                                {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                                {{ form.category }}
+                                {% if form.category.errors %}<div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="field-span-2">
+                                <label for="{{ form.image.id_for_label }}" class="form-label">Item Image</label>
+                                {{ form.image }}
+                                <div class="field-note">Add a product image for clearer identification in the item record.</div>
+                                {% if form.image.errors %}<div class="invalid-feedback d-block">{{ form.image.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Stock Settings</h4>
+                                <p>Set low and high thresholds for monitoring inventory balance.</p>
+                            </div>
+                            <span class="section-badge">B</span>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label for="{{ form.minimum_stock.id_for_label }}" class="form-label">Minimum Stock</label>
+                                {{ form.minimum_stock }}
+                                {% if form.minimum_stock.errors %}<div class="invalid-feedback d-block">{{ form.minimum_stock.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.maximum_stock.id_for_label }}" class="form-label">Maximum Stock</label>
+                                {{ form.maximum_stock }}
+                                {% if form.maximum_stock.errors %}<div class="invalid-feedback d-block">{{ form.maximum_stock.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Pricing Defaults</h4>
+                                <p>Store the default selling price and GST rate used in inventory flows.</p>
+                            </div>
+                            <span class="section-badge">C</span>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label for="{{ form.selling_price.id_for_label }}" class="form-label">Selling Price</label>
+                                {{ form.selling_price }}
+                                {% if form.selling_price.errors %}<div class="invalid-feedback d-block">{{ form.selling_price.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.gst_percentage.id_for_label }}" class="form-label">GST %</label>
+                                {{ form.gst_percentage }}
+                                {% if form.gst_percentage.errors %}<div class="invalid-feedback d-block">{{ form.gst_percentage.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="form-stack">
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Workflow</h4>
+                                <p>What happens after this item is saved.</p>
+                            </div>
+                            <span class="section-badge">+</span>
+                        </div>
+                        <div class="helper-list">
+                            <div><i class="fas fa-arrow-right"></i><span>The item appears in the item register immediately.</span></div>
+                            <div><i class="fas fa-arrow-right"></i><span>Use <strong>Add Stock</strong> to record quantity and purchase price.</span></div>
+                            <div><i class="fas fa-arrow-right"></i><span>Purchase history and profit metrics build after stock entries.</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Save Actions</h4>
+                                <p>Commit the item master or return to the items register.</p>
+                            </div>
+                        </div>
+                        <div class="action-bar">
+                            <a href="{% url 'inventory:item-list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Add Item
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </form>
+    </div>
+</div>
+{% endblock %}

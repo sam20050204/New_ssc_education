@@ -515,7 +515,7 @@
                     <div class="entry-card-header">
                         <div>
                             <h2 class="entry-card-title">Item Details</h2>
-                            <p class="entry-card-copy">Search an existing product or register a new stock item with SKU, description, and technical specs.</p>
+                            <p class="entry-card-copy">Search an existing product or register a new stock item with SKU, stock controls, and pricing defaults.</p>
                         </div>
                         <span class="section-tag">A</span>
                     </div>
@@ -570,23 +570,6 @@
                             </div>
                         </div>
 
-                        <div class="field-group form-col-8">
-                            <label for="{{ form.description.id_for_label }}">Description</label>
-                            {{ form.description }}
-                            {% if form.description.errors %}<div class="field-error">{{ form.description.errors.0 }}</div>{% endif %}
-                        </div>
-
-                        <div class="field-group form-col-4">
-                            <label for="{{ form.image.id_for_label }}">Item Image</label>
-                            {{ form.image }}
-                            {% if form.image.errors %}<div class="field-error">{{ form.image.errors.0 }}</div>{% endif %}
-                        </div>
-
-                        <div class="field-group form-col-12">
-                            <label for="{{ form.specifications.id_for_label }}">Specifications</label>
-                            {{ form.specifications }}
-                            {% if form.specifications.errors %}<div class="field-error">{{ form.specifications.errors.0 }}</div>{% endif %}
-                        </div>
                     </div>
                 </section>
 
@@ -628,7 +611,7 @@
                     <div class="entry-card-header">
                         <div>
                             <h2 class="entry-card-title">Purchase Information</h2>
-                            <p class="entry-card-copy">Record the supplier, purchase date, batch traceability, quantity, and tax-ready invoice metadata.</p>
+                            <p class="entry-card-copy">Record the supplier, purchase date, quantity, and purchase rate for the incoming stock.</p>
                         </div>
                         <span class="section-tag">C</span>
                     </div>
@@ -671,29 +654,6 @@
                             </div>
                         </div>
 
-                        <div class="field-group form-col-4">
-                            <label for="{{ form.batch_number.id_for_label }}">Batch Number</label>
-                            {{ form.batch_number }}
-                            {% if form.batch_number.errors %}<div class="field-error">{{ form.batch_number.errors.0 }}</div>{% endif %}
-                        </div>
-
-                        <div class="field-group form-col-4">
-                            <label for="{{ form.invoice_number.id_for_label }}">Invoice Number</label>
-                            {{ form.invoice_number }}
-                            {% if form.invoice_number.errors %}<div class="field-error">{{ form.invoice_number.errors.0 }}</div>{% endif %}
-                        </div>
-
-                        <div class="field-group form-col-4">
-                            <label for="{{ form.expiry_date.id_for_label }}">Expiry Date</label>
-                            {{ form.expiry_date }}
-                            {% if form.expiry_date.errors %}<div class="field-error">{{ form.expiry_date.errors.0 }}</div>{% endif %}
-                        </div>
-
-                        <div class="field-group form-col-12">
-                            <label for="{{ form.notes.id_for_label }}">Purchase Notes</label>
-                            {{ form.notes }}
-                            {% if form.notes.errors %}<div class="field-error">{{ form.notes.errors.0 }}</div>{% endif %}
-                        </div>
                     </div>
                 </section>
 
@@ -747,7 +707,7 @@
                     <div class="entry-card-header">
                         <div>
                             <h2 class="entry-card-title">Stock Settings</h2>
-                            <p class="entry-card-copy">Control minimum alerts, maximum thresholds, and batch-aware stock posture before saving the transaction.</p>
+                            <p class="entry-card-copy">Control minimum alerts, maximum thresholds, and stock posture before saving the transaction.</p>
                         </div>
                         <span class="section-tag">E</span>
                     </div>
@@ -828,7 +788,7 @@
                             <div id="stock-status-chip" class="status-chip ok">Healthy Stock</div>
                         </div>
                         <div class="summary-note">
-                            Batch-wise history, supplier history, barcode-ready SKU, invoice reference, and GST defaults are captured for future ERP flows.
+                            Supplier history, barcode-ready SKU, and GST defaults are captured for future ERP flows.
                         </div>
                     </div>
                 </section>
@@ -933,8 +893,6 @@
     const itemInput = document.getElementById('item_name_input');
     const existingItemInput = document.getElementById('existing_item_id');
     const categorySelect = document.getElementById('category_select');
-    const descriptionInput = document.getElementById('{{ form.description.id_for_label }}');
-    const specificationsInput = document.getElementById('{{ form.specifications.id_for_label }}');
     const supplierSelect = document.getElementById('supplier_select');
     const quantityInput = document.getElementById('quantity_input');
     const purchaseRateInput = document.getElementById('purchase_rate_input');
@@ -1025,9 +983,6 @@
                     <div class="timeline-meta">
                         Rate: ${formatCurrency(purchase.purchase_rate)} | Sell: ${formatCurrency(purchase.selling_price)} | Qty: ${purchase.quantity}
                     </div>
-                    <div class="timeline-meta">
-                        Invoice: ${purchase.invoice_number || 'Not recorded'}
-                    </div>
                 </div>
             `;
         }).join('');
@@ -1065,8 +1020,6 @@
         setText('insight-selling-price', formatCurrency(item.selling_price));
 
         if (categorySelect) categorySelect.value = item.category_id;
-        if (descriptionInput) descriptionInput.value = item.description || '';
-        if (specificationsInput) specificationsInput.value = item.specifications || '';
         if (minimumStockInput) minimumStockInput.value = item.minimum_stock || 0;
         if (maximumStockInput) maximumStockInput.value = item.maximum_stock || 0;
         if (sellingPriceInput && !sellingPriceInput.value) sellingPriceInput.value = item.selling_price || 0;

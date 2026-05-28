@@ -85,16 +85,11 @@ def create_inventory_entry(form, user):
     item.name = data["item_name"].strip()
     if data.get("category"):
         item.category = data["category"]
-    item.description = data.get("description")
-    item.specifications = data.get("specifications")
     item.minimum_stock = data["minimum_stock"]
     item.maximum_stock = data["maximum_stock"]
     item.selling_price = data["selling_price"]
     item.gst_percentage = data["gst_percentage"]
     item.is_active = True
-
-    if data.get("image"):
-        item.image = data["image"]
 
     item.save()
 
@@ -105,10 +100,6 @@ def create_inventory_entry(form, user):
         quantity=data["quantity"],
         purchase_rate=data["purchase_rate"],
         selling_price=data["selling_price"],
-        batch_number=data.get("batch_number"),
-        expiry_date=data.get("expiry_date"),
-        invoice_number=data.get("invoice_number"),
-        notes=data.get("notes"),
         created_by=user,
     )
 
@@ -120,7 +111,7 @@ def create_inventory_entry(form, user):
         movement_type="purchase",
         quantity=purchase.quantity,
         user=user,
-        reference=purchase.invoice_number or purchase.batch_number or str(purchase.pk),
+        reference=str(purchase.pk),
         notes=f"Purchase recorded at {purchase.purchase_rate} per unit.",
     )
 

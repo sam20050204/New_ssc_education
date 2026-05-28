@@ -33,6 +33,7 @@ from inventory.forms import (
 from inventory.services import (
     build_item_insight_payload,
     create_inventory_entry,
+    record_stock_movement,
 )
 
 
@@ -110,40 +111,30 @@ def inventory_dashboard(request):
 
 @login_required
 def add_item(request):
-    """Unified inventory entry page for item and purchase capture."""
+    """Add a new inventory item."""
     if request.method == "POST":
-        form = InventoryEntryForm(request.POST, request.FILES)
+        form = ItemForm(request.POST, request.FILES)
         if form.is_valid():
-            try:
-                item, purchase = create_inventory_entry(form, request.user)
-                messages.success(
-                    request,
-                    f"Inventory updated for '{item.name}' with {purchase.quantity} new units.",
-                )
-                return redirect("inventory:item-detail", pk=item.pk)
-            except Exception as e:
-                form.add_error(None, f"Unable to save inventory entry: {str(e)}")
-        else:
-            messages.error(request, "Please correct the highlighted fields and try again.")
+            item = form.save()
+            messages.success(request, f"Item '{item.name}' added successfully!")
+            return redirect("inventory:item-detail", pk=item.pk)
+        for error in form.errors.values():
+            messages.error(request, error)
     else:
-        form = InventoryEntryForm(
+        form = ItemForm(
             initial={
-                "purchase_date": timezone.localdate(),
                 "minimum_stock": 5,
                 "maximum_stock": 100,
                 "gst_percentage": Decimal("18.00"),
-                "quantity": 1,
             }
         )
 
     context = {
         "form": form,
-        "category_form": CategoryForm(),
-        "supplier_form": SupplierForm(),
         "page_title": "Add New Item",
         "active_page": "inventory_add_item",
     }
-    return render(request, "inventory/add_item.html", context)
+    return render(request, "inventory/add_item_form.html", context)
 
 
 @login_required
@@ -263,8 +254,8 @@ class ItemListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["categories"] = Category.objects.filter(is_active=True)
-        context["page_title"] = "Inventory Items"
-        context["active_page"] = "inventory"
+        context["page_title"] = "Items"
+        context["active_page"] = "inventory_items"
         return context
 
 
@@ -570,8 +561,8 @@ def supplier_detail(request, pk):
 
 
 @login_required
-def add_purchase(request):
-    """Record a new purchase"""
+def add_stock(request):
+    """Add stock for an existing inventory item."""
     if request.method == "POST":
         form = PurchaseForm(request.POST)
         if form.is_valid():
@@ -579,10 +570,19 @@ def add_purchase(request):
                 purchase = form.save(commit=False)
                 purchase.created_by = request.user
                 purchase.save()
+                Inventory.objects.get_or_create(item=purchase.item)
+                record_stock_movement(
+                    item=purchase.item,
+                    movement_type="purchase",
+                    quantity=purchase.quantity,
+                    user=request.user,
+                    reference=str(purchase.pk),
+                    notes=f"Purchase recorded at {purchase.purchase_rate} per unit.",
+                )
 
                 messages.success(
                     request,
-                    f"Purchase recorded: {purchase.quantity} units of {purchase.item.name}",
+                    f"Stock added for '{purchase.item.name}': {purchase.quantity} units recorded.",
                 )
                 return redirect("inventory:item-detail", pk=purchase.item.pk)
             except Exception as e:
@@ -591,13 +591,27 @@ def add_purchase(request):
             for error in form.errors.values():
                 messages.error(request, error)
     else:
-        form = PurchaseForm()
+        initial = {
+            "purchase_date": timezone.localdate(),
+            "quantity": 1,
+        }
+        item_id = request.GET.get("item_id")
+        if item_id and Item.objects.filter(pk=item_id, is_active=True).exists():
+            initial["item"] = item_id
+        form = PurchaseForm(initial=initial)
 
     context = {
         "form": form,
-        "page_title": "Record Purchase",
+        "page_title": "Add Stock / Record Purchase",
+        "active_page": "inventory_add_stock",
     }
     return render(request, "inventory/add_purchase.html", context)
+
+
+@login_required
+def add_purchase(request):
+    """Backward-compatible purchase entry route."""
+    return add_stock(request)
 
 
 class PurchaseListView(LoginRequiredMixin, ListView):

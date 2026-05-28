@@ -25,8 +25,11 @@
 
         <div class="sidebar-group">
             <div class="sidebar-label">Inventory</div>
-            <a href="{% url 'inventory:add-item' %}" class="menu-item {% if active_page == 'inventory_add_item' %}active{% endif %}" data-menu-label="inventory add item product supplier purchase">
-                <i class="fa-solid fa-plus"></i><span>Add Item</span>
+            <a href="{% url 'inventory:item-list' %}" class="menu-item {% if active_page == 'inventory_items' %}active{% endif %}" data-menu-label="inventory items product stock finished register">
+                <i class="fa-solid fa-boxes-stacked"></i><span>Items</span>
+            </a>
+            <a href="{% url 'inventory:add-stock' %}" class="menu-item {% if active_page == 'inventory_add_stock' %}active{% endif %}" data-menu-label="inventory add stock record purchase supplier purchase">
+                <i class="fa-solid fa-cart-plus"></i><span>Add Stock</span>
             </a>
             <a href="{% url 'inventory:category-list' %}" class="menu-item {% if active_page == 'inventory_categories' %}active{% endif %}" data-menu-label="inventory categories item category list">
                 <i class="fa-solid fa-layer-group"></i><span>Categories</span>

@@ -6,10 +6,10 @@
 {% block page_actions %}
 <div class="list-top-actions">
     <a href="{% url 'inventory:add-item' %}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Add Item
+        <i class="fas fa-plus"></i> Add New Item
     </a>
-    <a href="{% url 'inventory:add-purchase' %}" class="btn btn-success">
-        <i class="fas fa-shopping-cart"></i> Record Purchase
+    <a href="{% url 'inventory:add-stock' %}" class="btn btn-success">
+        <i class="fas fa-shopping-cart"></i> Add Stock / Record Purchase
     </a>
 </div>
 {% endblock %}
@@ -269,7 +269,11 @@
                     <div class="register-cell">
                         <a href="{% url 'inventory:item-detail' item.pk %}" class="item-title">{{ item.name }}</a>
                         <div class="item-subtext">
-                            {{ item.description|default:"No description recorded."|truncatechars:120 }}
+                            {% if item.current_stock > 0 %}
+                            In stock with {{ item.current_stock }} units available.
+                            {% else %}
+                            Finished stock item. Quantity currently zero.
+                            {% endif %}
                         </div>
                     </div>
 
@@ -289,7 +293,9 @@
 
                     <div class="register-cell">
                         <div class="status-stack">
-                            {% if item.is_low_stock %}
+                            {% if item.current_stock == 0 %}
+                            <span class="badge bg-secondary">Finished</span>
+                            {% elif item.is_low_stock %}
                             <span class="badge bg-danger">Low Stock</span>
                             {% elif item.is_overstocked %}
                             <span class="badge bg-warning">Overstocked</span>
@@ -326,7 +332,7 @@
                             <a href="{% url 'inventory:edit-item' item.pk %}" class="btn btn-sm btn-warning" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <a href="{% url 'inventory:add-purchase' %}?item_id={{ item.pk }}" class="btn btn-sm btn-success" title="Purchase">
+                            <a href="{% url 'inventory:add-stock' %}?item_id={{ item.pk }}" class="btn btn-sm btn-success" title="Add Stock">
                                 <i class="fas fa-shopping-cart"></i>
                             </a>
                         </div>
@@ -367,10 +373,7 @@
         <div class="empty-state">
             <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
             <h3>No items found</h3>
-            <p>Start by adding your first inventory item.</p>
-            <a href="{% url 'inventory:add-item' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Add Item
-            </a>
+            <p>No inventory items are available to show right now.</p>
         </div>
         {% endif %}
     </div>

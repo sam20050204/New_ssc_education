@@ -6,89 +6,116 @@
 {% block content %}
 {{ block.super }}
 
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="form-section">
-            <h2>Add New Category</h2>
-
-            {% if form.non_field_errors %}
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {% for error in form.non_field_errors %}
-                <div>{{ error }}</div>
-                {% endfor %}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endif %}
-
-            <form method="post">
-                {% csrf_token %}
-
-                <div class="mb-3">
-                    <label for="{{ form.name.id_for_label }}" class="form-label">
-                        Category Name <span class="text-danger">*</span>
-                    </label>
-                    {{ form.name }}
-                    {% if form.name.errors %}
-                    <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
-                    {% endif %}
+<div class="inventory-container">
+    <div class="form-workspace">
+        <div class="form-hero">
+            <section class="form-hero-primary">
+                <h2>Add New Category</h2>
+                <p>Create a clean category structure for grouping items, filtering stock, and improving reporting clarity.</p>
+                <div class="hero-pill-row">
+                    <span class="hero-pill"><i class="fas fa-layer-group"></i> Organized stock</span>
+                    <span class="hero-pill"><i class="fas fa-filter"></i> Better filtering</span>
+                    <span class="hero-pill"><i class="fas fa-icons"></i> Icon supported</span>
                 </div>
-
-                <div class="mb-3">
-                    <label for="{{ form.description.id_for_label }}" class="form-label">
-                        Description
-                    </label>
-                    {{ form.description }}
-                    {% if form.description.errors %}
-                    <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
-                    {% endif %}
+            </section>
+            <aside class="form-hero-side">
+                <h3>Category tips</h3>
+                <div class="mini-checklist">
+                    <div><i class="fas fa-circle-check"></i><span>Use broad business-friendly names such as Laptops, Accessories, or Networking.</span></div>
+                    <div><i class="fas fa-circle-check"></i><span>Keep names unique to avoid duplicate reporting buckets.</span></div>
+                    <div><i class="fas fa-circle-check"></i><span>Optional icons improve readability in category views.</span></div>
                 </div>
-
-                <div class="mb-3">
-                    <label for="{{ form.icon.id_for_label }}" class="form-label">
-                        Icon (Font Awesome)
-                    </label>
-                    {{ form.icon }}
-                    <small class="form-text text-muted">
-                        E.g., fa-laptop, fa-desktop, fa-keyboard
-                        <a href="https://fontawesome.com/icons" target="_blank">
-                            Browse icons
-                        </a>
-                    </small>
-                    {% if form.icon.errors %}
-                    <div class="invalid-feedback d-block">{{ form.icon.errors.0 }}</div>
-                    {% endif %}
-                </div>
-
-                <hr class="my-4">
-
-                <div class="d-flex gap-2">
-                    <a href="{% url 'inventory:category-list' %}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancel
-                    </a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Add Category
-                    </button>
-                </div>
-            </form>
+            </aside>
         </div>
 
-        <!-- Existing Categories -->
-        <div class="form-section mt-4">
-            <h5>Existing Categories</h5>
-            <p class="text-muted small">Click on any category to edit or manage</p>
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
 
-            <div class="list-group">
-                {% for category in categories %}
-                <a href="{% url 'inventory:edit-category' category.pk %}"
-                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    {% if category.icon %}
-                    <i class="fas {{ category.icon }} me-2"></i>
-                    {% endif %}
-                    {{ category.name }}
-                    <span class="badge bg-primary">{{ category.item_count }} items</span>
-                </a>
-                {% endfor %}
-            </div>
+        <div class="form-layout">
+            <form method="post" class="form-stack">
+                {% csrf_token %}
+
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Category Setup</h4>
+                                <p>Enter the name, summary, and icon used to identify this category.</p>
+                            </div>
+                            <span class="section-badge">A</span>
+                        </div>
+                        <div class="field-grid">
+                            <div class="field-span-2">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">Category Name <span class="text-danger">*</span></label>
+                                {{ form.name }}
+                                {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="field-span-2">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                                {{ form.description }}
+                                {% if form.description.errors %}<div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="field-span-2">
+                                <label for="{{ form.icon.id_for_label }}" class="form-label">Icon (Font Awesome)</label>
+                                {{ form.icon }}
+                                <div class="field-note">Example: <code>fa-laptop</code>, <code>fa-desktop</code>, <code>fa-keyboard</code>. <a href="https://fontawesome.com/icons" target="_blank">Browse icons</a>.</div>
+                                {% if form.icon.errors %}<div class="invalid-feedback d-block">{{ form.icon.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Save Actions</h4>
+                                <p>Save the category or return to the category register.</p>
+                            </div>
+                        </div>
+                        <div class="action-bar">
+                            <a href="{% url 'inventory:category-list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Add Category
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </form>
+
+            <aside class="form-stack">
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Existing Categories</h4>
+                                <p>Quick view of active inventory groups.</p>
+                            </div>
+                        </div>
+                        <div class="mini-records">
+                            {% for category in categories|slice:":8" %}
+                            <a href="{% url 'inventory:edit-category' category.pk %}" class="mini-record">
+                                <strong>{% if category.icon %}<i class="fas {{ category.icon }}"></i> {% endif %}{{ category.name }}</strong>
+                                <span>{{ category.item_count }} items</span>
+                            </a>
+                            {% empty %}
+                            <div class="mini-record">
+                                <strong>No categories yet</strong>
+                                <span>Create the first one here</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+            </aside>
         </div>
     </div>
 </div>

@@ -11,8 +11,8 @@
     <a href="{% url 'inventory:edit-item' item.pk %}" class="btn btn-warning">
         <i class="fas fa-edit"></i> Edit
     </a>
-    <a href="{% url 'inventory:add-purchase' %}?item_id={{ item.pk }}" class="btn btn-success">
-        <i class="fas fa-shopping-cart"></i> Record Purchase
+    <a href="{% url 'inventory:add-stock' %}?item_id={{ item.pk }}" class="btn btn-success">
+        <i class="fas fa-shopping-cart"></i> Add Stock
     </a>
     <form method="post" action="{% url 'inventory:delete-item' item.pk %}" class="inline-form"
           onsubmit="return confirm('Are you sure you want to delete this item?');">
@@ -308,7 +308,6 @@
         <div class="detail-hero">
             <section class="hero-primary">
                 <div class="hero-chips">
-                    <span class="hero-chip"><i class="fas fa-barcode"></i> {{ item.sku }}</span>
                     <span class="hero-chip"><i class="fas fa-layer-group"></i> {{ item.category.name }}</span>
                     {% if item.is_low_stock %}
                     <span class="hero-chip"><i class="fas fa-triangle-exclamation"></i> Low Stock</span>
@@ -319,13 +318,7 @@
                     {% endif %}
                 </div>
                 <h2>{{ item.name }}</h2>
-                <p>
-                    {% if item.description %}
-                    {{ item.description }}
-                    {% else %}
-                    Commercial inventory record with pricing snapshots, stock controls, and purchase history.
-                    {% endif %}
-                </p>
+                <p>Commercial inventory record with pricing snapshots, stock controls, and purchase history.</p>
                 <div class="hero-grid">
                     <div class="hero-metric">
                         <label>Current Stock</label>
@@ -394,20 +387,8 @@
                     <div class="card-body">
                         <div class="info-list">
                             <div class="info-row">
-                                <label>SKU</label>
-                                <div><code>{{ item.sku }}</code></div>
-                            </div>
-                            <div class="info-row">
                                 <label>Category</label>
                                 <div>{{ item.category.name }}</div>
-                            </div>
-                            <div class="info-row">
-                                <label>Description</label>
-                                <div>{{ item.description|default:"No description recorded." }}</div>
-                            </div>
-                            <div class="info-row">
-                                <label>Specifications</label>
-                                <div>{{ item.specifications|default:"No technical specifications recorded." }}</div>
                             </div>
                             <div class="info-row">
                                 <label>GST</label>
