@@ -12,6 +12,8 @@ from inventory.models import (
     Inventory,
     Item,
     Purchase,
+    SaleReceipt,
+    SaleReceiptLine,
     StockMovement,
     Supplier,
 )
@@ -182,3 +184,42 @@ def build_item_insight_payload(item):
             for row in supplier_history
         ],
     }
+
+
+@transaction.atomic
+def create_sales_receipt(receipt_form, line_formset, user):
+    """Create a customer sale receipt, reduce stock, and log stock movements."""
+    receipt = receipt_form.save(commit=False)
+    receipt.created_by = user
+    receipt.save()
+
+    lines = line_formset.save(commit=False)
+    active_lines = []
+    for line in lines:
+        line.receipt = receipt
+        line.purchase_price_snapshot = line.item.average_purchase_rate or Decimal("0.00")
+        line.gst_percentage = line.item.gst_percentage or Decimal("0.00")
+        if line.item.current_stock < line.quantity:
+            raise ValueError(f"Only {line.item.current_stock} units are currently available for {line.item.name}.")
+        line.save()
+        active_lines.append(line)
+
+    for deleted_line in line_formset.deleted_objects:
+        deleted_line.delete()
+
+    receipt.refresh_totals()
+
+    for line in active_lines:
+        line.item.refresh_purchase_metrics()
+        Inventory.objects.get_or_create(item=line.item)
+        line.item.inventory.save()
+        record_stock_movement(
+            item=line.item,
+            movement_type="sale",
+            quantity=-line.quantity,
+            user=user,
+            reference=receipt.receipt_no,
+            notes=f"Sold {line.quantity} units at {line.unit_price} per unit.",
+        )
+
+    return receipt

@@ -32,6 +32,9 @@ urlpatterns = [
 
     # Purchases
     path("stock/add/", views.add_stock, name="add-stock"),
+    path("sales/add/", views.add_sale, name="add-sale"),
+    path("sales/history/", views.SaleReceiptListView.as_view(), name="sale-history"),
+    path("sales/receipts/<int:pk>/", views.sale_receipt_detail, name="sale-receipt-detail"),
     path("purchases/", views.PurchaseListView.as_view(), name="purchase-list"),
     path("purchases/add/", views.add_purchase, name="add-purchase"),
     path("purchases/<int:pk>/edit/", views.edit_purchase, name="edit-purchase"),

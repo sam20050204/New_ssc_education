@@ -28,6 +28,12 @@
             <a href="{% url 'inventory:item-list' %}" class="menu-item {% if active_page == 'inventory_items' %}active{% endif %}" data-menu-label="inventory items product stock finished register">
                 <i class="fa-solid fa-boxes-stacked"></i><span>Items</span>
             </a>
+            <a href="{% url 'inventory:add-sale' %}" class="menu-item {% if active_page == 'inventory_sales' %}active{% endif %}" data-menu-label="inventory record sale customer receipt billing">
+                <i class="fa-solid fa-cash-register"></i><span>Record Sale</span>
+            </a>
+            <a href="{% url 'inventory:sale-history' %}" class="menu-item {% if active_page == 'inventory_sales_history' %}active{% endif %}" data-menu-label="inventory sales history receipts reprint customer billing list">
+                <i class="fa-solid fa-receipt"></i><span>Sales History</span>
+            </a>
             <a href="{% url 'inventory:add-stock' %}" class="menu-item {% if active_page == 'inventory_add_stock' %}active{% endif %}" data-menu-label="inventory add stock record purchase supplier purchase">
                 <i class="fa-solid fa-cart-plus"></i><span>Add Stock</span>
             </a>

@@ -3,6 +3,7 @@ Inventory Models - Sales & Inventory Management
 Handles categories, suppliers, items, purchases, and inventory tracking
 """
 
+from datetime import date
 from decimal import Decimal
 from django.db import models, transaction
 from django.contrib.auth.models import User
@@ -284,11 +285,14 @@ class Item(models.Model):
             self.save(update_fields=["average_purchase_rate"])
 
     def refresh_purchase_metrics(self, save=True):
-        """Synchronize stock and pricing snapshots from purchase history."""
+        """Synchronize stock and pricing snapshots from purchase and sales history."""
         summary = self.purchases.aggregate(
             total_cost=Sum("total_purchase_price", default=Decimal("0.00")),
             total_quantity=Sum("quantity", default=0),
         )
+        sold_quantity = self.sales_lines.aggregate(
+            total=Sum("quantity", default=0)
+        )["total"] or 0
         latest_purchase = self.purchases.order_by(
             "-purchase_date", "-created_at"
         ).first()
@@ -296,7 +300,7 @@ class Item(models.Model):
         total_quantity = summary["total_quantity"] or 0
         total_cost = summary["total_cost"] or Decimal("0.00")
 
-        self.current_stock = total_quantity
+        self.current_stock = max(total_quantity - sold_quantity, 0)
         self.latest_purchase_rate = (
             latest_purchase.purchase_rate if latest_purchase else Decimal("0.00")
         )
@@ -464,6 +468,12 @@ class Inventory(models.Model):
                 )["total"]
                 or 0
             )
+            self.total_quantity_sold = (
+                self.item.sales_lines.aggregate(
+                    total=Sum("quantity", default=0)
+                )["total"]
+                or 0
+            )
         super().save(*args, **kwargs)
 
     def get_stock_value(self):
@@ -562,3 +572,116 @@ class LowStockAlert(models.Model):
 
     def __str__(self):
         return f"Low Stock Alert - {self.item.name} ({self.current_stock}/{self.minimum_stock})"
+
+
+class SaleReceipt(models.Model):
+    """Customer-facing inventory sale receipt."""
+
+    receipt_no = models.CharField(max_length=24, unique=True, editable=False, db_index=True)
+    customer_name = models.CharField(max_length=200)
+    customer_phone = models.CharField(max_length=15, blank=True)
+    customer_address = models.TextField(blank=True)
+    sale_date = models.DateField(default=date.today, db_index=True)
+    payment_mode = models.CharField(max_length=20, default="Cash")
+    notes = models.TextField(blank=True)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    gst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sales_receipts_created",
+    )
+
+    class Meta:
+        ordering = ["-sale_date", "-created_at"]
+        verbose_name = "Sale Receipt"
+        verbose_name_plural = "Sale Receipts"
+        indexes = [
+            models.Index(fields=["receipt_no"]),
+            models.Index(fields=["sale_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.receipt_no} - {self.customer_name}"
+
+    def save(self, *args, **kwargs):
+        if not self.receipt_no:
+            with transaction.atomic():
+                prefix = f"INV-{timezone.localdate():%Y%m}"
+                last_receipt = (
+                    SaleReceipt.objects.select_for_update()
+                    .filter(receipt_no__startswith=prefix)
+                    .order_by("-receipt_no")
+                    .only("receipt_no")
+                    .first()
+                )
+                next_number = 1
+                if last_receipt and last_receipt.receipt_no:
+                    try:
+                        next_number = int(last_receipt.receipt_no.split("-")[-1]) + 1
+                    except (ValueError, IndexError):
+                        next_number = SaleReceipt.objects.filter(receipt_no__startswith=prefix).count() + 1
+                self.receipt_no = f"{prefix}-{next_number:04d}"
+        super().save(*args, **kwargs)
+
+    def refresh_totals(self, save=True):
+        totals = self.lines.aggregate(
+            subtotal=Sum("line_subtotal", default=Decimal("0.00")),
+            gst=Sum("line_gst_amount", default=Decimal("0.00")),
+            grand=Sum("line_total", default=Decimal("0.00")),
+        )
+        self.subtotal = totals["subtotal"] or Decimal("0.00")
+        self.gst_amount = totals["gst"] or Decimal("0.00")
+        self.grand_total = totals["grand"] or Decimal("0.00")
+        if save:
+            self.save(update_fields=["subtotal", "gst_amount", "grand_total"])
+        return self
+
+
+class SaleReceiptLine(models.Model):
+    """Individual sold line items for a receipt."""
+
+    receipt = models.ForeignKey(
+        SaleReceipt, on_delete=models.CASCADE, related_name="lines"
+    )
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.PROTECT,
+        related_name="sales_lines",
+    )
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
+    purchase_price_snapshot = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="Purchase cost per unit frozen at time of sale",
+    )
+    gst_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+    line_subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    line_gst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    line_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+
+    class Meta:
+        ordering = ["pk"]
+        verbose_name = "Sale Receipt Line"
+        verbose_name_plural = "Sale Receipt Lines"
+
+    def __str__(self):
+        return f"{self.receipt.receipt_no} - {self.item.name}"
+
+    def save(self, *args, **kwargs):
+        self.line_subtotal = Decimal(self.quantity) * (self.unit_price or Decimal("0.00"))
+        self.line_gst_amount = self.line_subtotal * (self.gst_percentage or Decimal("0.00")) / Decimal("100.00")
+        self.line_total = self.line_subtotal + self.line_gst_amount
+        super().save(*args, **kwargs)

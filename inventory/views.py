@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
+from django.db.models import Prefetch
 from django.db.models import Q, Sum, F, Count, DecimalField
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -18,6 +19,8 @@ from inventory.models import (
     Category,
     Supplier,
     Purchase,
+    SaleReceipt,
+    SaleReceiptLine,
     Inventory,
     StockMovement,
     LowStockAlert,
@@ -29,10 +32,13 @@ from inventory.forms import (
     SupplierForm,
     PurchaseForm,
     PurchaseHistoryFilterForm,
+    SaleReceiptForm,
+    SaleReceiptLineFormSet,
 )
 from inventory.services import (
     build_item_insight_payload,
     create_inventory_entry,
+    create_sales_receipt,
     record_stock_movement,
 )
 
@@ -57,6 +63,7 @@ def inventory_dashboard(request):
         "total_categories": Category.objects.filter(is_active=True).count(),
         "total_suppliers": Supplier.objects.filter(is_active=True).count(),
         "total_purchases": Purchase.objects.count(),
+        "total_sales_receipts": SaleReceipt.objects.count(),
         "low_stock_items": low_stock_items,
         "overstocked_items": overstocked_items,
         "healthy_stock_items": max(total_items - low_stock_items - overstocked_items, 0),
@@ -612,6 +619,107 @@ def add_stock(request):
 def add_purchase(request):
     """Backward-compatible purchase entry route."""
     return add_stock(request)
+
+
+# ==================== SALES MANAGEMENT ====================
+
+
+@login_required
+def add_sale(request):
+    """Record a customer sale and generate a receipt."""
+    if request.method == "POST":
+        form = SaleReceiptForm(request.POST)
+        formset = SaleReceiptLineFormSet(request.POST, prefix="lines")
+        if form.is_valid() and formset.is_valid():
+            try:
+                receipt = create_sales_receipt(form, formset, request.user)
+                messages.success(request, f"Sale recorded successfully. Receipt {receipt.receipt_no} is ready.")
+                return redirect("inventory:sale-receipt-detail", pk=receipt.pk)
+            except Exception as exc:
+                form.add_error(None, f"Unable to record sale: {exc}")
+        else:
+            messages.error(request, "Please correct the highlighted sale fields and try again.")
+    else:
+        form = SaleReceiptForm(initial={"sale_date": timezone.localdate(), "payment_mode": "Cash"})
+        formset = SaleReceiptLineFormSet(prefix="lines")
+
+    context = {
+        "form": form,
+        "formset": formset,
+        "page_title": "Record Sale",
+        "active_page": "inventory_sales",
+        "sale_items": list(
+            Item.objects.filter(is_active=True)
+            .select_related("category")
+            .values("id", "name", "category__name", "current_stock", "selling_price", "gst_percentage")
+        ),
+    }
+    return render(request, "inventory/add_sale.html", context)
+
+
+@login_required
+def sale_receipt_detail(request, pk):
+    """Show printable customer sale receipt."""
+    receipt = get_object_or_404(
+        SaleReceipt.objects.prefetch_related("lines__item"),
+        pk=pk,
+    )
+    context = {
+        "receipt": receipt,
+        "page_title": f"Receipt {receipt.receipt_no}",
+        "active_page": "inventory_sales",
+    }
+    return render(request, "inventory/sale_receipt_detail.html", context)
+
+
+class SaleReceiptListView(LoginRequiredMixin, ListView):
+    """List customer sales receipts with filtering and reprint actions."""
+
+    model = SaleReceipt
+    template_name = "inventory/sale_history.html"
+    context_object_name = "receipts"
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = SaleReceipt.objects.prefetch_related(
+            Prefetch("lines", queryset=SaleReceiptLine.objects.select_related("item"))
+        ).order_by("-sale_date", "-created_at")
+
+        search_query = self.request.GET.get("search", "").strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(receipt_no__icontains=search_query)
+                | Q(customer_name__icontains=search_query)
+                | Q(customer_phone__icontains=search_query)
+                | Q(lines__item__name__icontains=search_query)
+            ).distinct()
+
+        payment_mode = self.request.GET.get("payment_mode")
+        if payment_mode:
+            queryset = queryset.filter(payment_mode=payment_mode)
+
+        start_date = self.request.GET.get("start_date")
+        if start_date:
+            queryset = queryset.filter(sale_date__gte=start_date)
+
+        end_date = self.request.GET.get("end_date")
+        if end_date:
+            queryset = queryset.filter(sale_date__lte=end_date)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        filtered_queryset = self.get_queryset()
+        context["page_title"] = "Sales History"
+        context["active_page"] = "inventory_sales_history"
+        context["payment_modes"] = ["Cash", "UPI", "Card", "Bank Transfer"]
+        context["sales_totals"] = filtered_queryset.aggregate(
+            total_receipts=Count("id"),
+            total_sales=Sum("grand_total", default=Decimal("0.00")),
+            total_gst=Sum("gst_amount", default=Decimal("0.00")),
+        )
+        return context
 
 
 class PurchaseListView(LoginRequiredMixin, ListView):

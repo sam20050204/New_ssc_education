@@ -18,13 +18,10 @@
                 <a href="{% url 'attendance_reports' %}?report_type=student" class="btn-filter {% if report_type == 'student' %}active{% endif %}">
                     👤 Student Report
                 </a>
-                <a href="{% url 'attendance_reports' %}?report_type=daily" class="btn-filter {% if report_type == 'daily' %}active{% endif %}">
-                    📅 Daily Report
-                </a>
                 <a href="{% url 'attendance_reports' %}?report_type=batch" class="btn-filter {% if report_type == 'batch' %}active{% endif %}">
                     📚 Batch Report
                 </a>
-                <a href="{% url 'export_attendance_report' %}?report_type={{ report_type }}" class="btn-filter">
+                <a href="{% url 'export_attendance_report' %}" class="btn-filter">
                     📥 Export Excel
                 </a>
             </div>
@@ -38,83 +35,155 @@
     <!-- Student Attendance Report -->
     {% if report_type == 'student' %}
     <div class="report-section">
+        <form method="get" class="attendance-report-controls" id="studentAttendanceFilterForm">
+            <input type="hidden" name="report_type" value="student">
+            <div class="attendance-filter-field">
+                <label for="studentBatchFilter">Admission Batch</label>
+                <select id="studentBatchFilter" name="batch" class="attendance-filter-input" onchange="this.form.submit()">
+                    <option value="">All Batches</option>
+                    <option value="Not Assigned" {% if selected_batch == 'Not Assigned' %}selected{% endif %}>Not Assigned</option>
+                    {% for batch in available_batches %}
+                        <option value="{{ batch }}" {% if selected_batch == batch %}selected{% endif %}>{{ batch }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="attendance-filter-field">
+                <label for="studentTheoryTimeFilter">Theory Timing</label>
+                <select id="studentTheoryTimeFilter" name="theory_time" class="attendance-filter-input" onchange="this.form.submit()">
+                    <option value="">All Theory Timings</option>
+                    {% for slot, display in available_theory_times %}
+                        <option value="{{ slot }}" {% if selected_theory_time == slot %}selected{% endif %}>{{ display }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="attendance-filter-field">
+                <label for="studentPracticalTimeFilter">Practical Timing</label>
+                <select id="studentPracticalTimeFilter" name="practical_time" class="attendance-filter-input" onchange="this.form.submit()">
+                    <option value="">All Practical Timings</option>
+                    {% for slot, display in available_practical_times %}
+                        <option value="{{ slot }}" {% if selected_practical_time == slot %}selected{% endif %}>{{ display }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="attendance-filter-field">
+                <label for="studentSortFilter">Sort By</label>
+                <select id="studentSortFilter" name="sort" class="attendance-filter-input" onchange="this.form.submit()">
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Student Name</option>
+                    <option value="batch" {% if sort_by == 'batch' %}selected{% endif %}>Admission Batch</option>
+                    <option value="theory_time" {% if sort_by == 'theory_time' %}selected{% endif %}>Theory Timing</option>
+                    <option value="practical_time" {% if sort_by == 'practical_time' %}selected{% endif %}>Practical Timing</option>
+                    <option value="fees_pending" {% if sort_by == 'fees_pending' %}selected{% endif %}>Fees Pending</option>
+                </select>
+            </div>
+            {% if selected_batch or selected_theory_time or selected_practical_time or sort_by != 'name' %}
+                <a href="{% url 'attendance_reports' %}?report_type=student" class="attendance-clear-filter">Clear Filters</a>
+            {% endif %}
+        </form>
+
         <div class="report-toolbar">
+            <div class="attendance-format-note">
+                <strong>Format:</strong> Sr. No, Student Name, Mobile No, then date-wise attendance.
+                <span class="legend-mini theory">T</span> Theory
+                <span class="legend-mini practical">P</span> Practical
+                <span class="legend-mini absent">A</span> Absent
+            </div>
             <div class="search-box">
-                <input type="text" id="studentReportSearch" class="search-input" placeholder="Search student by name..." oninput="filterAttendanceRows('studentReportSearch', 'studentReportTableBody', 9)">
+                <input type="text" id="studentReportSearch" class="search-input" placeholder="Search by name or mobile..." oninput="filterAttendanceRows('studentReportSearch', 'studentReportTableBody', {{ attendance_colspan }})">
             </div>
         </div>
-        <div class="table-container">
-            <table class="data-table">
+        <div class="attendance-sheet-container">
+            <table class="attendance-sheet-table">
                 <thead>
-                    <tr>
-                        <th>Student Name</th>
-                        <th class="text-center">Mobile No</th>
-                        <th class="text-center">Total Days</th>
-                        <th class="text-center">Theory Present</th>
-                        <th class="text-center">Theory Absent</th>
-                        <th class="text-center">Practical Present</th>
-                        <th class="text-center">Practical Absent</th>
-                        <th class="text-center">Attendance %</th>
-                        <th class="text-center">Theory &#128197;</th>
-                        <th class="text-center">Practical &#128197;</th>
+                    <tr class="sheet-date-header-row">
+                        <th class="sheet-sticky sheet-sr-col" rowspan="2">Sr. No</th>
+                        <th class="sheet-sticky sheet-name-col" rowspan="2">Student Name</th>
+                        <th class="sheet-sticky sheet-mobile-col" rowspan="2">Mobile No</th>
+                        {% for attendance_date in attendance_dates %}
+                            <th class="sheet-date-col" colspan="2">{{ attendance_date|date:"d-M" }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr class="sheet-session-header-row">
+                        {% for attendance_date in attendance_dates %}
+                            <th class="sheet-session-col sheet-theory-col">Theory</th>
+                            <th class="sheet-session-col sheet-practical-col">Practical</th>
+                        {% endfor %}
                     </tr>
                 </thead>
                 <tbody id="studentReportTableBody">
                     {% for report in student_reports %}
-                    <tr>
-                        <td><strong>{{ report.student.full_name }}</strong></td>
-                        <td class="text-center">{{ report.student.mobile_own }}</td>
-                        <td class="text-center">
-                            <span class="badge badge-secondary">{{ report.total }}</span>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge badge-success">{{ report.theory_present }}</span>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge badge-danger">{{ report.theory_absent }}</span>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge badge-success">{{ report.practical_present }}</span>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge badge-danger">{{ report.practical_absent }}</span>
-                        </td>
-                        <td class="text-center">
-                            <div class="percentage-bar">
-                                <div class="percentage-fill" style="width: {{ report.percentage }}%"></div>
-                                <span class="percentage-text">{{ report.percentage }}%</span>
-                            </div>
-                        </td>
-                        <td class="text-center">
+                    <tr class="{% if report.has_fee_balance %}student-fee-pending-row{% endif %}">
+                        <td class="sheet-sticky sheet-sr-col">{{ forloop.counter }}</td>
+                        <td class="sheet-sticky sheet-name-col">
                             <button
                                 type="button"
-                                class="calendar-trigger"
-                                onclick="openAttendanceModal('{{ report.student.full_name|escapejs }}', 'Theory', this)"
-                                data-days="{% for item in report.theory_days %}{{ item.date|date:'d M Y' }}|{{ item.status|default:'' }}{% if not forloop.last %};{% endif %}{% endfor %}"
-                                title="Open theory attendance calendar">
-                                &#128197;
+                                class="sheet-student-link {% if report.has_fee_balance %}fee-pending-link{% endif %}"
+                                onclick="openAttendanceStudentDetail({{ report.student.id }})"
+                                title="{% if report.has_fee_balance %}Fees pending: Rs. {{ report.remaining_fees|floatformat:2 }}{% else %}View student details{% endif %}">
+                                {{ report.student.full_name }}
                             </button>
+                            {% if report.has_fee_balance %}
+                                <span class="fee-pending-chip">Fees Pending</span>
+                            {% endif %}
                         </td>
-                        <td class="text-center">
-                            <button
-                                type="button"
-                                class="calendar-trigger"
-                                onclick="openAttendanceModal('{{ report.student.full_name|escapejs }}', 'Practical', this)"
-                                data-days="{% for item in report.practical_days %}{{ item.date|date:'d M Y' }}|{{ item.status|default:'' }}{% if not forloop.last %};{% endif %}{% endfor %}"
-                                title="Open practical attendance calendar">
-                                &#128197;
-                            </button>
-                        </td>
+                        <td class="sheet-sticky sheet-mobile-col">{{ report.mobile_no }}</td>
+                        {% for item in report.attendance_pairs %}
+                            <td class="sheet-status-cell sheet-theory-cell status-{{ item.theory_status|default:'blank'|lower }}">
+                                {{ item.theory_status|default:"" }}
+                            </td>
+                            <td class="sheet-status-cell sheet-practical-cell status-{{ item.practical_status|default:'blank'|lower }}">
+                                {{ item.practical_status|default:"" }}
+                            </td>
+                        {% empty %}
+                            <td colspan="2" class="sheet-status-cell">No attendance dates</td>
+                        {% endfor %}
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" style="text-align: center; padding: 40px; color: #666;">
+                        <td colspan="{{ attendance_colspan }}" style="text-align: center; padding: 40px; color: #666;">
                             No attendance records found.
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div id="attendanceStudentDetailModal" class="attendance-modal" onclick="closeAttendanceStudentDetailModal(event)">
+        <div class="attendance-modal-content student-info-modal-content" onclick="event.stopPropagation()">
+            <div class="attendance-modal-header">
+                <div>
+                    <h3 id="attendanceStudentDetailTitle">Student Details</h3>
+                    <p id="attendanceStudentDetailSubtitle" class="attendance-modal-subtitle"></p>
+                </div>
+                <button type="button" class="attendance-modal-close" onclick="closeAttendanceStudentDetailModal()">&times;</button>
+            </div>
+            <div class="student-detail-layout">
+                <div class="student-detail-photo-wrap">
+                    <img id="attendanceStudentDetailPhoto" src="" alt="Student Photo">
+                </div>
+                <div class="student-detail-grid">
+                    <div class="student-detail-item"><span>Full Name</span><strong id="attendanceDetailFullName">-</strong></div>
+                    <div class="student-detail-item"><span>Mobile</span><strong id="attendanceDetailMobile">-</strong></div>
+                    <div class="student-detail-item"><span>Parent Mobile</span><strong id="attendanceDetailParentMobile">-</strong></div>
+                    <div class="student-detail-item"><span>Course</span><strong id="attendanceDetailCourse">-</strong></div>
+                    <div class="student-detail-item"><span>Batch</span><strong id="attendanceDetailBatch">-</strong></div>
+                    <div class="student-detail-item"><span>Admission Date</span><strong id="attendanceDetailAdmissionDate">-</strong></div>
+                    <div class="student-detail-item"><span>Total Fees</span><strong id="attendanceDetailTotalFees">-</strong></div>
+                    <div class="student-detail-item"><span>Paid Fees</span><strong id="attendanceDetailPaidFees">-</strong></div>
+                    <div class="student-detail-item"><span>Remaining Fees</span><strong id="attendanceDetailRemainingFees">-</strong></div>
+                    <div class="student-detail-item student-detail-item-wide"><span>Address</span><strong id="attendanceDetailAddress">-</strong></div>
+                </div>
+            </div>
+            <div class="attendance-payment-section">
+                <div class="attendance-payment-header">
+                    <h4>Fees Payment Details</h4>
+                    <span id="attendanceLastPayment" class="last-payment-pill">Last paid: -</span>
+                </div>
+                <div id="attendancePaymentHistory" class="attendance-payment-history">
+                    <p class="finance-modal-empty">Loading payment history...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -133,100 +202,6 @@
                 <span class="legend-item"><span class="legend-dot status-not-taken"></span> Not Taken</span>
             </div>
             <div id="attendanceModalDays" class="attendance-calendar"></div>
-        </div>
-    </div>
-
-    <!-- Daily Attendance Report -->
-    {% elif report_type == 'daily' %}
-    <div class="report-section">
-        <!-- Date Selector -->
-        <div class="date-selector">
-            <form method="get" class="date-form" id="dailyReportForm">
-                <input type="hidden" name="report_type" value="daily">
-                <input type="date" name="date" id="dailyDateInput" class="form-control" value="{{ report_date|date:'Y-m-d' }}" onchange="submitDateForm('dailyReportForm', 'daily')">
-            </form>
-        </div>
-
-        <div class="report-toolbar">
-            <div class="search-box">
-                <input type="text" id="dailyReportSearch" class="search-input" placeholder="Search student by name..." oninput="filterAttendanceRows('dailyReportSearch', 'dailyReportTableBody', 4)">
-            </div>
-        </div>
-
-        <!-- Summary Cards -->
-        <div class="summary-cards">
-            <div class="summary-card card-primary">
-                <div class="card-icon">👥</div>
-                <div class="card-content">
-                    <h6>Total Students</h6>
-                    <p class="card-number">{{ total_students }}</p>
-                </div>
-            </div>
-            <div class="summary-card card-success">
-                <div class="card-icon">✅</div>
-                <div class="card-content">
-                    <h6>Present</h6>
-                    <p class="card-number">{{ present_count }}</p>
-                </div>
-            </div>
-            <div class="summary-card card-danger">
-                <div class="card-icon">❌</div>
-                <div class="card-content">
-                    <h6>Absent</h6>
-                    <p class="card-number">{{ absent_count }}</p>
-                </div>
-            </div>
-            <div class="summary-card card-info">
-                <div class="card-icon">📊</div>
-                <div class="card-content">
-                    <h6>Attendance Rate</h6>
-                    <p class="card-number">
-                        {% if total_students > 0 %}
-                            {{ percentage|floatformat:1 }}%
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Attendance Table -->
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Student Name</th>
-                        <th class="text-center">Theory</th>
-                        <th class="text-center">Practical</th>
-                        <th class="text-center">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody id="dailyReportTableBody">
-                    {% for record in attendance_records %}
-                    <tr>
-                        <td><strong>{{ record.student.full_name }}</strong></td>
-                        <td class="text-center">
-                            <span class="badge {% if record.theory_attendance == 'P' %}badge-success{% else %}badge-danger{% endif %}">
-                                {{ record.get_theory_attendance_display }}
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge {% if record.practical_attendance == 'P' %}badge-success{% else %}badge-danger{% endif %}">
-                                {{ record.get_practical_attendance_display }}
-                            </span>
-                        </td>
-                        <td>{{ record.remarks|default:"--" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; padding: 40px; color: #666;">
-                            No attendance records for this date.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
         </div>
     </div>
 
@@ -306,6 +281,7 @@
                 <table class="data-table batch-students-table">
                     <thead>
                         <tr>
+                            <th class="text-center">Sr. No</th>
                             <th>Student Name</th>
                             <th>Mobile Number</th>
                             <th class="text-center">Status</th>
@@ -351,6 +327,71 @@
 <style>
     .report-section {
         margin-bottom: 40px;
+    }
+
+    .attendance-report-controls {
+        display: flex;
+        align-items: end;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .attendance-filter-field {
+        display: grid;
+        gap: 6px;
+        min-width: 210px;
+    }
+
+    .attendance-filter-field label {
+        color: #475569;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .attendance-filter-input {
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .attendance-filter-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12);
+    }
+
+    .attendance-clear-filter {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #4f46e5;
+        font-size: 13px;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+    .attendance-clear-filter:hover {
+        border-color: #667eea;
+        background: #eef2ff;
     }
 
     .filter-buttons {
@@ -622,12 +663,306 @@
 
     .report-toolbar {
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
         margin-bottom: 14px;
+    }
+
+    .attendance-format-note {
+        color: #334155;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .legend-mini {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        margin-left: 10px;
+        margin-right: 4px;
+        border: 1px solid #111827;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .legend-mini.theory {
+        background: #e0e7ff;
+        color: #111827;
+    }
+
+    .legend-mini.practical {
+        background: #f3e8ff;
+        color: #111827;
+    }
+
+    .legend-mini.absent {
+        background: #f87171;
+        color: #111827;
     }
 
     .search-box {
         width: min(360px, 100%);
+    }
+
+    .attendance-sheet-container {
+        background: #ffffff;
+        border: 1px solid #dbe3ef;
+        border-radius: 14px;
+        overflow: auto;
+        max-height: calc(100vh - 220px);
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.10);
+    }
+
+    .attendance-sheet-table {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .attendance-sheet-table th,
+    .attendance-sheet-table td {
+        border: 1px solid #c9d3e1;
+        padding: 8px 10px;
+        height: 36px;
+        white-space: nowrap;
+    }
+
+    .attendance-sheet-table thead th {
+        position: sticky;
+        z-index: 30;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: #ffffff;
+        font-weight: 800;
+        text-align: center;
+        box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.18);
+    }
+
+    .attendance-sheet-table .sheet-date-header-row th {
+        top: 0;
+    }
+
+    .attendance-sheet-table .sheet-session-header-row th {
+        top: 37px;
+        z-index: 29;
+        font-size: 12px;
+    }
+
+    .attendance-sheet-table .sheet-session-header-row .sheet-theory-col {
+        background: #e0e7ff;
+        color: #312e81;
+    }
+
+    .attendance-sheet-table .sheet-session-header-row .sheet-practical-col {
+        background: #f3e8ff;
+        color: #581c87;
+    }
+
+    .attendance-sheet-table .sheet-sticky {
+        position: sticky;
+        background: #ffffff;
+        z-index: 20;
+        box-shadow: 1px 0 0 #c9d3e1;
+    }
+
+    .attendance-sheet-table thead .sheet-sticky {
+        z-index: 40;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: #ffffff;
+    }
+
+    .sheet-sr-col {
+        left: 0;
+        min-width: 70px;
+        text-align: center;
+        font-weight: 800;
+    }
+
+    .sheet-name-col {
+        left: 70px;
+        min-width: 250px;
+        max-width: 320px;
+        text-align: left;
+    }
+
+    .sheet-mobile-col {
+        left: 320px;
+        min-width: 120px;
+        text-align: left;
+    }
+
+    .sheet-date-col {
+        min-width: 126px;
+    }
+
+    .sheet-session-col {
+        min-width: 63px;
+    }
+
+    .sheet-status-cell {
+        text-align: center;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .sheet-theory-cell {
+        background: #eef2ff;
+    }
+
+    .sheet-practical-cell {
+        background: #faf5ff;
+    }
+
+    .sheet-status-cell.status-a {
+        background: #ff6b6b;
+    }
+
+    .sheet-status-cell.status-p {
+        color: #111827;
+    }
+
+    .sheet-status-cell.status-l {
+        background: #fde68a;
+    }
+
+    .sheet-status-cell.status-h {
+        background: #bfdbfe;
+    }
+
+    .attendance-sheet-table tbody tr:hover td {
+        background: #eef6ff;
+    }
+
+    .attendance-sheet-table tbody tr:hover .status-a {
+        background: #fb7185;
+    }
+
+    .attendance-sheet-table tbody tr:hover .sheet-theory-cell:not(.status-a):not(.status-l):not(.status-h) {
+        background: #e0e7ff;
+    }
+
+    .attendance-sheet-table tbody tr:hover .sheet-practical-cell:not(.status-a):not(.status-l):not(.status-h) {
+        background: #f3e8ff;
+    }
+
+    .student-fee-pending-row .sheet-sr-col,
+    .student-fee-pending-row .sheet-name-col,
+    .student-fee-pending-row .sheet-mobile-col {
+        background: #fff1f2;
+    }
+
+    .student-fee-pending-row .sheet-name-col {
+        box-shadow: inset 4px 0 0 #ef4444, 1px 0 0 #c9d3e1;
+    }
+
+    .sheet-student-link {
+        display: inline-flex;
+        align-items: center;
+        border: 0;
+        background: transparent;
+        color: #1d4ed8;
+        font: inherit;
+        font-weight: 800;
+        padding: 0;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .sheet-student-link:hover {
+        color: #0f172a;
+        text-decoration: underline;
+    }
+
+    .sheet-student-link.fee-pending-link {
+        color: #b91c1c;
+    }
+
+    .fee-pending-chip {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 8px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #fee2e2;
+        color: #991b1b;
+        font-size: 11px;
+        font-weight: 800;
+        vertical-align: middle;
+    }
+
+    .attendance-payment-section {
+        margin-top: 22px;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 18px;
+    }
+
+    .attendance-payment-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .attendance-payment-header h4 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 16px;
+    }
+
+    .last-payment-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3730a3;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .attendance-payment-history {
+        display: grid;
+        gap: 10px;
+        max-height: 260px;
+        overflow: auto;
+        padding-right: 4px;
+    }
+
+    .attendance-payment-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px 14px;
+        padding: 12px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #f8fafc;
+    }
+
+    .attendance-payment-row strong {
+        color: #0f172a;
+        font-size: 14px;
+    }
+
+    .attendance-payment-row span {
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .attendance-payment-amount {
+        color: #166534;
+        font-weight: 900;
+        text-align: right;
+    }
+
+    .attendance-payment-meta {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
     }
 
     .search-input {
@@ -984,6 +1319,19 @@
             flex-direction: column;
         }
 
+        .report-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .attendance-format-note {
+            order: 2;
+        }
+
+        .search-box {
+            width: 100%;
+        }
+
         .btn-filter {
             width: 100%;
         }
@@ -1028,6 +1376,9 @@
 
     function closeAttendanceModal(event) {
         const modal = document.getElementById('attendanceModal');
+        if (!modal) {
+            return;
+        }
 
         if (event && event.target && event.target !== modal) {
             return;
@@ -1066,13 +1417,13 @@
         let visibleCount = 0;
 
         rows.forEach((row) => {
-            const firstCell = row.querySelector('td');
-            if (!firstCell) {
+            const cells = Array.from(row.querySelectorAll('td'));
+            if (!cells.length) {
                 return;
             }
 
-            const studentName = firstCell.textContent.trim().toLowerCase();
-            const matches = searchValue === '' || studentName.includes(searchValue);
+            const searchableText = cells.slice(0, 3).map((cell) => cell.textContent.trim().toLowerCase()).join(' ');
+            const matches = searchValue === '' || searchableText.includes(searchValue);
             row.style.display = matches ? '' : 'none';
 
             if (matches) {
@@ -1115,6 +1466,9 @@
 
     function closeBatchStudentsModal(event) {
         const modal = document.getElementById('batchStudentsModal');
+        if (!modal) {
+            return;
+        }
 
         if (event && event.target && event.target !== modal) {
             return;
@@ -1141,16 +1495,17 @@
         tbody.innerHTML = '';
 
         if (!students.length) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 32px; color:#666;">No students found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 32px; color:#666;">No students found.</td></tr>';
             return;
         }
 
-        students.forEach((student) => {
+        students.forEach((student, index) => {
             const row = document.createElement('tr');
             const statusLabel = student.status === 'P' ? 'Present' : 'Absent';
             const statusClass = student.status === 'P' ? 'present' : 'absent';
 
             row.innerHTML = `
+                <td class="text-center">${index + 1}</td>
                 <td><button type="button" class="student-name-link" onclick="openBatchStudentDetail(${student.id})">${escapeHtml(student.full_name || '-')}</button></td>
                 <td>${escapeHtml(student.mobile_own || '-')}</td>
                 <td class="text-center"><span class="status-pill ${statusClass}">${statusLabel}</span></td>
@@ -1221,6 +1576,9 @@
 
     function closeBatchStudentDetailModal(event) {
         const modal = document.getElementById('batchStudentDetailModal');
+        if (!modal) {
+            return;
+        }
 
         if (event && event.target && event.target !== modal) {
             return;
@@ -1254,6 +1612,137 @@
             .replace(/'/g, '&#39;');
     }
 
+    async function openAttendanceStudentDetail(studentId) {
+        const modal = document.getElementById('attendanceStudentDetailModal');
+        if (!modal) {
+            return;
+        }
+
+        setAttendanceDetailField('attendanceDetailFullName', 'Loading...');
+        setAttendanceDetailField('attendanceDetailMobile', '-');
+        setAttendanceDetailField('attendanceDetailParentMobile', '-');
+        setAttendanceDetailField('attendanceDetailCourse', '-');
+        setAttendanceDetailField('attendanceDetailBatch', '-');
+        setAttendanceDetailField('attendanceDetailAdmissionDate', '-');
+        setAttendanceDetailField('attendanceDetailTotalFees', '-');
+        setAttendanceDetailField('attendanceDetailPaidFees', '-');
+        setAttendanceDetailField('attendanceDetailRemainingFees', '-');
+        setAttendanceDetailField('attendanceDetailAddress', '-');
+        document.getElementById('attendanceStudentDetailTitle').textContent = 'Student Details';
+        document.getElementById('attendanceStudentDetailSubtitle').textContent = '';
+        document.getElementById('attendanceStudentDetailPhoto').src = '';
+        renderAttendancePayments([]);
+        setAttendanceLastPayment(null);
+
+        modal.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+
+        try {
+            const response = await fetch(`/admission/${studentId}/detail/`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Unable to load student details');
+            }
+
+            const data = await response.json();
+            const address = [data.address, data.city, data.tehsil_block, data.district, data.pin_code].filter(Boolean).join(', ');
+
+            document.getElementById('attendanceStudentDetailTitle').textContent = data.full_name || 'Student Details';
+            document.getElementById('attendanceStudentDetailSubtitle').textContent = data.course || data.custom_course || '';
+            setAttendanceDetailField('attendanceDetailFullName', data.full_name || '-');
+            setAttendanceDetailField('attendanceDetailMobile', data.mobile_own || '-');
+            setAttendanceDetailField('attendanceDetailParentMobile', data.parent_mobile || '-');
+            setAttendanceDetailField('attendanceDetailCourse', data.course || data.custom_course || '-');
+            setAttendanceDetailField('attendanceDetailBatch', data.batch_display || '-');
+            setAttendanceDetailField('attendanceDetailAdmissionDate', data.admission_date || '-');
+            setAttendanceDetailField('attendanceDetailTotalFees', formatMoney(data.total_fees));
+            setAttendanceDetailField('attendanceDetailPaidFees', formatMoney(data.paid_fees));
+            setAttendanceDetailField('attendanceDetailRemainingFees', formatMoney(data.remaining_fees));
+            setAttendanceDetailField('attendanceDetailAddress', address || '-');
+            renderAttendancePayments(data.payment_history || []);
+            setAttendanceLastPayment(data.payment_history || []);
+
+            const photo = document.getElementById('attendanceStudentDetailPhoto');
+            photo.src = data.photo ? data.photo : buildInitialAvatar((data.full_name || 'S').charAt(0).toUpperCase());
+        } catch (error) {
+            setAttendanceDetailField('attendanceDetailFullName', 'Error loading student');
+            document.getElementById('attendanceStudentDetailSubtitle').textContent = error.message;
+            document.getElementById('attendanceStudentDetailPhoto').src = buildInitialAvatar('E');
+            renderAttendancePayments([]);
+            setAttendanceLastPayment(null);
+        }
+    }
+
+    function closeAttendanceStudentDetailModal(event) {
+        const modal = document.getElementById('attendanceStudentDetailModal');
+        if (!modal) {
+            return;
+        }
+
+        if (event && event.target && event.target !== modal) {
+            return;
+        }
+
+        modal.classList.remove('is-open');
+        document.body.style.overflow = '';
+    }
+
+    function setAttendanceDetailField(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value || '-';
+        }
+    }
+
+    function setAttendanceLastPayment(payments) {
+        const element = document.getElementById('attendanceLastPayment');
+        if (!element) {
+            return;
+        }
+
+        if (!Array.isArray(payments) || payments.length === 0) {
+            element.textContent = 'Last paid: No payment';
+            return;
+        }
+
+        const lastPayment = payments[payments.length - 1];
+        element.textContent = `Last paid: ${lastPayment.payment_date || '-'} (${formatMoney(lastPayment.amount)})`;
+    }
+
+    function renderAttendancePayments(payments) {
+        const container = document.getElementById('attendancePaymentHistory');
+        if (!container) {
+            return;
+        }
+
+        if (!Array.isArray(payments) || payments.length === 0) {
+            container.innerHTML = '<p class="finance-modal-empty">No payment history available.</p>';
+            return;
+        }
+
+        container.innerHTML = payments.map((payment, index) => {
+            return `
+                <div class="attendance-payment-row">
+                    <div>
+                        <strong>Installment ${index + 1}</strong>
+                        <span>${escapeHtml(payment.payment_date || '-')}</span>
+                    </div>
+                    <div class="attendance-payment-amount">${escapeHtml(formatMoney(payment.amount))}</div>
+                    <div class="attendance-payment-meta">
+                        <span>Receipt: ${escapeHtml(payment.receipt_no || '-')}</span>
+                        <span>Mode: ${escapeHtml(payment.payment_mode || '-')}</span>
+                        <span>Remaining after: ${escapeHtml(formatMoney(payment.remaining_after))}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
     // Submit date form without closing menu
     function submitDateForm(formId, reportType) {
         const form = document.getElementById(formId);
@@ -1276,6 +1765,9 @@
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             closeAttendanceModal();
+            closeAttendanceStudentDetailModal();
+            closeBatchStudentsModal();
+            closeBatchStudentDetailModal();
         }
     });
 </script>

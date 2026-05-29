@@ -1,0 +1,321 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Record Sale{% endblock %}
+
+{% block content %}
+{{ block.super }}
+
+{{ sale_items|json_script:"sale-items-data" }}
+
+<div class="inventory-container">
+    <div class="form-workspace">
+        <div class="form-hero">
+            <section class="form-hero-primary">
+                <h2>Record Sale</h2>
+                <p>Create a customer sale with one or more inventory items and generate a receipt immediately after saving.</p>
+                <div class="hero-pill-row">
+                    <span class="hero-pill"><i class="fas fa-cash-register"></i> Sales entry</span>
+                    <span class="hero-pill"><i class="fas fa-receipt"></i> Receipt output</span>
+                    <span class="hero-pill"><i class="fas fa-boxes-stacked"></i> Auto stock reduction</span>
+                </div>
+            </section>
+            <aside class="form-hero-side">
+                <h3>Sale flow</h3>
+                <div class="mini-checklist">
+                    <div><i class="fas fa-circle-check"></i><span>Select items from current inventory only.</span></div>
+                    <div><i class="fas fa-circle-check"></i><span>Unit price auto-loads from the item and can be adjusted before save.</span></div>
+                    <div><i class="fas fa-circle-check"></i><span>A printable receipt opens after the sale is recorded.</span></div>
+                </div>
+            </aside>
+        </div>
+
+        {% if form.non_field_errors or formset.non_form_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+            {% for error in formset.non_form_errors %}<div>{{ error }}</div>{% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <form method="post" class="form-layout">
+            {% csrf_token %}
+            {{ formset.management_form }}
+
+            <div class="form-stack">
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Customer Details</h4>
+                                <p>Store the customer information printed on the receipt.</p>
+                            </div>
+                            <span class="section-badge">A</span>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label for="{{ form.customer_name.id_for_label }}" class="form-label">Customer Name</label>
+                                {{ form.customer_name }}
+                                {% if form.customer_name.errors %}<div class="invalid-feedback d-block">{{ form.customer_name.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.customer_phone.id_for_label }}" class="form-label">Phone</label>
+                                {{ form.customer_phone }}
+                                {% if form.customer_phone.errors %}<div class="invalid-feedback d-block">{{ form.customer_phone.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="field-span-2">
+                                <label for="{{ form.customer_address.id_for_label }}" class="form-label">Address</label>
+                                {{ form.customer_address }}
+                                {% if form.customer_address.errors %}<div class="invalid-feedback d-block">{{ form.customer_address.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.sale_date.id_for_label }}" class="form-label">Sale Date</label>
+                                {{ form.sale_date }}
+                                {% if form.sale_date.errors %}<div class="invalid-feedback d-block">{{ form.sale_date.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.payment_mode.id_for_label }}" class="form-label">Payment Mode</label>
+                                {{ form.payment_mode }}
+                                {% if form.payment_mode.errors %}<div class="invalid-feedback d-block">{{ form.payment_mode.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="field-span-2">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                                {{ form.notes }}
+                                {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Sale Items</h4>
+                                <p>Add one or more products to this receipt.</p>
+                            </div>
+                            <span class="section-badge">B</span>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table" id="sale-lines-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Available</th>
+                                        <th>Qty</th>
+                                        <th>Unit Price</th>
+                                        <th>GST</th>
+                                        <th>Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sale-lines-body">
+                                    {% for line_form in formset %}
+                                    <tr class="sale-line-row">
+                                        <td>
+                                            {{ line_form.id }}
+                                            {{ line_form.item }}
+                                            {% if line_form.item.errors %}<div class="invalid-feedback d-block">{{ line_form.item.errors.0 }}</div>{% endif %}
+                                        </td>
+                                        <td><div class="field-note sale-stock-cell">-</div></td>
+                                        <td>
+                                            {{ line_form.quantity }}
+                                            {% if line_form.quantity.errors %}<div class="invalid-feedback d-block">{{ line_form.quantity.errors.0 }}</div>{% endif %}
+                                        </td>
+                                        <td>
+                                            {{ line_form.unit_price }}
+                                            {% if line_form.unit_price.errors %}<div class="invalid-feedback d-block">{{ line_form.unit_price.errors.0 }}</div>{% endif %}
+                                        </td>
+                                        <td><div class="field-note sale-gst-cell">0%</div></td>
+                                        <td><strong class="sale-line-total">Rs 0.00</strong></td>
+                                        <td>
+                                            <span style="display:none;">{{ line_form.DELETE }}</span>
+                                            <button type="button" class="btn btn-secondary btn-sm remove-line-btn">Remove</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <button type="button" class="btn btn-outline-primary" id="add-sale-line-btn">
+                            <i class="fas fa-plus"></i> Add Another Item
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="form-stack">
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Receipt Summary</h4>
+                                <p>Live totals for the current sale.</p>
+                            </div>
+                        </div>
+                        <div class="insight-list">
+                            <div class="insight-item">
+                                <label>Subtotal</label>
+                                <strong id="sale-subtotal">Rs 0.00</strong>
+                            </div>
+                            <div class="insight-item">
+                                <label>GST Amount</label>
+                                <strong id="sale-gst-total">Rs 0.00</strong>
+                            </div>
+                            <div class="insight-item">
+                                <label>Grand Total</label>
+                                <strong id="sale-grand-total">Rs 0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-card">
+                    <div class="form-card-body">
+                        <div class="form-card-head">
+                            <div>
+                                <h4>Save Actions</h4>
+                                <p>Save the sale and generate a printable receipt.</p>
+                            </div>
+                        </div>
+                        <div class="action-bar">
+                            <a href="{% url 'inventory:item-list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-floppy-disk"></i> Save Sale & Receipt
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </form>
+    </div>
+</div>
+
+<template id="empty-sale-line-template">
+    <tr class="sale-line-row">
+        <td>__ITEM__</td>
+        <td><div class="field-note sale-stock-cell">-</div></td>
+        <td>__QTY__</td>
+        <td>__PRICE__</td>
+        <td><div class="field-note sale-gst-cell">0%</div></td>
+        <td><strong class="sale-line-total">Rs 0.00</strong></td>
+        <td><span style="display:none;">__DELETE__</span> <button type="button" class="btn btn-secondary btn-sm remove-line-btn">Remove</button></td>
+    </tr>
+</template>
+
+<script>
+(function() {
+    const itemData = JSON.parse(document.getElementById('sale-items-data').textContent);
+    const itemMap = {};
+    itemData.forEach(function(item) { itemMap[String(item.id)] = item; });
+
+    const totalFormsInput = document.getElementById('id_lines-TOTAL_FORMS');
+    const tableBody = document.getElementById('sale-lines-body');
+    const addBtn = document.getElementById('add-sale-line-btn');
+
+    function formatCurrency(value) {
+        return 'Rs ' + Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function updateRow(row) {
+        const itemSelect = row.querySelector('select');
+        const qtyInput = row.querySelector('.sale-quantity-input');
+        const priceInput = row.querySelector('.sale-price-input');
+        const stockCell = row.querySelector('.sale-stock-cell');
+        const gstCell = row.querySelector('.sale-gst-cell');
+        const totalCell = row.querySelector('.sale-line-total');
+        const item = itemMap[itemSelect ? itemSelect.value : ''];
+
+        if (item) {
+            stockCell.textContent = item.current_stock + ' units';
+            gstCell.textContent = Number(item.gst_percentage || 0).toFixed(2) + '%';
+            if (!priceInput.value) {
+                priceInput.value = item.selling_price;
+            }
+        } else {
+            stockCell.textContent = '-';
+            gstCell.textContent = '0%';
+        }
+
+        const quantity = Number(qtyInput ? qtyInput.value : 0);
+        const price = Number(priceInput ? priceInput.value : 0);
+        const gst = item ? Number(item.gst_percentage || 0) : 0;
+        const subtotal = quantity * price;
+        const total = subtotal + ((subtotal * gst) / 100);
+        totalCell.textContent = formatCurrency(total);
+    }
+
+    function refreshSummary() {
+        let subtotal = 0;
+        let gstTotal = 0;
+        tableBody.querySelectorAll('.sale-line-row').forEach(function(row) {
+            const deleteInput = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+            if (deleteInput && deleteInput.checked) return;
+            const itemSelect = row.querySelector('select');
+            const qtyInput = row.querySelector('.sale-quantity-input');
+            const priceInput = row.querySelector('.sale-price-input');
+            const item = itemMap[itemSelect ? itemSelect.value : ''];
+            const quantity = Number(qtyInput ? qtyInput.value : 0);
+            const price = Number(priceInput ? priceInput.value : 0);
+            const lineSubtotal = quantity * price;
+            const lineGst = item ? (lineSubtotal * Number(item.gst_percentage || 0) / 100) : 0;
+            subtotal += lineSubtotal;
+            gstTotal += lineGst;
+        });
+        document.getElementById('sale-subtotal').textContent = formatCurrency(subtotal);
+        document.getElementById('sale-gst-total').textContent = formatCurrency(gstTotal);
+        document.getElementById('sale-grand-total').textContent = formatCurrency(subtotal + gstTotal);
+    }
+
+    function bindRow(row) {
+        row.querySelectorAll('select, input').forEach(function(input) {
+            input.addEventListener('input', function() {
+                updateRow(row);
+                refreshSummary();
+            });
+            input.addEventListener('change', function() {
+                updateRow(row);
+                refreshSummary();
+            });
+        });
+
+        const removeBtn = row.querySelector('.remove-line-btn');
+        const deleteInput = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        removeBtn.addEventListener('click', function() {
+            if (deleteInput) {
+                deleteInput.checked = true;
+                row.style.display = 'none';
+            }
+            refreshSummary();
+        });
+
+        updateRow(row);
+    }
+
+    addBtn.addEventListener('click', function() {
+        const nextIndex = Number(totalFormsInput.value);
+        const template = document.getElementById('empty-sale-line-template').innerHTML;
+        const emptyForm = `{{ formset.empty_form.item.as_widget|escapejs }}`;
+        const emptyQty = `{{ formset.empty_form.quantity.as_widget|escapejs }}`;
+        const emptyPrice = `{{ formset.empty_form.unit_price.as_widget|escapejs }}`;
+        const emptyDelete = `{{ formset.empty_form.DELETE.as_widget|escapejs }}`;
+        const rowHtml = template
+            .replace('__ITEM__', emptyForm.replace(/__prefix__/g, nextIndex))
+            .replace('__QTY__', emptyQty.replace(/__prefix__/g, nextIndex))
+            .replace('__PRICE__', emptyPrice.replace(/__prefix__/g, nextIndex))
+            .replace('__DELETE__', emptyDelete.replace(/__prefix__/g, nextIndex));
+        tableBody.insertAdjacentHTML('beforeend', rowHtml);
+        totalFormsInput.value = String(nextIndex + 1);
+        bindRow(tableBody.lastElementChild);
+        refreshSummary();
+    });
+
+    tableBody.querySelectorAll('.sale-line-row').forEach(bindRow);
+    refreshSummary();
+})();
+</script>
+{% endblock %}

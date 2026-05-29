@@ -36,6 +36,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods
 from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 from PIL import Image
 from .audit_logs import log_audit_event
 from .constants import TIME_SLOT_CHOICES, TIME_SLOT_DISPLAY_MAP, TIME_SLOT_VALUES
@@ -4044,6 +4045,8 @@ def attendance_reports(request):
     from datetime import date as date_class
 
     report_type = request.GET.get("report_type", "student")
+    if report_type == "daily":
+        return redirect("attendance_reports")
 
     # Student Attendance Report
     if report_type == "student":
@@ -4124,38 +4127,6 @@ def attendance_reports(request):
             "student_reports": student_reports,
             "attendance_dates": attendance_dates,
             "title": "Student Attendance Report",
-            "active_page": "attendance_reports",
-        }
-
-    # Daily Report
-    elif report_type == "daily":
-        selected_date = request.GET.get("date")
-
-        if selected_date:
-            try:
-                report_date = dt.strptime(selected_date, "%Y-%m-%d").date()
-            except (ValueError, TypeError):
-                report_date = date_class.today()
-        else:
-            report_date = date_class.today()
-
-        # Get all attendance records for the date
-        attendance_records = Attendance.objects.filter(date=report_date).select_related("student", "marked_by")
-
-        total_students = AdmittedStudent.objects.count()
-        present_count = attendance_records.filter(Q(theory_attendance="P") | Q(practical_attendance="P")).count()
-        absent_count = total_students - present_count
-        percentage = (present_count / total_students) * 100 if total_students > 0 else 0
-
-        context = {
-            "report_type": "daily",
-            "report_date": report_date,
-            "attendance_records": attendance_records,
-            "total_students": total_students,
-            "present_count": present_count,
-            "absent_count": absent_count,
-            "percentage": percentage,
-            "title": f"Daily Attendance Report - {report_date}",
             "active_page": "attendance_reports",
         }
 
@@ -4324,65 +4295,94 @@ def export_timetable_excel(request):
 @login_required
 @staff_member_required
 def export_attendance_report_excel(request):
-    """Export attendance reports to Excel"""
-    report_type = request.GET.get("report_type", "student")
-
+    """Export attendance reports to Excel in the same format as the reports page."""
     wb = openpyxl.Workbook()
-    ws = wb.active
 
-    if report_type == "student":
-        ws.title = "Student Attendance"
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
 
-        # Headers
-        headers = ["Student Name", "Mobile No", "Course", "Total Days", "Present Days", "Absent Days", "Attendance %"]
-        ws.append(headers)
-
-        # Style header
-        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-        header_font = Font(bold=True, color="FFFFFF")
-
-        for cell in ws[1]:
+    def style_sheet(sheet, widths):
+        for cell in sheet[1]:
             cell.fill = header_fill
             cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        for column, width in widths.items():
+            sheet.column_dimensions[column].width = width
+        sheet.freeze_panes = "A2"
 
-        # Add data
-        students = AdmittedStudent.objects.all().order_by("full_name")
-        for student in students:
-            total_records = student.attendance_records.count()
-            present_count = student.attendance_records.filter(
-                Q(theory_attendance="P") | Q(practical_attendance="P")
-            ).count()
-            absent_count = total_records - present_count
+    student_sheet = wb.active
+    student_sheet.title = "Student Attendance"
+    attendance_dates = list(Attendance.objects.order_by("date").values_list("date", flat=True).distinct())
+    first_header = ["Sr. No", "Student Name", "Mobile No"]
+    second_header = ["", "", ""]
+    for attendance_date in attendance_dates:
+        first_header.extend([attendance_date.strftime("%d-%b"), ""])
+        second_header.extend(["Theory", "Practical"])
+    student_sheet.append(first_header)
+    student_sheet.append(second_header)
+    student_sheet.merge_cells(start_row=1, start_column=1, end_row=2, end_column=1)
+    student_sheet.merge_cells(start_row=1, start_column=2, end_row=2, end_column=2)
+    student_sheet.merge_cells(start_row=1, start_column=3, end_row=2, end_column=3)
+    for date_index in range(len(attendance_dates)):
+        start_column = 4 + (date_index * 2)
+        student_sheet.merge_cells(start_row=1, start_column=start_column, end_row=1, end_column=start_column + 1)
 
-            if total_records > 0:
-                percentage = (present_count / total_records) * 100
-            else:
-                percentage = 0
-
-            ws.append(
+    students = AdmittedStudent.objects.filter(is_archived=False).prefetch_related(
+        Prefetch("attendance_records", queryset=Attendance.objects.order_by("date"))
+    ).order_by("full_name")
+    for index, student in enumerate(students, start=1):
+        attendance_records = list(student.attendance_records.all())
+        attendance_by_date = {record.date: record for record in attendance_records}
+        row = [index, student.full_name, student.mobile_own or ""]
+        for attendance_date in attendance_dates:
+            record = attendance_by_date.get(attendance_date)
+            row.extend(
                 [
-                    student.full_name,
-                    student.mobile_own or "",
-                    student.course or "N/A",
-                    total_records,
-                    present_count,
-                    absent_count,
-                    f"{percentage:.2f}%",
+                    record.theory_attendance if record else "",
+                    record.practical_attendance if record else "",
                 ]
             )
+        student_sheet.append(row)
 
-        # Adjust column widths
-        ws.column_dimensions["A"].width = 25
-        ws.column_dimensions["B"].width = 16
-        ws.column_dimensions["C"].width = 18
-        ws.column_dimensions["D"].width = 15
-        ws.column_dimensions["E"].width = 15
-        ws.column_dimensions["F"].width = 15
-        ws.column_dimensions["G"].width = 15
+    for row in student_sheet.iter_rows(min_row=1, max_row=2):
+        for cell in row:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+    student_sheet.freeze_panes = "D3"
+    student_sheet.column_dimensions["A"].width = 10
+    student_sheet.column_dimensions["B"].width = 30
+    student_sheet.column_dimensions["C"].width = 16
+    for column_index in range(4, student_sheet.max_column + 1):
+        student_sheet.column_dimensions[get_column_letter(column_index)].width = 12
 
-    # Return as attachment
+    daily_sheet = wb.create_sheet("Daily Attendance")
+    daily_sheet.append(["Sr. No", "Date", "Student Name", "Mobile No", "Course", "Theory", "Practical", "Remarks"])
+
+    attendance_records = Attendance.objects.select_related("student").order_by("date", "student__full_name")
+    for index, record in enumerate(attendance_records, start=1):
+        student = record.student
+        course_name = student.custom_course if student.course == "Other" and student.custom_course else student.course
+        daily_sheet.append(
+            [
+                index,
+                record.date.strftime("%Y-%m-%d") if record.date else "",
+                student.full_name,
+                student.mobile_own or "",
+                course_name or "N/A",
+                record.get_theory_attendance_display(),
+                record.get_practical_attendance_display(),
+                record.remarks or "",
+            ]
+        )
+
+    style_sheet(
+        daily_sheet,
+        {"A": 10, "B": 14, "C": 30, "D": 16, "E": 20, "F": 14, "G": 14, "H": 30},
+    )
+
     response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    response["Content-Disposition"] = f'attachment; filename="attendance_report_{report_type}.xlsx"'
+    response["Content-Disposition"] = 'attachment; filename="attendance_report.xlsx"'
     wb.save(response)
     return response
 

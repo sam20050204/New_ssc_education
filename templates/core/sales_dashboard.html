@@ -6,14 +6,18 @@
     <div class="page-header dashboard-page-header" style="margin-bottom: 24px;">
         <div>
             <h1 class="page-title">Sales & Services Dashboard</h1>
-            <p class="page-subtitle">Dashboard page retained as requested.</p>
+            <p class="page-subtitle">Quick access to inventory, stock intake, and customer sales receipts.</p>
         </div>
     </div>
 
     <div class="stat-card" style="padding: 32px;">
-        <h3 style="margin-top: 0;">Module Status</h3>
-        <p style="margin-bottom: 12px;">All sales and services pages and database tables have been removed.</p>
-        <p style="margin-bottom: 0;">Only this dashboard page remains so you can still switch between Computer Education and Sales & Services.</p>
+        <h3 style="margin-top: 0;">Sales Workspace</h3>
+        <p style="margin-bottom: 12px;">Inventory sales are now managed through the inventory module with dedicated flows for items, stock entries, and customer sale receipts.</p>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;">
+            <a href="{% url 'inventory:item-list' %}" class="btn btn-primary">Open Items</a>
+            <a href="{% url 'inventory:add-stock' %}" class="btn btn-success">Add Stock</a>
+            <a href="{% url 'inventory:add-sale' %}" class="btn btn-warning">Record Sale</a>
+        </div>
     </div>
 </section>
 {% endblock %}

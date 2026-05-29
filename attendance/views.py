@@ -4,7 +4,7 @@ from datetime import datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Prefetch, Q
+from django.db.models import F, Prefetch, Q
 from django.shortcuts import redirect, render
 
 from core.constants import TIME_SLOT_DISPLAY_MAP
@@ -109,27 +109,7 @@ def attendance_reports(request):
     report_type = request.GET.get("report_type", "student")
 
     if report_type == "daily":
-        selected_date = request.GET.get("date")
-        report_date = datetime.strptime(selected_date, "%Y-%m-%d").date() if selected_date else current_date.today()
-        attendance_records = Attendance.objects.filter(date=report_date).select_related("student")
-        total_students = AdmittedStudent.objects.filter(is_archived=False).count()
-        present_count = attendance_records.filter(Q(theory_attendance="P") | Q(practical_attendance="P")).count()
-        absent_count = max(total_students - present_count, 0)
-        return render(
-            request,
-            "core/timetable/attendance_reports.html",
-            {
-                "report_type": "daily",
-                "report_date": report_date,
-                "attendance_records": attendance_records,
-                "total_students": total_students,
-                "present_count": present_count,
-                "absent_count": absent_count,
-                "percentage": (present_count / total_students) * 100 if total_students else 0,
-                "title": f"Daily Attendance Report - {report_date}",
-                "active_page": "attendance_reports",
-            },
-        )
+        return redirect("attendance_reports")
 
     if report_type == "batch":
         selected_date = request.GET.get("date")
@@ -194,9 +174,67 @@ def attendance_reports(request):
             },
         )
 
-    students = AdmittedStudent.objects.filter(is_archived=False).prefetch_related(
-        Prefetch("attendance_records", queryset=Attendance.objects.order_by("-date"))
-    ).order_by("full_name")
+    selected_batch = request.GET.get("batch", "").strip()
+    selected_theory_time = request.GET.get("theory_time", "").strip()
+    selected_practical_time = request.GET.get("practical_time", "").strip()
+    sort_by = request.GET.get("sort", "name").strip()
+    all_students = AdmittedStudent.objects.filter(is_archived=False)
+    available_batches = sorted(
+        {
+            student.batch_display
+            for student in all_students.only("batch_month", "batch_year")
+            if student.batch_display != "Not Assigned"
+        }
+    )
+    available_theory_times = [
+        (slot, TIME_SLOT_DISPLAY_MAP.get(slot, slot))
+        for slot in all_students.exclude(theory_batch_time__isnull=True)
+        .exclude(theory_batch_time="")
+        .order_by("theory_batch_time")
+        .values_list("theory_batch_time", flat=True)
+        .distinct()
+    ]
+    available_practical_times = [
+        (slot, TIME_SLOT_DISPLAY_MAP.get(slot, slot))
+        for slot in all_students.exclude(practical_batch_time__isnull=True)
+        .exclude(practical_batch_time="")
+        .order_by("practical_batch_time")
+        .values_list("practical_batch_time", flat=True)
+        .distinct()
+    ]
+
+    students_queryset = all_students
+    if selected_batch == "Not Assigned":
+        students_queryset = students_queryset.filter(
+            Q(batch_month__isnull=True) | Q(batch_month="") | Q(batch_year__isnull=True) | Q(batch_year="")
+        )
+    elif selected_batch:
+        batch_parts = selected_batch.rsplit(" ", 1)
+        if len(batch_parts) == 2:
+            students_queryset = students_queryset.filter(batch_month=batch_parts[0], batch_year=batch_parts[1])
+
+    if selected_theory_time:
+        students_queryset = students_queryset.filter(theory_batch_time=selected_theory_time)
+
+    if selected_practical_time:
+        students_queryset = students_queryset.filter(practical_batch_time=selected_practical_time)
+
+    if sort_by == "batch":
+        students_queryset = students_queryset.order_by("batch_year", "batch_month", "full_name")
+    elif sort_by == "theory_time":
+        students_queryset = students_queryset.order_by("theory_batch_time", "full_name")
+    elif sort_by == "practical_time":
+        students_queryset = students_queryset.order_by("practical_batch_time", "full_name")
+    elif sort_by == "fees_pending":
+        students_queryset = students_queryset.annotate(balance_fees=F("total_fees") - F("paid_fees")).order_by(
+            "-balance_fees", "full_name"
+        )
+    else:
+        students_queryset = students_queryset.order_by("full_name")
+
+    students = students_queryset.prefetch_related(
+        Prefetch("attendance_records", queryset=Attendance.objects.order_by("date"))
+    )
     attendance_dates = list(Attendance.objects.order_by("date").values_list("date", flat=True).distinct())
     student_reports = []
 
@@ -206,9 +244,22 @@ def attendance_reports(request):
         present_count = sum(1 for record in attendance_records if record.theory_attendance == "P" or record.practical_attendance == "P")
         absent_count = sum(1 for record in attendance_records if record.theory_attendance == "A" and record.practical_attendance == "A")
         attendance_by_date = {record.date: record for record in attendance_records}
+        attendance_pairs = []
+        for date_value in attendance_dates:
+            record = attendance_by_date.get(date_value)
+            attendance_pairs.append(
+                {
+                    "date": date_value,
+                    "theory_status": record.theory_attendance if record else "",
+                    "practical_status": record.practical_attendance if record else "",
+                }
+            )
         student_reports.append(
             {
                 "student": student,
+                "mobile_no": student.mobile_own,
+                "has_fee_balance": student.remaining_fees > 0,
+                "remaining_fees": student.remaining_fees,
                 "total": total_records,
                 "present": present_count,
                 "absent": absent_count,
@@ -217,6 +268,7 @@ def attendance_reports(request):
                 "practical_present": sum(1 for record in attendance_records if record.practical_attendance == "P"),
                 "practical_absent": sum(1 for record in attendance_records if record.practical_attendance == "A"),
                 "records": attendance_records,
+                "attendance_pairs": attendance_pairs,
                 "theory_days": [{"date": date_value, "status": (attendance_by_date.get(date_value).theory_attendance if attendance_by_date.get(date_value) else "")} for date_value in attendance_dates],
                 "practical_days": [{"date": date_value, "status": (attendance_by_date.get(date_value).practical_attendance if attendance_by_date.get(date_value) else "")} for date_value in attendance_dates],
                 "percentage": round((present_count / total_records) * 100, 2) if total_records else 0,
@@ -230,6 +282,14 @@ def attendance_reports(request):
             "report_type": "student",
             "student_reports": student_reports,
             "attendance_dates": attendance_dates,
+            "attendance_colspan": (len(attendance_dates) * 2) + 3,
+            "available_batches": available_batches,
+            "available_theory_times": available_theory_times,
+            "available_practical_times": available_practical_times,
+            "selected_batch": selected_batch,
+            "selected_theory_time": selected_theory_time,
+            "selected_practical_time": selected_practical_time,
+            "sort_by": sort_by,
             "title": "Student Attendance Report",
             "active_page": "attendance_reports",
         },

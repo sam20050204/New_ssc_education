@@ -5,14 +5,18 @@ Forms for Inventory Management
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.forms import BaseInlineFormSet, inlineformset_factory
 from decimal import Decimal
 
+from core.constants import PAYMENT_MODE_CHOICES
 from inventory.models import (
     Item,
     Category,
     Supplier,
     Purchase,
     Inventory,
+    SaleReceipt,
+    SaleReceiptLine,
 )
 from inventory.services import get_or_create_category_by_name
 
@@ -671,3 +675,98 @@ class PurchaseHistoryFilterForm(forms.Form):
         ),
         label="Sort By",
     )
+
+
+class SaleReceiptForm(forms.ModelForm):
+    """Header form for customer sale receipts."""
+
+    payment_mode = forms.ChoiceField(
+        choices=PAYMENT_MODE_CHOICES,
+        widget=forms.Select(attrs=_bootstrap_control({"class": "form-control form-select"})),
+    )
+
+    class Meta:
+        model = SaleReceipt
+        fields = [
+            "customer_name",
+            "customer_phone",
+            "customer_address",
+            "sale_date",
+            "payment_mode",
+            "notes",
+        ]
+        widgets = {
+            "customer_name": forms.TextInput(attrs=_bootstrap_control({"placeholder": "Customer name"})),
+            "customer_phone": forms.TextInput(attrs=_bootstrap_control({"placeholder": "Phone number"})),
+            "customer_address": forms.Textarea(attrs=_bootstrap_control({"rows": 3, "placeholder": "Customer address"})),
+            "sale_date": forms.DateInput(attrs=_bootstrap_control({"type": "date"})),
+            "notes": forms.Textarea(attrs=_bootstrap_control({"rows": 3, "placeholder": "Optional notes for this sale"})),
+        }
+
+
+class SaleReceiptLineForm(forms.ModelForm):
+    """Line item form for inventory sales."""
+
+    class Meta:
+        model = SaleReceiptLine
+        fields = ["item", "quantity", "unit_price"]
+        widgets = {
+            "item": forms.Select(attrs=_bootstrap_control({"class": "form-control form-select sale-item-select"})),
+            "quantity": forms.NumberInput(attrs=_bootstrap_control({"min": "1", "class": "form-control sale-quantity-input"})),
+            "unit_price": forms.NumberInput(
+                attrs=_bootstrap_control({"step": "0.01", "min": "0", "class": "form-control sale-price-input"})
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["item"].queryset = Item.objects.filter(is_active=True).select_related("category").order_by("name")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.cleaned_data.get("DELETE"):
+            return cleaned_data
+        item = cleaned_data.get("item")
+        quantity = cleaned_data.get("quantity")
+        if not item or quantity in (None, ""):
+            return cleaned_data
+        if item.current_stock < quantity:
+            raise ValidationError(f"Only {item.current_stock} units are currently available for {item.name}.")
+        return cleaned_data
+
+
+class BaseSaleReceiptLineFormSet(BaseInlineFormSet):
+    """Validate combined sale quantities across repeated item rows."""
+
+    def clean(self):
+        super().clean()
+        item_quantities = {}
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+            if form.cleaned_data.get("DELETE"):
+                continue
+            item = form.cleaned_data.get("item")
+            quantity = form.cleaned_data.get("quantity") or 0
+            if not item:
+                continue
+            item_quantities[item.pk] = item_quantities.get(item.pk, 0) + quantity
+
+        for item_pk, total_quantity in item_quantities.items():
+            item = Item.objects.filter(pk=item_pk, is_active=True).first()
+            if item and total_quantity > item.current_stock:
+                raise ValidationError(
+                    f"Requested quantity for {item.name} is {total_quantity}, but only {item.current_stock} units are available."
+                )
+
+
+SaleReceiptLineFormSet = inlineformset_factory(
+    SaleReceipt,
+    SaleReceiptLine,
+    form=SaleReceiptLineForm,
+    formset=BaseSaleReceiptLineFormSet,
+    extra=1,
+    min_num=1,
+    validate_min=True,
+    can_delete=True,
+)
