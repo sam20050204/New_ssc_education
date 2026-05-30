@@ -7,9 +7,27 @@ from django.db import transaction
 from django.db.models import F, Prefetch, Q
 from django.shortcuts import redirect, render
 
-from core.constants import TIME_SLOT_DISPLAY_MAP
+from core.constants import TIME_SLOT_CHOICES, TIME_SLOT_DISPLAY_MAP
 from core.models import AdmittedStudent, Attendance, Batch
 from core.permissions import roles_required
+
+
+def _unique_time_slots(slot_values):
+    seen = set()
+    slots_by_value = {slot: TIME_SLOT_DISPLAY_MAP.get(slot, slot) for slot in slot_values if slot}
+    ordered_slots = []
+
+    for slot, display in TIME_SLOT_CHOICES:
+        if slot in slots_by_value and slot not in seen:
+            ordered_slots.append((slot, display))
+            seen.add(slot)
+
+    for slot, display in sorted(slots_by_value.items(), key=lambda item: item[1]):
+        if slot not in seen:
+            ordered_slots.append((slot, display))
+            seen.add(slot)
+
+    return ordered_slots
 
 
 @login_required
@@ -37,8 +55,8 @@ def mark_attendance_page(request):
         .values_list("practical_batch_time", flat=True)
         .distinct()
     )
-    theory_slots = [(slot, TIME_SLOT_DISPLAY_MAP.get(slot, slot)) for slot in theory_slot_values]
-    practical_slots = [(slot, TIME_SLOT_DISPLAY_MAP.get(slot, slot)) for slot in practical_slot_values]
+    theory_slots = _unique_time_slots(theory_slot_values)
+    practical_slots = _unique_time_slots(practical_slot_values)
     return render(
         request,
         "core/timetable/mark_attendance.html",

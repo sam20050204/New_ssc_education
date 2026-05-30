@@ -333,15 +333,26 @@
     // Store batch data
     const theoryBatches = [
         {% for slot, display in theory_slots %}
-            { value: '{{ slot }}', display: '{{ display }}' },
+            { value: '{{ slot|escapejs }}', display: '{{ display|escapejs }}' },
         {% endfor %}
     ];
     
     const practicalBatches = [
         {% for slot, display in practical_slots %}
-            { value: '{{ slot }}', display: '{{ display }}' },
+            { value: '{{ slot|escapejs }}', display: '{{ display|escapejs }}' },
         {% endfor %}
     ];
+
+    function getUniqueBatches(batches) {
+        const seenValues = new Set();
+        return batches.filter(batch => {
+            if (!batch.value || seenValues.has(batch.value)) {
+                return false;
+            }
+            seenValues.add(batch.value);
+            return true;
+        });
+    }
     
     function updateBatchTimes() {
         const batchType = document.getElementById('batch_type').value;
@@ -351,7 +362,7 @@
         batchTimeSelect.innerHTML = '<option value="">-- Select Batch --</option>';
         
         // Get appropriate batch list
-        const batches = batchType === 'theory' ? theoryBatches : practicalBatches;
+        const batches = getUniqueBatches(batchType === 'theory' ? theoryBatches : practicalBatches);
         
         // Populate with batches for selected type
         batches.forEach(batch => {
