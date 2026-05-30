@@ -1,0 +1,114 @@
+{% if selected_batch_students %}
+<div class="batch-student-list-card">
+    <div class="batch-student-list-header">
+        <h3>Students in Selected Batch</h3>
+        {% if pending_fee_students %}
+            <span class="pending-badge">{{ pending_fee_students|length }} student{{ pending_fee_students|length|pluralize }} with pending fees</span>
+        {% else %}
+            <span class="clear-badge">No pending fees</span>
+        {% endif %}
+    </div>
+    <div class="student-table-wrapper">
+        <table class="student-table">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Mobile</th>
+                    <th>Status</th>
+                    <th>Total Fees</th>
+                    <th>Paid</th>
+                    <th>Remaining</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in selected_batch_students %}
+                <tr class="{% if student.remaining_fees > 0 %}fee-pending-row{% endif %}">
+                    <td>
+                        {{ student.full_name }}
+                        {% if student.remaining_fees > 0 %}
+                            <span class="inline-pending-badge">Pending Fees</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ student.mobile_own }}</td>
+                    <td>{{ student.batch_status|title }}</td>
+                    <td>Rs. {{ student.total_fees }}</td>
+                    <td>Rs. {{ student.paid_fees }}</td>
+                    <td>Rs. {{ student.remaining_fees }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<style>
+    .batch-student-list-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 18px;
+        margin: 22px 0;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+    .batch-student-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .batch-student-list-header h3 {
+        margin: 0;
+        color: #0f172a;
+    }
+    .pending-badge,
+    .clear-badge {
+        border-radius: 999px;
+        padding: 7px 10px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .pending-badge {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .clear-badge {
+        background: #dcfce7;
+        color: #166534;
+    }
+    .student-table-wrapper {
+        overflow-x: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+    }
+    .student-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+    }
+    .student-table th,
+    .student-table td {
+        padding: 11px 12px;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: left;
+    }
+    .student-table th {
+        background: #f1f5f9;
+        color: #334155;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+    .fee-pending-row {
+        background: #fff7ed;
+    }
+    .inline-pending-badge {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #ffedd5;
+        color: #9a3412;
+        font-size: 11px;
+        font-weight: 700;
+    }
+</style>

@@ -1647,6 +1647,26 @@ function loadBatchStudentsTable(students) {
         '17:00-18:00': '5:00 PM - 6:00 PM',
         '18:00-19:00': '6:00 PM - 7:00 PM',
     };
+
+    function getAvailableBatchOptions(batchType, currentValue) {
+        const availableSlots = Array.from(
+            document.querySelectorAll(`.batch-card[data-type="${batchType}"]:not(.batch-add-card)`)
+        ).map(card => ({
+            slot: card.getAttribute('data-slot'),
+            display: card.getAttribute('data-display') || timeSlots[card.getAttribute('data-slot')] || card.getAttribute('data-slot')
+        }));
+
+        if (currentValue && !availableSlots.some(batch => batch.slot === currentValue)) {
+            availableSlots.push({
+                slot: currentValue,
+                display: timeSlots[currentValue] || currentValue
+            });
+        }
+
+        return availableSlots.map(batch => (
+            `<option value="${batch.slot}" ${currentValue === batch.slot ? 'selected' : ''}>${batch.display}</option>`
+        )).join('');
+    }
     
     students.forEach(student => {
         const theoryDisplay = timeSlots[student.theory_batch_time] || student.theory_batch_time || '-';
@@ -1663,37 +1683,17 @@ function loadBatchStudentsTable(students) {
                 <td>
                     <select class="time-slot-select" data-student-id="${student.id}" data-type="theory" onchange="handleBatchTimeChange(this)">
                         <option value="">-- Select --</option>
-                        <option value="08:00-09:00" ${student.theory_batch_time === '08:00-09:00' ? 'selected' : ''}>8:00 AM - 9:00 AM</option>
-                        <option value="09:00-10:00" ${student.theory_batch_time === '09:00-10:00' ? 'selected' : ''}>9:00 AM - 10:00 AM</option>
-                        <option value="10:00-11:00" ${student.theory_batch_time === '10:00-11:00' ? 'selected' : ''}>10:00 AM - 11:00 AM</option>
-                        <option value="11:00-12:00" ${student.theory_batch_time === '11:00-12:00' ? 'selected' : ''}>11:00 AM - 12:00 PM</option>
-                        <option value="12:00-13:00" ${student.theory_batch_time === '12:00-13:00' ? 'selected' : ''}>12:00 PM - 1:00 PM</option>
-                        <option value="13:00-14:00" ${student.theory_batch_time === '13:00-14:00' ? 'selected' : ''}>1:00 PM - 2:00 PM</option>
-                        <option value="14:00-15:00" ${student.theory_batch_time === '14:00-15:00' ? 'selected' : ''}>2:00 PM - 3:00 PM</option>
-                        <option value="15:00-16:00" ${student.theory_batch_time === '15:00-16:00' ? 'selected' : ''}>3:00 PM - 4:00 PM</option>
-                        <option value="16:00-17:00" ${student.theory_batch_time === '16:00-17:00' ? 'selected' : ''}>4:00 PM - 5:00 PM</option>
-                        <option value="17:00-18:00" ${student.theory_batch_time === '17:00-18:00' ? 'selected' : ''}>5:00 PM - 6:00 PM</option>
-                        <option value="18:00-19:00" ${student.theory_batch_time === '18:00-19:00' ? 'selected' : ''}>6:00 PM - 7:00 PM</option>
+                        ${getAvailableBatchOptions('Theory', student.theory_batch_time)}
                     </select>
                 </td>
                 <td>
                     <select class="time-slot-select" data-student-id="${student.id}" data-type="practical" onchange="handleBatchTimeChange(this)">
                         <option value="">-- Select --</option>
-                        <option value="08:00-09:00" ${student.practical_batch_time === '08:00-09:00' ? 'selected' : ''}>8:00 AM - 9:00 AM</option>
-                        <option value="09:00-10:00" ${student.practical_batch_time === '09:00-10:00' ? 'selected' : ''}>9:00 AM - 10:00 AM</option>
-                        <option value="10:00-11:00" ${student.practical_batch_time === '10:00-11:00' ? 'selected' : ''}>10:00 AM - 11:00 AM</option>
-                        <option value="11:00-12:00" ${student.practical_batch_time === '11:00-12:00' ? 'selected' : ''}>11:00 AM - 12:00 PM</option>
-                        <option value="12:00-13:00" ${student.practical_batch_time === '12:00-13:00' ? 'selected' : ''}>12:00 PM - 1:00 PM</option>
-                        <option value="13:00-14:00" ${student.practical_batch_time === '13:00-14:00' ? 'selected' : ''}>1:00 PM - 2:00 PM</option>
-                        <option value="14:00-15:00" ${student.practical_batch_time === '14:00-15:00' ? 'selected' : ''}>2:00 PM - 3:00 PM</option>
-                        <option value="15:00-16:00" ${student.practical_batch_time === '15:00-16:00' ? 'selected' : ''}>3:00 PM - 4:00 PM</option>
-                        <option value="16:00-17:00" ${student.practical_batch_time === '16:00-17:00' ? 'selected' : ''}>4:00 PM - 5:00 PM</option>
-                        <option value="17:00-18:00" ${student.practical_batch_time === '17:00-18:00' ? 'selected' : ''}>5:00 PM - 6:00 PM</option>
-                        <option value="18:00-19:00" ${student.practical_batch_time === '18:00-19:00' ? 'selected' : ''}>6:00 PM - 7:00 PM</option>
+                        ${getAvailableBatchOptions('Practical', student.practical_batch_time)}
                     </select>
                 </td>
                 <td style="text-align: center;">
-                    <button class="btn btn-sm btn-danger" onclick="removeStudentFromBatch(${student.id})" title="Remove from batch">🗑️</button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeStudentFromBatch(event, ${student.id})" title="Remove from batch">🗑️</button>
                 </td>
             </tr>
         `;
@@ -1866,7 +1866,7 @@ async function saveBatchStudentChanges() {
         });
         
         if (changes.length === 0) {
-            showAlert('No changes made', 'info');
+            showAlert('No timing changes to save', 'info');
             return;
         }
 
@@ -1887,18 +1887,35 @@ async function saveBatchStudentChanges() {
             })
         });
 
-        if (!response.ok) {
-            throw new Error(`Failed to save changes (${response.status})`);
-        }
-
         const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || `Failed to save changes (${response.status})`);
+        }
         
         if (data.success) {
-            closeBatchStudentsModal();
             closeAddStudentToBatchModal();
             closeEditBatchCapacityModal();
+
+            const changesByStudentId = changes.reduce((acc, change) => {
+                acc[change.student_id] = acc[change.student_id] || {};
+                acc[change.student_id][change.type] = change.value || '';
+                return acc;
+            }, {});
+            const currentBatchField = currentBatchData.type === 'Theory' ? 'theory_batch_time' : 'practical_batch_time';
+
+            currentBatchData.students = currentBatchData.students
+                .map(student => ({
+                    ...student,
+                    ...(changesByStudentId[student.id] || changesByStudentId[String(student.id)] || {})
+                }))
+                .filter(student => (student[currentBatchField] || '') === currentBatchData.slot)
+                .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+
+            loadBatchStudentsTable(currentBatchData.students);
             showAlert('Changes saved successfully!', 'success');
             await updateBatchList();
+            closeBatchStudentsModal();
         } else {
             showAlert(data.error || 'Error saving changes', 'error');
         }
@@ -1914,35 +1931,45 @@ async function saveBatchStudentChanges() {
     }
 }
 
-function removeStudentFromBatch(studentId) {
+async function removeStudentFromBatch(event, studentId) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
     if (confirm('Remove student from this batch?')) {
         const type = currentBatchData.type === 'Theory' ? 'theory_batch_time' : 'practical_batch_time';
-        
+
         const request = {};
         request[type] = '';
-        
-        fetch(`/admission/${studentId}/update/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': CSRF_TOKEN
-            },
-            body: JSON.stringify(request)
-        }).then(response => response.json()).then(data => {
+
+        try {
+            const response = await fetch(`/admission/${studentId}/update/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify(request)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || `Failed to remove student (${response.status})`);
+            }
+
             if (data.success) {
                 showAlert('Student removed from batch', 'success');
-                openBatchStudentsModal(
-                    currentBatchData.type,
-                    currentBatchData.slot,
-                    currentBatchData.display,
-                    currentBatchData.batchId,
-                    currentBatchData.capacity
-                );
-                updateBatchList();
+                currentBatchData.students = currentBatchData.students.filter(student => student.id !== studentId);
+                loadBatchStudentsTable(currentBatchData.students);
+                await updateBatchList();
             } else {
                 showAlert(data.error || 'Error removing student from batch', 'error');
             }
-        });
+        } catch (error) {
+            console.error('Error removing student from batch:', error);
+            showAlert('Error removing student from batch: ' + error.message, 'error');
+        }
     }
 }
 

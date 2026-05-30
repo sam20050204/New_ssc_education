@@ -118,36 +118,13 @@ def calculate_student_profit(student):
     Returns:
         Decimal profit amount
     """
-    from .models import FeePayment, StudentFinanceDetail
+    from .models import StudentFinanceDetail
 
-    # Get or create finance detail record
-    finance_detail, _ = StudentFinanceDetail.objects.get_or_create(
-        student=student,
-        defaults={
-            "first_installment": Decimal("0.00"),
-            "second_installment": Decimal("0.00"),
-            "third_installment": Decimal("0.00"),
-            "fourth_installment": Decimal("0.00"),
-            "fifth_installment": Decimal("0.00"),
-            "fees_paid_to_mkcl_1": Decimal("0.00"),
-            "fees_paid_to_mkcl_2": Decimal("0.00"),
-        },
-    )
+    finance_detail = getattr(student, "finance_detail", None)
+    if finance_detail is None:
+        finance_detail, _ = StudentFinanceDetail.objects.get_or_create(student=student)
 
-    # Calculate MKCL fees
-    mkcl_1 = finance_detail.fees_paid_to_mkcl_1 or Decimal("0.00")
-    mkcl_2 = finance_detail.fees_paid_to_mkcl_2 or Decimal("0.00")
-    mkcl_total = mkcl_1 + mkcl_2
-
-    # Get fee payments ordered by date
-    fee_payments = FeePayment.objects.filter(student=student).order_by("payment_date")
-
-    # Sum up to 5 installments
-    learner_total_paid = Decimal("0.00")
-    for idx in range(min(5, fee_payments.count())):
-        learner_total_paid += fee_payments[idx].amount
-
-    return learner_total_paid - mkcl_total
+    return Decimal(finance_detail.profit or 0)
 
 
 def calculate_total_profit(student_queryset):

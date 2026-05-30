@@ -15,12 +15,14 @@ from core.constants import BATCH_STATUS_CHOICES, TIME_SLOT_VALUES
 from core.models import AdmittedStudent, Batch
 from core.permissions import ROLE_ADMIN, ROLE_SUPER_ADMIN, roles_required
 from core.services.batch_service import (
+    ENDED_BATCH_STATUSES,
     archive_batch,
     create_batch,
     get_active_batch_summaries,
     get_batch_dashboard_data,
     get_batch_report_data,
     get_batch_transition_preview,
+    get_batch_transition_students,
     get_ended_batch_summaries,
     update_batch_lifecycle,
 )
@@ -87,7 +89,15 @@ def end_batch(request):
     selected_year = request.GET.get("batch_year", "").strip()
     selected_course = request.GET.get("course", "").strip()
     preview = None
+    preview_students = []
+    pending_fee_students = []
+    has_filters = any([selected_course, selected_year, selected_month])
     active_batches = AdmittedStudent.objects.filter(is_archived=False, batch_status="active")
+    active_batch_summaries = (
+        get_active_batch_summaries(month=selected_month, year=selected_year, course=selected_course)
+        if has_filters
+        else []
+    )
 
     if selected_month and selected_year and selected_course:
         try:
@@ -97,6 +107,15 @@ def end_batch(request):
                 course=selected_course,
                 statuses=("active",),
             )
+            preview_students = list(
+                get_batch_transition_students(
+                    batch_month=selected_month,
+                    batch_year=selected_year,
+                    course=selected_course,
+                    statuses=("active",),
+                )
+            )
+            pending_fee_students = [student for student in preview_students if student.remaining_fees > 0]
         except ValueError as exc:
             messages.error(request, str(exc))
 
@@ -127,7 +146,11 @@ def end_batch(request):
             "selected_month": selected_month,
             "selected_year": selected_year,
             "selected_course": selected_course,
+            "active_batch_summaries": active_batch_summaries,
+            "has_filters": has_filters,
             "preview": preview,
+            "preview_students": preview_students,
+            "pending_fee_students": pending_fee_students,
             "active_page": "end_batch",
             "page_title": "End Batch",
         }
@@ -174,11 +197,26 @@ def ended_batches(request):
         "course": request.GET.get("course", "").strip(),
         "search": request.GET.get("search", "").strip(),
     }
+    selected_batch_students = []
+    pending_fee_students = []
+    if filters["month"] and filters["year"] and filters["course"]:
+        selected_batch_students = list(
+            get_batch_transition_students(
+                batch_month=filters["month"],
+                batch_year=filters["year"],
+                course=filters["course"],
+                statuses=ENDED_BATCH_STATUSES,
+            )
+        )
+        pending_fee_students = [student for student in selected_batch_students if student.remaining_fees > 0]
+
     context = _common_batch_filters()
     context.update(
         {
             "batch_summaries": get_ended_batch_summaries(**filters),
             "filters": filters,
+            "selected_batch_students": selected_batch_students,
+            "pending_fee_students": pending_fee_students,
             "active_page": "ended_batches",
             "page_title": "Ended Batches",
         }
@@ -245,11 +283,27 @@ def batch_reports(request):
         "course": request.GET.get("course", "").strip(),
         "status": request.GET.get("status", "").strip(),
     }
+    selected_batch_students = []
+    pending_fee_students = []
+    if filters["month"] and filters["year"] and filters["course"]:
+        selected_statuses = (filters["status"],) if filters["status"] else None
+        selected_batch_students = list(
+            get_batch_transition_students(
+                batch_month=filters["month"],
+                batch_year=filters["year"],
+                course=filters["course"],
+                statuses=selected_statuses,
+            )
+        )
+        pending_fee_students = [student for student in selected_batch_students if student.remaining_fees > 0]
+
     context = _common_batch_filters()
     context.update(
         {
             "report_data": get_batch_report_data(**filters),
             "filters": filters,
+            "selected_batch_students": selected_batch_students,
+            "pending_fee_students": pending_fee_students,
             "active_page": "batch_reports",
             "page_title": "Batch Reports",
         }

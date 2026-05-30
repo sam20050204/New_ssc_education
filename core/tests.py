@@ -536,6 +536,42 @@ class ERPFoundationTests(TestCase):
         self.assertEqual(negative_row["april"], "₹ -700.00")
         self.assertEqual(negative_row["total"], "₹ -700.00")
 
+    def test_statistics_finance_card_uses_student_finance_profit(self):
+        self.client.force_login(self.user)
+
+        student = AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Finance",
+            father_name="Card",
+            surname="Student",
+            mother_name="Parent",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776620",
+            parent_mobile="9988776621",
+            gender="Male",
+            marital_status="Single",
+            address="Address",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            total_fees="6000.00",
+            paid_fees="5000.00",
+            admission_date=date(2026, 1, 10),
+        )
+        StudentFinanceDetail.objects.create(
+            student=student,
+            fees_paid_to_mkcl_1="1000.00",
+            fees_paid_to_mkcl_2="500.00",
+            fees_paid_to_mkcl_3="250.00",
+        )
+
+        response = self.client.get(reverse("statistics"), {"year": "2026"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(str(response.context["total_profit"]), "3250.00")
+
     def test_unauthorized_user_cannot_end_batch(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("end_batch"))

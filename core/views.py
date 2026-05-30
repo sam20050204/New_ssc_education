@@ -3096,7 +3096,7 @@ def statistics_view(request):
     )
 
     # Get students for selected year
-    students = AdmittedStudent.objects.all()
+    students = AdmittedStudent.objects.select_related("finance_detail")
     if selected_year:
         students = students.filter(admission_date__year=selected_year)
 
@@ -3104,12 +3104,14 @@ def statistics_view(request):
     total_profit = calculate_total_profit(students)
 
     # Calculate total profit for all years
-    all_students = AdmittedStudent.objects.all()
+    all_students = AdmittedStudent.objects.select_related("finance_detail")
     total_profit_all_years = calculate_total_profit(all_students)
 
     # Get current year
     current_year = datetime.now().year
-    current_year_students = AdmittedStudent.objects.filter(admission_date__year=current_year)
+    current_year_students = AdmittedStudent.objects.select_related("finance_detail").filter(
+        admission_date__year=current_year
+    )
     total_profit_current_year = calculate_total_profit(current_year_students)
 
     context = {

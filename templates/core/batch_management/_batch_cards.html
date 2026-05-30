@@ -1,10 +1,9 @@
 <div class="batch-toolbar">
     <form method="get" class="batch-filter-form">
-        <input type="text" name="search" value="{{ filters.search }}" placeholder="Search batch or course..." class="filter-input">
-        <select name="month" class="filter-select">
-            <option value="">All Months</option>
-            {% for month in filter_months %}
-                <option value="{{ month }}" {% if filters.month == month %}selected{% endif %}>{{ month }}</option>
+        <select name="course" class="filter-select">
+            <option value="">All Courses</option>
+            {% for course in filter_courses %}
+                <option value="{{ course }}" {% if filters.course == course %}selected{% endif %}>{{ course }}</option>
             {% endfor %}
         </select>
         <select name="year" class="filter-select">
@@ -13,10 +12,10 @@
                 <option value="{{ year }}" {% if filters.year == year %}selected{% endif %}>{{ year }}</option>
             {% endfor %}
         </select>
-        <select name="course" class="filter-select">
-            <option value="">All Courses</option>
-            {% for course in filter_courses %}
-                <option value="{{ course }}" {% if filters.course == course %}selected{% endif %}>{{ course }}</option>
+        <select name="month" class="filter-select">
+            <option value="">All Months</option>
+            {% for month in filter_months %}
+                <option value="{{ month }}" {% if filters.month == month %}selected{% endif %}>{{ month }}</option>
             {% endfor %}
         </select>
         {% if include_status_filter %}
@@ -26,9 +25,11 @@
                 <option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
+        {% else %}
+        <input type="text" name="search" value="{{ filters.search }}" placeholder="Search batch or course..." class="filter-input">
         {% endif %}
         <button type="submit" class="btn btn-primary">Apply</button>
-        <a href="{{ reset_url }}" class="btn btn-secondary">Reset</a>
+        <a href="{{ reset_url }}" class="btn btn-secondary">Clear Filters</a>
     </form>
 </div>
 
@@ -57,7 +58,30 @@
         {% endif %}
         {% if card_actions %}
         <div class="card-actions">
+            {% if show_select_batch_action %}
+            <form method="get">
+                <input type="hidden" name="course" value="{{ batch.course }}">
+                <input type="hidden" name="year" value="{{ batch.batch_year }}">
+                <input type="hidden" name="month" value="{{ batch.batch_month }}">
+                {% if include_status_filter %}
+                    <input type="hidden" name="status" value="{{ batch.batch_status }}">
+                {% endif %}
+                <button type="submit" class="btn btn-secondary">View Students</button>
+            </form>
+            {% endif %}
             {% include card_actions %}
+        </div>
+        {% elif show_select_batch_action %}
+        <div class="card-actions">
+            <form method="get">
+                <input type="hidden" name="course" value="{{ batch.course }}">
+                <input type="hidden" name="year" value="{{ batch.batch_year }}">
+                <input type="hidden" name="month" value="{{ batch.batch_month }}">
+                {% if include_status_filter %}
+                    <input type="hidden" name="status" value="{{ batch.batch_status }}">
+                {% endif %}
+                <button type="submit" class="btn btn-secondary">View Students</button>
+            </form>
         </div>
         {% endif %}
     </div>
@@ -75,12 +99,14 @@
     }
     .batch-filter-form {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 12px;
+        align-items: center;
         background: #fff;
         padding: 16px;
         border-radius: 16px;
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        overflow-x: auto;
     }
     .filter-input,
     .filter-select {
@@ -89,6 +115,13 @@
         border: 1px solid #dbe3ef;
         border-radius: 10px;
         background: #f8fafc;
+    }
+    .batch-filter-form .filter-input,
+    .batch-filter-form .filter-select {
+        flex: 1 1 0;
+    }
+    .batch-filter-form .btn {
+        flex: 0 0 auto;
     }
     .batch-card-grid {
         display: grid;

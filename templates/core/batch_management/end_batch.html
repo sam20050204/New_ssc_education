@@ -20,26 +20,62 @@
 <div class="container-fluid">
     <div class="lifecycle-panel">
         <form method="get" class="selection-form">
-            <select name="batch_month" required class="filter-select">
-                <option value="">Select Month</option>
-                {% for month in filter_months %}
-                    <option value="{{ month }}" {% if selected_month == month %}selected{% endif %}>{{ month }}</option>
-                {% endfor %}
-            </select>
-            <select name="batch_year" required class="filter-select">
-                <option value="">Select Year</option>
-                {% for year in filter_years %}
-                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
-                {% endfor %}
-            </select>
-            <select name="course" required class="filter-select">
+            <select name="course" class="filter-select">
                 <option value="">Select Course</option>
                 {% for course in filter_courses %}
                     <option value="{{ course }}" {% if selected_course == course %}selected{% endif %}>{{ course }}</option>
                 {% endfor %}
             </select>
+            <select name="batch_year" class="filter-select">
+                <option value="">Select Year</option>
+                {% for year in filter_years %}
+                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+            <select name="batch_month" class="filter-select">
+                <option value="">Select Month</option>
+                {% for month in filter_months %}
+                    <option value="{{ month }}" {% if selected_month == month %}selected{% endif %}>{{ month }}</option>
+                {% endfor %}
+            </select>
             <button type="submit" class="btn btn-primary">Load Summary</button>
+            <a href="{% url 'end_batch' %}" class="btn btn-secondary">Clear Filters</a>
         </form>
+
+        {% if has_filters %}
+        <div class="batch-results">
+            <h3>Active Batches</h3>
+            <p class="helper-text">Select a batch from this list to review students before ending it.</p>
+            <div class="batch-summary-grid">
+                {% for batch in active_batch_summaries %}
+                <div class="batch-summary-card {% if preview and preview.batch_month == batch.batch_month and preview.batch_year == batch.batch_year and preview.course == batch.course %}selected{% endif %}">
+                    <div class="batch-summary-head">
+                        <div>
+                            <h4>{{ batch.course_name }}</h4>
+                            <p>{{ batch.batch_month }} {{ batch.batch_year }}</p>
+                        </div>
+                        <span>{{ batch.student_count }} students</span>
+                    </div>
+                    <div class="batch-summary-stats">
+                        <div><span>Paid Fees</span><strong>Rs. {{ batch.paid_fees }}</strong></div>
+                        <div><span>Pending Fees</span><strong>Rs. {{ batch.pending_fees }}</strong></div>
+                    </div>
+                    <form method="get">
+                        <input type="hidden" name="course" value="{{ batch.course }}">
+                        <input type="hidden" name="batch_year" value="{{ batch.batch_year }}">
+                        <input type="hidden" name="batch_month" value="{{ batch.batch_month }}">
+                        <button type="submit" class="btn btn-secondary">Select Batch</button>
+                    </form>
+                </div>
+                {% empty %}
+                <div class="empty-state-card">
+                    <h3>No active batches found</h3>
+                    <p>No active batch matches the selected course, year, or month.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         {% if preview %}
         <div class="preview-card">
@@ -59,6 +95,52 @@
                     No pending fee blocker detected.
                 {% endif %}
             </p>
+
+            <div class="student-list-section">
+                <div class="student-list-header">
+                    <h4>Students in This Batch</h4>
+                    {% if pending_fee_students %}
+                        <span class="pending-badge">{{ pending_fee_students|length }} student{{ pending_fee_students|length|pluralize }} with pending fees</span>
+                    {% else %}
+                        <span class="clear-badge">No pending fees</span>
+                    {% endif %}
+                </div>
+
+                <div class="student-table-wrapper">
+                    <table class="student-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Mobile</th>
+                                <th>Total Fees</th>
+                                <th>Paid</th>
+                                <th>Remaining</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in preview_students %}
+                            <tr class="{% if student.remaining_fees > 0 %}fee-pending-row{% endif %}">
+                                <td>
+                                    {{ student.full_name }}
+                                    {% if student.remaining_fees > 0 %}
+                                        <span class="inline-pending-badge">Pending Fees</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ student.mobile_own }}</td>
+                                <td>Rs. {{ student.total_fees }}</td>
+                                <td>Rs. {{ student.paid_fees }}</td>
+                                <td>Rs. {{ student.remaining_fees }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5">No active students found in this batch.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <form method="post" action="{% url 'end_batch_confirm' %}" onsubmit="return confirm('Are you sure you want to end this batch?');">
                 {% csrf_token %}
                 <input type="hidden" name="batch_month" value="{{ preview.batch_month }}">
@@ -85,9 +167,80 @@
     }
     .selection-form {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 12px;
+        align-items: center;
         margin-bottom: 20px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+    .selection-form .filter-select {
+        flex: 1 1 0;
+        min-width: 180px;
+    }
+    .selection-form .btn {
+        flex: 0 0 auto;
+    }
+    .batch-results {
+        margin-bottom: 20px;
+    }
+    .batch-results h3,
+    .student-list-header h4 {
+        margin: 0;
+        color: #0f172a;
+    }
+    .helper-text {
+        margin: 6px 0 14px;
+        color: #64748b;
+    }
+    .batch-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+    }
+    .batch-summary-card,
+    .empty-state-card {
+        border: 1px solid #dbe7f3;
+        border-radius: 16px;
+        padding: 16px;
+        background: #f8fbff;
+    }
+    .batch-summary-card.selected {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    .batch-summary-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .batch-summary-head h4 {
+        margin: 0 0 4px;
+        color: #0f172a;
+    }
+    .batch-summary-head p,
+    .batch-summary-head span {
+        margin: 0;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    .batch-summary-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .batch-summary-stats div {
+        background: #eff6ff;
+        border-radius: 12px;
+        padding: 10px;
+    }
+    .batch-summary-stats span {
+        display: block;
+        color: #64748b;
+        font-size: 12px;
     }
     .preview-grid {
         display: grid;
@@ -122,6 +275,66 @@
         gap: 8px;
         align-items: center;
         margin-bottom: 14px;
+    }
+    .student-list-section {
+        margin: 18px 0;
+    }
+    .student-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .pending-badge,
+    .clear-badge {
+        border-radius: 999px;
+        padding: 7px 10px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .pending-badge {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .clear-badge {
+        background: #dcfce7;
+        color: #166534;
+    }
+    .student-table-wrapper {
+        overflow-x: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+    }
+    .student-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 680px;
+    }
+    .student-table th,
+    .student-table td {
+        padding: 11px 12px;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: left;
+    }
+    .student-table th {
+        background: #f1f5f9;
+        color: #334155;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+    .fee-pending-row {
+        background: #fff7ed;
+    }
+    .inline-pending-badge {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #ffedd5;
+        color: #9a3412;
+        font-size: 11px;
+        font-weight: 700;
     }
     .btn-danger {
         background: #dc2626;

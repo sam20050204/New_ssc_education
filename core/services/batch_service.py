@@ -171,6 +171,15 @@ def get_batch_transition_preview(*, batch_month, batch_year, course="", statuses
     }
 
 
+def get_batch_transition_students(*, batch_month, batch_year, course="", statuses=None):
+    return get_batch_lifecycle_queryset(
+        statuses=statuses,
+        month=batch_month,
+        year=batch_year,
+        course=course,
+    ).order_by("full_name")
+
+
 def _validate_transition(students, transition_key):
     config = ADMIN_MUTATION_STATUSES[transition_key]
     invalid = students.exclude(batch_status__in=config["from"])
