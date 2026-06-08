@@ -74,14 +74,14 @@ class AdmittedStudent(models.Model):
     course = models.CharField(max_length=50)
     custom_course = models.CharField(max_length=100, blank=True, null=True, help_text="If 'Other' is selected")
 
-    student_name = models.CharField(max_length=100)
-    father_name = models.CharField(max_length=100)
-    surname = models.CharField(max_length=100)
+    student_name = models.CharField(max_length=100, db_index=True)
+    father_name = models.CharField(max_length=100, db_index=True)
+    surname = models.CharField(max_length=100, db_index=True)
     mother_name = models.CharField(max_length=100, blank=True, null=True)
-    full_name = models.CharField(max_length=300)
+    full_name = models.CharField(max_length=300, db_index=True)
     date_of_birth = models.DateField()
 
-    mobile_own = models.CharField(max_length=15)
+    mobile_own = models.CharField(max_length=15, db_index=True)
     parent_mobile = models.CharField(max_length=15, blank=True, null=True)
 
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
@@ -148,6 +148,46 @@ class AdmittedStudent(models.Model):
     def formatted_full_name(self):
         parts = [self.surname, self.student_name, self.father_name]
         return " ".join(part.strip() for part in parts if part and part.strip())
+
+    def clean(self):
+        super().clean()
+        from django.core.exceptions import ValidationError
+        from core.constants import TIME_SLOT_DISPLAY_MAP
+
+        # Check capacity when active and not archived
+        if not self.is_archived and self.batch_status == "active":
+            for field_name, batch_type in [("theory_batch_time", "Theory"), ("practical_batch_time", "Practical")]:
+                slot_value = getattr(self, field_name)
+                if slot_value:
+                    # Look for course-specific batch first, then generic batch
+                    batch = Batch.objects.filter(
+                        batch_type=batch_type,
+                        time_slot=slot_value,
+                        course__name=self.course,
+                        is_archived=False
+                    ).first() or Batch.objects.filter(
+                        batch_type=batch_type,
+                        time_slot=slot_value,
+                        course__isnull=True,
+                        is_archived=False
+                    ).first()
+
+                    if batch:
+                        # Count active students in this batch
+                        filter_args = {field_name: slot_value, "batch_status": "active", "is_archived": False}
+                        if batch.course:
+                            filter_args["course"] = self.course
+                            
+                        current_count = AdmittedStudent.objects.filter(**filter_args)
+                        if self.pk:
+                            current_count = current_count.exclude(pk=self.pk)
+                            
+                        cnt = current_count.count()
+                        if batch.capacity and cnt >= batch.capacity:
+                            display_slot = TIME_SLOT_DISPLAY_MAP.get(slot_value, slot_value)
+                            raise ValidationError({
+                                field_name: f"{batch_type} batch {display_slot} is full. Capacity is {batch.capacity}."
+                            })
 
     def save(self, *args, **kwargs):
         self.full_name = self.formatted_full_name

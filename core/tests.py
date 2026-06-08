@@ -576,3 +576,71 @@ class ERPFoundationTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse("end_batch"))
         self.assertEqual(response.status_code, 302)
+
+    def test_logout_only_allows_post(self):
+        self.client.force_login(self.user)
+        # GET request to logout should fail with 405 Method Not Allowed
+        response = self.client.get(reverse("logout"))
+        self.assertEqual(response.status_code, 405)
+        
+        # POST request to logout should succeed and redirect
+        response = self.client.post(reverse("logout"))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("home"))
+
+    def test_batch_capacity_validation_raises_validation_error(self):
+        from django.core.exceptions import ValidationError
+        
+        # Create a batch with capacity 1
+        Batch.objects.create(batch_type="Theory", time_slot="08:00-09:00", capacity=1)
+        
+        # Add first student to the batch
+        AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Student1",
+            father_name="Father1",
+            surname="Surname1",
+            mother_name="Mother1",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776611",
+            parent_mobile="9988776612",
+            gender="Female",
+            marital_status="Single",
+            address="Address 1",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="HSC",
+            theory_batch_time="08:00-09:00",
+            total_fees="5000.00",
+        )
+        
+        # Attempt to create second student in same batch
+        student2 = AdmittedStudent(
+            course="MS-CIT",
+            student_name="Student2",
+            father_name="Father2",
+            surname="Surname2",
+            mother_name="Mother2",
+            date_of_birth=date(2004, 1, 1),
+            mobile_own="9988776622",
+            parent_mobile="9988776623",
+            gender="Female",
+            marital_status="Single",
+            address="Address 2",
+            city="Pune",
+            tehsil_block="Haveli",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="HSC",
+            theory_batch_time="08:00-09:00",
+            total_fees="5000.00",
+        )
+        
+        # Should raise ValidationError
+        with self.assertRaises(ValidationError) as ctx:
+            student2.full_clean()
+        
+        self.assertIn("theory_batch_time", ctx.exception.message_dict)
+        self.assertIn("full", ctx.exception.message_dict["theory_batch_time"][0])

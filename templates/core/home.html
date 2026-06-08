@@ -21,7 +21,12 @@
         {% if user.is_authenticated %}
             <li>Hello, {{ user.username }}</li>
             <li><a href="{% url 'dashboard' %}" class="login-btn">Dashboard</a></li>
-            <li><a href="{% url 'logout' %}" class="login-btn">Logout</a></li>
+            <li>
+                <form method="post" action="{% url 'logout' %}" id="home-logout-form" style="display:none;">
+                    {% csrf_token %}
+                </form>
+                <a href="#" onclick="document.getElementById('home-logout-form').submit(); return false;" class="login-btn">Logout</a>
+            </li>
         {% else %}
             <li><a href="{% url 'login' %}" class="login-btn">Login</a></li>
         {% endif %}

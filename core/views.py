@@ -1936,6 +1936,16 @@ def update_student_admitted(request, student_id):
                 f"Files: {list(request.FILES.keys())}"
             )
 
+        from django.core.exceptions import ValidationError
+        try:
+            student.full_clean()
+        except ValidationError as exc:
+            errors = []
+            for field, field_errors in exc.message_dict.items():
+                for err in field_errors:
+                    errors.append(f"{field}: {err}" if field != "__all__" else err)
+            return JsonResponse({"success": False, "error": " | ".join(errors)}, status=400)
+
         with transaction.atomic():
             student.save()
 
@@ -2806,16 +2816,20 @@ def import_database(request):
 
         db_path = settings.DATABASES["default"]["NAME"]
 
+        # Create backups directory under BASE_DIR if it doesn't exist
+        backups_dir = os.path.join(settings.BASE_DIR, "backups")
+        os.makedirs(backups_dir, exist_ok=True)
+
         # Create backup of current database before importing
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_name = f"database_backup_before_import_{timestamp}.db"
-        backup_path = os.path.join(settings.BASE_DIR, backup_name)
+        backup_path = os.path.join(backups_dir, backup_name)
         shutil.copy2(db_path, backup_path)
 
         # Create backup of current photos before importing
         media_path = os.path.join(settings.BASE_DIR, "media", "student_photos")
         if os.path.exists(media_path):
-            photos_backup_dir = os.path.join(settings.BASE_DIR, f"student_photos_backup_{timestamp}")
+            photos_backup_dir = os.path.join(backups_dir, f"student_photos_backup_{timestamp}")
             shutil.copytree(media_path, photos_backup_dir)
 
         temp_db_path = None

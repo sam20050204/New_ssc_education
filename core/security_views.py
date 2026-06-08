@@ -60,7 +60,7 @@ def custom_login(request):
     return render(request, "core/login.html")
 
 
-@require_http_methods(["POST", "GET"])
+@require_http_methods(["POST"])
 def custom_logout(request):
     if request.user.is_authenticated:
         log_audit_event(action="auth.logout", actor=request.user, request=request)
