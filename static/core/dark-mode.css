@@ -393,3 +393,193 @@ html[data-theme="dark"] .status-chip.low {
 html[data-theme="dark"] .status-chip.high {
     background: rgba(251, 191, 36, 0.16) !important;
 }
+
+html[data-theme="dark"] .main-content,
+html[data-theme="dark"] .content-wrapper {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .card-body,
+html[data-theme="dark"] .filters-container,
+html[data-theme="dark"] .filter-section,
+html[data-theme="dark"] .filter-drawer,
+html[data-theme="dark"] .drawer-body,
+html[data-theme="dark"] .drawer-actions,
+html[data-theme="dark"] .receipts-top-bar,
+html[data-theme="dark"] .student-details-section,
+html[data-theme="dark"] .payment-form-section,
+html[data-theme="dark"] .date-selector,
+html[data-theme="dark"] .batch-report-card,
+html[data-theme="dark"] .batch-card,
+html[data-theme="dark"] .batch-students-table-wrapper,
+html[data-theme="dark"] .attendance-report-controls,
+html[data-theme="dark"] .attendance-modal-content,
+html[data-theme="dark"] .student-info-modal-content,
+html[data-theme="dark"] .attendance-sheet-container,
+html[data-theme="dark"] .attendance-payment-row,
+html[data-theme="dark"] .search-suggestions,
+html[data-theme="dark"] .suggestion-item,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .modal-body,
+html[data-theme="dark"] .modal-footer,
+html[data-theme="dark"] .help-section,
+html[data-theme="dark"] [style*="background: white"],
+html[data-theme="dark"] [style*="background:white"],
+html[data-theme="dark"] [style*="background: #fff"],
+html[data-theme="dark"] [style*="background:#fff"],
+html[data-theme="dark"] [style*="background: #ffffff"],
+html[data-theme="dark"] [style*="background:#ffffff"],
+html[data-theme="dark"] [style*="background-color: #f0f0f0"],
+html[data-theme="dark"] [style*="background-color:#f0f0f0"] {
+    background: var(--panel) !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .card-header,
+html[data-theme="dark"] .drawer-actions,
+html[data-theme="dark"] .data-table thead,
+html[data-theme="dark"] .data-table th,
+html[data-theme="dark"] .student-table thead,
+html[data-theme="dark"] .receipts-table thead,
+html[data-theme="dark"] .attendance-sheet-table .sheet-sticky,
+html[data-theme="dark"] .attendance-sheet-table tbody tr:hover td,
+html[data-theme="dark"] [style*="background: #f8f9fa"],
+html[data-theme="dark"] [style*="background:#f8f9fa"],
+html[data-theme="dark"] [style*="background: #f8fafc"],
+html[data-theme="dark"] [style*="background:#f8fafc"],
+html[data-theme="dark"] [style*="background: #f9fafb"],
+html[data-theme="dark"] [style*="background:#f9fafb"] {
+    background: var(--panel-muted) !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6,
+html[data-theme="dark"] label,
+html[data-theme="dark"] .page-title,
+html[data-theme="dark"] .section-title,
+html[data-theme="dark"] .student-name,
+html[data-theme="dark"] .batch-time,
+html[data-theme="dark"] .stat-value,
+html[data-theme="dark"] .card-number,
+html[data-theme="dark"] .attendance-modal-header h3,
+html[data-theme="dark"] .attendance-payment-header h4,
+html[data-theme="dark"] .attendance-payment-row strong,
+html[data-theme="dark"] .suggestion-item div,
+html[data-theme="dark"] [style*="color: #333"],
+html[data-theme="dark"] [style*="color:#333"],
+html[data-theme="dark"] [style*="color: #111"],
+html[data-theme="dark"] [style*="color:#111"],
+html[data-theme="dark"] [style*="color: #000"],
+html[data-theme="dark"] [style*="color:#000"],
+html[data-theme="dark"] [style*="color: black"],
+html[data-theme="dark"] [style*="color:black"] {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .page-subtitle,
+html[data-theme="dark"] .form-text,
+html[data-theme="dark"] .help-list li,
+html[data-theme="dark"] .info-card p,
+html[data-theme="dark"] .stat-label,
+html[data-theme="dark"] .batch-label,
+html[data-theme="dark"] .empty-days,
+html[data-theme="dark"] .attendance-modal-subtitle,
+html[data-theme="dark"] .attendance-legend,
+html[data-theme="dark"] .attendance-payment-row span,
+html[data-theme="dark"] [style*="color: #666"],
+html[data-theme="dark"] [style*="color:#666"],
+html[data-theme="dark"] [style*="color: #64748b"],
+html[data-theme="dark"] [style*="color:#64748b"],
+html[data-theme="dark"] [style*="color: #7f8c8d"],
+html[data-theme="dark"] [style*="color:#7f8c8d"],
+html[data-theme="dark"] [style*="color: #999"],
+html[data-theme="dark"] [style*="color:#999"] {
+    color: var(--text-soft) !important;
+}
+
+html[data-theme="dark"] .data-table td,
+html[data-theme="dark"] .data-table th,
+html[data-theme="dark"] .receipts-table td,
+html[data-theme="dark"] .receipts-table th,
+html[data-theme="dark"] .attendance-sheet-table td,
+html[data-theme="dark"] .attendance-sheet-table th,
+html[data-theme="dark"] .help-list li,
+html[data-theme="dark"] .stat-row,
+html[data-theme="dark"] .form-actions,
+html[data-theme="dark"] .attendance-payment-section {
+    border-color: var(--line) !important;
+}
+
+html[data-theme="dark"] .badge-warning,
+html[data-theme="dark"] .status-not-taken {
+    background: rgba(251, 191, 36, 0.18) !important;
+    color: #fde68a !important;
+    border-color: rgba(251, 191, 36, 0.28) !important;
+}
+
+html[data-theme="dark"] .badge-info,
+html[data-theme="dark"] .calendar-trigger,
+html[data-theme="dark"] .sheet-theory-cell,
+html[data-theme="dark"] .attendance-sheet-table .sheet-session-header-row .sheet-theory-col {
+    background: rgba(59, 130, 246, 0.18) !important;
+    color: #bfdbfe !important;
+    border-color: rgba(96, 165, 250, 0.28) !important;
+}
+
+html[data-theme="dark"] .badge-success,
+html[data-theme="dark"] .status-present {
+    background: rgba(34, 197, 94, 0.16) !important;
+    color: #bbf7d0 !important;
+    border-color: rgba(34, 197, 94, 0.28) !important;
+}
+
+html[data-theme="dark"] .badge-danger,
+html[data-theme="dark"] .status-absent,
+html[data-theme="dark"] .sheet-status-cell.status-a {
+    background: rgba(239, 68, 68, 0.22) !important;
+    color: #fecaca !important;
+    border-color: rgba(248, 113, 113, 0.34) !important;
+}
+
+html[data-theme="dark"] .sheet-practical-cell,
+html[data-theme="dark"] .attendance-sheet-table .sheet-session-header-row .sheet-practical-col {
+    background: rgba(168, 85, 247, 0.18) !important;
+    color: #e9d5ff !important;
+    border-color: rgba(192, 132, 252, 0.28) !important;
+}
+
+html[data-theme="dark"] .sheet-status-cell,
+html[data-theme="dark"] .legend-mini,
+html[data-theme="dark"] .percentage-text {
+    color: var(--text) !important;
+}
+
+html[data-theme="dark"] .student-fee-pending-row .sheet-sr-col,
+html[data-theme="dark"] .student-fee-pending-row .sheet-name-col,
+html[data-theme="dark"] .student-fee-pending-row .sheet-mobile-col {
+    background: rgba(239, 68, 68, 0.14) !important;
+}
+
+html[data-theme="dark"] .btn-filter,
+html[data-theme="dark"] .attendance-clear-filter,
+html[data-theme="dark"] .pagination a,
+html[data-theme="dark"] .pagination span {
+    background: #132132 !important;
+    border-color: var(--line) !important;
+    color: #bfdbfe !important;
+}
+
+html[data-theme="dark"] .btn-filter.active,
+html[data-theme="dark"] .pagination .active,
+html[data-theme="dark"] .pagination .page-item.active .page-link {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+}
