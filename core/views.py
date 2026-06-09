@@ -2742,6 +2742,14 @@ def export_database(request):
         import zipfile
         from io import BytesIO
 
+        # Guard against non-SQLite databases in production
+        db_engine = settings.DATABASES["default"]["ENGINE"]
+        if "sqlite" not in db_engine.lower():
+            return JsonResponse(
+                {"success": False, "error": "Database backup via UI is only supported for SQLite configurations."},
+                status=400
+            )
+
         db_path = settings.DATABASES["default"]["NAME"]
 
         # Convert Path object to string
@@ -2790,6 +2798,14 @@ def export_database(request):
 @csrf_protect
 def import_database(request):
     """Import database and photos from backup ZIP file (merge/update instead of overwrite)"""
+    # Guard against non-SQLite databases in production
+    db_engine = settings.DATABASES["default"]["ENGINE"]
+    if "sqlite" not in db_engine.lower():
+        return JsonResponse(
+            {"success": False, "error": "Database restoration via UI is only supported for SQLite configurations."},
+            status=400
+        )
+
     if "database_file" not in request.FILES:
         return JsonResponse({"success": False, "error": "No file provided"}, status=400)
 

@@ -644,3 +644,28 @@ class ERPFoundationTests(TestCase):
         
         self.assertIn("theory_batch_time", ctx.exception.message_dict)
         self.assertIn("full", ctx.exception.message_dict["theory_batch_time"][0])
+
+    def test_database_backup_restore_guards_non_sqlite(self):
+        self.client.force_login(self.user)
+        self.user.is_staff = True
+        self.user.save()
+
+        non_sqlite_databases = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": "test_db",
+            }
+        }
+        with override_settings(DATABASES=non_sqlite_databases):
+            response = self.client.get(reverse("export_database"))
+            self.assertEqual(response.status_code, 400)
+            payload = response.json()
+            self.assertFalse(payload["success"])
+            self.assertIn("SQLite", payload["error"])
+
+            response = self.client.post(reverse("import_database"), {"database_file": "dummy"})
+            self.assertEqual(response.status_code, 400)
+            payload = response.json()
+            self.assertFalse(payload["success"])
+            self.assertIn("SQLite", payload["error"])
+

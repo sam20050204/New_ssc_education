@@ -41,10 +41,6 @@ class CustomAdminSite(admin.AdminSite):
         return super().index(request, extra_context)
 
 
-admin_site = CustomAdminSite(name="custom_admin")
-
-
-@admin.register(Enquiry, site=admin_site)
 class EnquiryAdmin(admin.ModelAdmin):
     list_display = ("name", "mobile", "course", "city", "created_at_formatted")
     list_filter = ("course", "city", "created_at")
@@ -64,7 +60,6 @@ class EnquiryAdmin(admin.ModelAdmin):
     created_at_formatted.short_description = "Submitted On"
 
 
-@admin.register(AdmittedStudent, site=admin_site)
 class AdmittedStudentAdmin(admin.ModelAdmin):
     list_display = ("full_name", "course_display", "mobile_own", "admission_date", "fees_status")
     list_filter = ("course", "admission_date", "gender", "marital_status")
@@ -109,7 +104,6 @@ class AdmittedStudentAdmin(admin.ModelAdmin):
     fees_status.short_description = "Fees Status"
 
 
-@admin.register(Student, site=admin_site)
 class StudentAdmin(admin.ModelAdmin):
     list_display = ("name", "phone", "course_name", "admission_date", "is_active")
     list_filter = ("is_active", "course", "admission_date")
@@ -132,7 +126,6 @@ class StudentAdmin(admin.ModelAdmin):
     course_name.short_description = "Course"
 
 
-@admin.register(Course, site=admin_site)
 class CourseAdmin(admin.ModelAdmin):
     list_display = ("name", "duration", "student_count")
     search_fields = ("name",)
@@ -147,7 +140,6 @@ class CourseAdmin(admin.ModelAdmin):
     student_count.short_description = "Enrolled Students"
 
 
-@admin.register(FeePayment, site=admin_site)
 class FeePaymentAdmin(admin.ModelAdmin):
     list_display = ("receipt_no", "student_link", "amount_formatted", "payment_mode", "payment_date")
     list_filter = ("payment_mode", "payment_date")
@@ -176,7 +168,6 @@ class FeePaymentAdmin(admin.ModelAdmin):
     amount_formatted.short_description = "Amount"
 
 
-@admin.register(StudentFinanceDetail, site=admin_site)
 class StudentFinanceDetailAdmin(admin.ModelAdmin):
     list_display = ("student_link", "total_installments", "total_mkcl_fees", "profit_formatted")
     readonly_fields = ("created_at", "updated_at", "total_mkcl_fees", "profit")
