@@ -1,0 +1,293 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} – SSC Education{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        padding: 24px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .form-card {
+        background: var(--panel);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .form-card-header {
+        background: var(--panel-muted);
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .form-card-title {
+        font-weight: 800;
+        font-size: 16px;
+        color: var(--text);
+        margin: 0;
+    }
+
+    .form-card-body {
+        padding: 24px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    @media (max-width: 600px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-group-full {
+        grid-column: 1 / -1;
+    }
+
+    .form-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .form-help {
+        font-size: 12px;
+        color: var(--text-soft);
+        margin-top: 4px;
+        line-height: 1.4;
+    }
+
+    .form-actions {
+        padding: 20px 24px;
+        background: var(--panel-muted);
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .btn-save {
+        background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+        color: #fff;
+        border: 0;
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 8px 18px rgba(124, 58, 237, 0.2);
+    }
+
+    .btn-save:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(124, 58, 237, 0.3);
+    }
+
+    .btn-cancel {
+        background: var(--panel-strong);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 20px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background 0.2s ease;
+    }
+
+    .btn-cancel:hover {
+        background: var(--line);
+    }
+</style>
+{% endblock %}
+
+{% block page_heading %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #fff; box-shadow: 0 8px 20px rgba(124, 58, 237, 0.25);">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+            <div>
+                <h1 class="page-title">{{ title }}</h1>
+                <p class="page-subtitle">Record individual student exam metrics and verify MKCL/Institute certification.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+
+    <!-- Messages Block -->
+    {% if messages %}
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" style="padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 14px; border: 1px solid transparent; {% if message.tags == 'success' %}background: rgba(22,163,74,0.08); color: var(--success); border-color: rgba(22,163,74,0.15);{% else %}background: rgba(220,38,38,0.08); color: var(--danger); border-color: rgba(220,38,38,0.15);{% endif %}">
+                    <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% else %}fa-circle-xmark{% endif %}"></i>
+                    <div>{{ message }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" class="form-card">
+        {% csrf_token %}
+        
+        <div class="form-card-header">
+            <i class="fa-solid fa-address-card text-primary" style="font-size: 18px;"></i>
+            <h2 class="form-card-title">Exam Record Details</h2>
+        </div>
+
+        <div class="form-card-body">
+            <div class="form-grid">
+                
+                <!-- Student CRM Link -->
+                <div class="form-group-full">
+                    <label class="form-label" for="{{ form.student.id_for_label }}">Link CRM Admitted Student (Optional)</label>
+                    {{ form.student }}
+                    <p class="form-help">Select an active admitted student from the CRM to link this exam score to their profile. Leave empty for walk-in or external learners.</p>
+                    {% if form.student.errors %}
+                        <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.student.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Student Name -->
+                <div>
+                    <label class="form-label" for="{{ form.student.id_for_label }}">Student / Learner Name</label>
+                    {{ form.student_name }}
+                    <p class="form-help">The explicit name printed on the certificate.</p>
+                    {% if form.student_name.errors %}
+                        <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.student_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Learner ID -->
+                <div>
+                    <label class="form-label" for="{{ form.learner_id.id_for_label }}">Learner ID / Registration ID</label>
+                    {{ form.learner_id }}
+                    <p class="form-help">MKCL Learner ID or unique registration code.</p>
+                    {% if form.learner_id.errors %}
+                        <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.learner_id.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Course -->
+                <div>
+                    <label class="form-label" for="{{ form.course.id_for_label }}">Course</label>
+                    {{ form.course }}
+                    <p class="form-help">The course name (e.g. MS-CIT, KLiC IT, Tally ERP).</p>
+                    {% if form.course.errors %}
+                        <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.course.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Course Batch -->
+                <div>
+                    <label class="form-label" for="{{ form.course_batch.id_for_label }}">Course Batch</label>
+                    {{ form.course_batch }}
+                    <p class="form-help">Batch month and year (e.g. January 2026).</p>
+                    {% if form.course_batch.errors %}
+                        <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.course_batch.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Exam Date -->
+                <div>
+                    <label class="form-label" for="{{ form.exam_date.id_for_label }}">Exam Date</label>
+                    {{ form.exam_date }}
+                    {% if form.exam_date.errors %}
+                        <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.exam_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Percentage -->
+                <div>
+                    <label class="form-label" for="{{ form.percentage.id_for_label }}">Percentage Marks</label>
+                    {{ form.percentage }}
+                    {% if form.percentage.errors %}
+                        <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.percentage.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Result Status -->
+                <div class="form-group-full">
+                    <label class="form-label" for="{{ form.result.id_for_label }}">Result Status</label>
+                    {{ form.result }}
+                    {% if form.result.errors %}
+                        <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.result.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'exam_record_list' %}" class="btn-cancel">Cancel</a>
+            <button type="submit" class="btn-save">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Save Exam Record
+            </button>
+        </div>
+    </form>
+
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const studentSelect = document.getElementById("{{ form.student.id_for_label }}");
+        const nameInput = document.getElementById("{{ form.student_name.id_for_label }}");
+        const learnerIdInput = document.getElementById("{{ form.learner_id.id_for_label }}");
+        const courseInput = document.getElementById("{{ form.course.id_for_label }}");
+        const batchInput = document.getElementById("{{ form.course_batch.id_for_label }}");
+
+        // Autocomplete other fields when CRM Admitted Student is selected
+        if (studentSelect) {
+            studentSelect.addEventListener("change", function() {
+                const studentId = studentSelect.value;
+                if (!studentId) return;
+
+                // Call existing student batch detail API to fetch details
+                fetch(`/admission/${studentId}/batch-detail/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.student) {
+                            const student = data.student;
+                            if (nameInput && !nameInput.value) {
+                                nameInput.value = student.full_name;
+                            }
+                            if (learnerIdInput && !learnerIdInput.value) {
+                                learnerIdInput.value = student.student_id;
+                            }
+                            if (courseInput && !courseInput.value) {
+                                courseInput.value = student.course === 'Other' ? student.custom_course : student.course;
+                            }
+                            if (batchInput && !batchInput.value) {
+                                const m = student.batch_month || '';
+                                const y = student.batch_year || '';
+                                if (m || y) {
+                                    batchInput.value = `${m} ${y}`.trim();
+                                }
+                            }
+                        }
+                    })
+                    .catch(err => console.error("Error auto-completing student details:", err));
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -13,6 +13,46 @@ from django.utils.text import slugify
 from django.db.models import Sum, Avg, Q
 
 
+class Customer(models.Model):
+    """Customer record for inventory sales"""
+
+    name = models.CharField(max_length=150, db_index=True)
+    phone = models.CharField(max_length=20, blank=True, db_index=True)
+    email = models.EmailField(blank=True)
+    address = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Customer"
+        verbose_name_plural = "Customers"
+        indexes = [
+            models.Index(fields=["phone"]),
+            models.Index(fields=["name"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.phone})" if self.phone else self.name
+
+    def get_purchase_count(self):
+        """Total number of sales receipts for this customer"""
+        return self.sales_receipts.count()
+
+    def get_total_spent(self):
+        """Total amount spent across all receipts"""
+        return (
+            self.sales_receipts.aggregate(
+                total=Sum("grand_total", default=Decimal("0.00"))
+            )["total"]
+            or Decimal("0.00")
+        )
+
+
 class Category(models.Model):
     """Product categories for inventory items"""
 
@@ -578,6 +618,14 @@ class SaleReceipt(models.Model):
     """Customer-facing inventory sale receipt."""
 
     receipt_no = models.CharField(max_length=24, unique=True, editable=False, db_index=True)
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sales_receipts",
+        help_text="Link to customer record (optional)",
+    )
     customer_name = models.CharField(max_length=200)
     customer_phone = models.CharField(max_length=15, blank=True)
     customer_address = models.TextField(blank=True)

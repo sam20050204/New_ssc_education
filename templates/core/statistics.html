@@ -56,10 +56,11 @@
         <div class="stat-sublabel">Total Admissions</div>
     </a>
 
-    <div class="stat-card">
+    <div class="stat-card" id="courseAnalyticsCard" style="cursor:pointer;" onclick="toggleCourseChart()">
         <div class="stat-icon">📚</div>
         <div class="stat-label">Course Analytics</div>
-        <p class="coming-soon">Coming Soon</p>
+        <div class="stat-number" style="font-size:28px;">{{ course_distribution|length }}</div>
+        <div class="stat-sublabel">Active Courses — click to expand</div>
     </div>
 </div>
 </div>
@@ -85,8 +86,47 @@
 </div>
 
 <div id="coursesSection" class="detail-section" style="display: none;">
-    <h2>Course Analytics</h2>
-    <p style="padding: 40px; text-align: center; color: #666;">Coming soon...</p>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <h2 style="margin:0;">📚 Course Analytics</h2>
+        <button onclick="hideDetailSection()" style="background:none;border:1px solid var(--border-color,#e2e8f0);border-radius:8px;padding:6px 14px;cursor:pointer;color:var(--text-secondary,#64748b);font-size:13px;">✕ Close</button>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start;">
+        <!-- Doughnut Chart -->
+        <div style="background:var(--card-bg,#fff);border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border-color,#e2e8f0);">
+            <h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text-primary,#1e293b);">Student Distribution by Course</h3>
+            <div style="position:relative;height:300px;">
+                <canvas id="courseDonutChart"></canvas>
+            </div>
+        </div>
+        <!-- Breakdown Table -->
+        <div style="background:var(--card-bg,#fff);border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border-color,#e2e8f0);">
+            <h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text-primary,#1e293b);">Enrollment Breakdown</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <thead>
+                    <tr style="border-bottom:2px solid var(--border-color,#e2e8f0);">
+                        <th style="padding:8px 12px;text-align:left;color:var(--text-secondary,#64748b);font-weight:600;">Course</th>
+                        <th style="padding:8px 12px;text-align:right;color:var(--text-secondary,#64748b);font-weight:600;">Students</th>
+                        <th style="padding:8px 12px;text-align:right;color:var(--text-secondary,#64748b);font-weight:600;">Share</th>
+                    </tr>
+                </thead>
+                <tbody id="courseBreakdownBody">
+                    {% for item in course_distribution %}
+                    <tr style="border-bottom:1px solid var(--border-color,#f1f5f9);">
+                        <td style="padding:8px 12px;">{{ item.course }}</td>
+                        <td style="padding:8px 12px;text-align:right;font-weight:600;">{{ item.count }}</td>
+                        <td style="padding:8px 12px;text-align:right;color:var(--text-secondary,#64748b);">
+                            {% if total_admitted %}
+                                {{ item.count|floatformat:0 }}/{{ total_admitted }}
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" style="text-align:center;padding:20px;color:#999;">No data available</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -143,6 +183,16 @@
         detailSections.forEach(section => section.style.display = 'none');
         
         document.getElementById('coursesSection').style.display = 'block';
+        initCourseChart();
+    }
+    
+    function toggleCourseChart() {
+        const section = document.getElementById('coursesSection');
+        if (section.style.display === 'block') {
+            hideDetailSection();
+        } else {
+            loadCoursesSection();
+        }
     }
     
     function hideDetailSection() {
@@ -152,6 +202,65 @@
         statsGrid.style.display = 'grid';
         detailSections.forEach(section => section.style.display = 'none');
     }
+</script>
+
+<!-- Chart.js CDN + Doughnut Chart Init -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+    const COURSE_DATA = {{ course_distribution_json|safe }};
+    let donutChart = null;
+
+    const PALETTE = [
+        '#0f766e','#f97316','#6366f1','#ec4899','#14b8a6',
+        '#f59e0b','#8b5cf6','#06b6d4','#10b981','#ef4444',
+        '#3b82f6','#a855f7'
+    ];
+
+    function isDark() {
+        return document.documentElement.classList.contains('dark-mode') ||
+               document.body.classList.contains('dark-mode');
+    }
+
+    function initCourseChart() {
+        const canvas = document.getElementById('courseDonutChart');
+        if (!canvas || donutChart) return;
+
+        donutChart = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: COURSE_DATA.map(d => d.course),
+                datasets: [{
+                    data: COURSE_DATA.map(d => d.count),
+                    backgroundColor: COURSE_DATA.map((_, i) => PALETTE[i % PALETTE.length] + 'dd'),
+                    borderColor: COURSE_DATA.map((_, i) => PALETTE[i % PALETTE.length]),
+                    borderWidth: 2,
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: isDark() ? '#94a3b8' : '#64748b',
+                            font: { size: 11 },
+                            boxWidth: 12,
+                            padding: 10,
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.label}: ${ctx.parsed} students (${((ctx.parsed / ctx.dataset.data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
 </script>
 
 {% endblock %}

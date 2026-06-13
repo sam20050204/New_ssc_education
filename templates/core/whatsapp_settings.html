@@ -1,0 +1,1020 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}WhatsApp Bot Settings – SSC Education{% endblock %}
+
+{% block page_heading %}
+<div class="page-header wa-page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon wa-page-icon">
+                <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <div>
+                <h1 class="page-title">WhatsApp Bot Settings</h1>
+                <p class="page-subtitle">Configure automated admission &amp; payment notifications for students and parents.</p>
+            </div>
+        </div>
+        <div class="wa-header-badge">
+            <span class="wa-status-dot {% if form.instance.is_enabled %}wa-status-active{% else %}wa-status-inactive{% endif %}" id="headerStatusDot"></span>
+            <span class="wa-status-label" id="headerStatusLabel">{% if form.instance.is_enabled %}Active{% else %}Inactive{% endif %}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" id="whatsapp-settings-form">
+    {% csrf_token %}
+
+    <div class="wa-layout">
+
+        <!-- ═══════════════════════════════ LEFT COLUMN ═══════════════════════════════ -->
+        <div class="wa-main">
+
+            <!-- Enable Toggle Card -->
+            <div class="wa-card wa-card-toggle">
+                <div class="wa-toggle-row">
+                    <div class="wa-toggle-info">
+                        <div class="wa-toggle-icon">
+                            <i class="fa-solid fa-power-off"></i>
+                        </div>
+                        <div>
+                            <div class="wa-toggle-title">Enable Automated Notifications</div>
+                            <div class="wa-toggle-desc">Send WhatsApp messages to students/parents on admission and fee payment events.</div>
+                        </div>
+                    </div>
+                    <label class="wa-switch" for="{{ form.is_enabled.id_for_label }}" title="Toggle WhatsApp bot">
+                        {{ form.is_enabled }}
+                        <span class="wa-switch-track"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Provider Card -->
+            <div class="wa-card">
+                <div class="wa-card-head">
+                    <div class="wa-card-head-icon"><i class="fa-solid fa-plug"></i></div>
+                    <div>
+                        <div class="wa-card-title">API Provider</div>
+                        <div class="wa-card-subtitle">Choose which service sends your WhatsApp messages</div>
+                    </div>
+                </div>
+                <div class="wa-card-body">
+
+                    <!-- Provider Selector -->
+                    <div class="wa-field">
+                        <label class="wa-label" for="{{ form.provider.id_for_label }}">Message Provider</label>
+                        <div class="wa-select-wrap">
+                            <i class="fa-solid fa-server wa-select-icon"></i>
+                            {{ form.provider }}
+                        </div>
+                        <div class="wa-hint">Meta Cloud API offers up to 1,000 free conversations per month with no cost.</div>
+                    </div>
+
+                    <div class="wa-divider"></div>
+
+                    <!-- ── Meta Fields ── -->
+                    <div id="provider-fields-meta" class="wa-provider-group">
+                        <div class="wa-provider-header wa-provider-header-meta">
+                            <i class="fa-brands fa-meta"></i>
+                            <span>Meta Cloud API Credentials</span>
+                            <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener" class="wa-ext-link">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Developer Console
+                            </a>
+                        </div>
+                        <div class="wa-fields-grid">
+                            <div class="wa-field">
+                                <label class="wa-label" for="{{ form.meta_phone_id.id_for_label }}">
+                                    <i class="fa-solid fa-phone-volume me-1"></i> Phone Number ID
+                                </label>
+                                {{ form.meta_phone_id }}
+                                <div class="wa-hint">Found in your Meta app → WhatsApp → API Setup → Phone number ID.</div>
+                            </div>
+                            <div class="wa-field">
+                                <label class="wa-label" for="{{ form.meta_token.id_for_label }}">
+                                    <i class="fa-solid fa-key me-1"></i> System Access Token
+                                </label>
+                                <div class="wa-password-wrap">
+                                    {{ form.meta_token }}
+                                    <button type="button" class="wa-eye-btn" onclick="toggleTokenVisibility(this)" aria-label="Toggle token visibility">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="wa-hint">Generate a <strong>permanent</strong> token in Facebook Business Settings to avoid expiration.</div>
+                            </div>
+                        </div>
+                        <div class="wa-info-box wa-info-box-meta">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <div>
+                                <strong>Free Tier:</strong> Meta gives you 1,000 free user-initiated conversations/month. Business-initiated (outbound) messages require approved templates.
+                                <a href="https://developers.facebook.com/docs/whatsapp/pricing/" target="_blank" rel="noopener">See pricing →</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Twilio Fields ── -->
+                    <div id="provider-fields-twilio" class="wa-provider-group">
+                        <div class="wa-provider-header wa-provider-header-twilio">
+                            <i class="fa-solid fa-comments"></i>
+                            <span>Twilio WhatsApp Credentials</span>
+                        </div>
+                        <div class="wa-fields-grid">
+                            <div class="wa-field">
+                                <label class="wa-label" for="{{ form.twilio_sid.id_for_label }}">Account SID</label>
+                                {{ form.twilio_sid }}
+                            </div>
+                            <div class="wa-field">
+                                <label class="wa-label" for="{{ form.twilio_auth_token.id_for_label }}">Auth Token</label>
+                                <div class="wa-password-wrap">
+                                    {{ form.twilio_auth_token }}
+                                    <button type="button" class="wa-eye-btn" onclick="toggleTokenVisibility(this)" aria-label="Toggle token visibility">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="wa-field wa-field-full">
+                                <label class="wa-label" for="{{ form.twilio_from.id_for_label }}">Sender Phone Number</label>
+                                {{ form.twilio_from }}
+                                <div class="wa-hint">Format: <code>whatsapp:+14155238886</code></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Custom Fields ── -->
+                    <div id="provider-fields-custom" class="wa-provider-group">
+                        <div class="wa-provider-header wa-provider-header-custom">
+                            <i class="fa-solid fa-code"></i>
+                            <span>Custom HTTP Gateway</span>
+                        </div>
+                        <div class="wa-fields-grid">
+                            <div class="wa-field wa-field-full">
+                                <label class="wa-label" for="{{ form.custom_url.id_for_label }}">Gateway URL</label>
+                                {{ form.custom_url }}
+                                <div class="wa-hint">Full HTTP/HTTPS endpoint that accepts your message payload.</div>
+                            </div>
+                            <div class="wa-field wa-field-full">
+                                <label class="wa-label" for="{{ form.custom_token.id_for_label }}">API Key / Bearer Token</label>
+                                <div class="wa-password-wrap">
+                                    {{ form.custom_token }}
+                                    <button type="button" class="wa-eye-btn" onclick="toggleTokenVisibility(this)" aria-label="Toggle token visibility">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Console Fields ── -->
+                    <div id="provider-fields-console" class="wa-provider-group">
+                        <div class="wa-info-box wa-info-box-console">
+                            <i class="fa-solid fa-terminal"></i>
+                            <div>
+                                <strong>Console / Testing Mode</strong><br>
+                                No credentials needed. All WhatsApp notifications will be printed to the server's terminal stdout and log files. Use this during development.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Message Templates Card -->
+            <div class="wa-card">
+                <div class="wa-card-head">
+                    <div class="wa-card-head-icon wa-card-head-icon-tpl"><i class="fa-solid fa-file-lines"></i></div>
+                    <div>
+                        <div class="wa-card-title">Notification Templates</div>
+                        <div class="wa-card-subtitle">Customize the messages sent to students and parents</div>
+                    </div>
+                </div>
+                <div class="wa-card-body">
+                    <div class="wa-field">
+                        <label class="wa-label" for="{{ form.admission_template.id_for_label }}">
+                            <i class="fa-solid fa-user-graduate me-1"></i> Admission Confirmation Message
+                        </label>
+                        {{ form.admission_template }}
+                        <div class="wa-placeholder-chips">
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.admission_template.id_for_label }}', '{student_name}')">{student_name}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.admission_template.id_for_label }}', '{course_name}')">{course_name}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.admission_template.id_for_label }}', '{student_id}')">{student_id}</span>
+                        </div>
+                    </div>
+
+                    <div class="wa-divider"></div>
+
+                    <div class="wa-field">
+                        <label class="wa-label" for="{{ form.payment_template.id_for_label }}">
+                            <i class="fa-solid fa-receipt me-1"></i> Payment Receipt Message
+                        </label>
+                        {{ form.payment_template }}
+                        <div class="wa-placeholder-chips">
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.payment_template.id_for_label }}', '{student_name}')">{student_name}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.payment_template.id_for_label }}', '{amount}')">{amount}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.payment_template.id_for_label }}', '{receipt_no}')">{receipt_no}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.payment_template.id_for_label }}', '{course_name}')">{course_name}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.payment_template.id_for_label }}', '{remaining_fees}')">{remaining_fees}</span>
+                        </div>
+                    </div>
+
+                    <div class="wa-divider"></div>
+
+                    <div class="wa-field">
+                        <label class="wa-label" for="{{ form.enquiry_template.id_for_label }}">
+                            <i class="fa-solid fa-comments me-1"></i> Enquiry Welcome Message
+                        </label>
+                        {{ form.enquiry_template }}
+                        <div class="wa-placeholder-chips">
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.enquiry_template.id_for_label }}', '{student_name}')">{student_name}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.enquiry_template.id_for_label }}', '{course_name}')">{course_name}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.enquiry_template.id_for_label }}', '{institute_name}')">{institute_name}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.enquiry_template.id_for_label }}', '{contact_number}')">{contact_number}</span>
+                        </div>
+                    </div>
+
+                    <div class="wa-divider"></div>
+
+                    <div class="wa-field">
+                        <label class="wa-label" for="{{ form.absent_template.id_for_label }}">
+                            <i class="fa-solid fa-user-xmark me-1"></i> Absent Student Alert Message
+                        </label>
+                        {{ form.absent_template }}
+                        <div class="wa-placeholder-chips">
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.absent_template.id_for_label }}', '{student_name}')">{student_name}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.absent_template.id_for_label }}', '{date}')">{date}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.absent_template.id_for_label }}', '{batch_time}')">{batch_time}</span>
+                            <span class="wa-chip" onclick="insertPlaceholder('{{ form.absent_template.id_for_label }}', '{batch_type}')">{batch_type}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ═══════════════════════════════ RIGHT COLUMN ═══════════════════════════════ -->
+        <div class="wa-sidebar-col">
+
+            <!-- Save Card -->
+            <div class="wa-card wa-sticky-card">
+                <div class="wa-save-head">
+                    <div class="wa-save-icon"><i class="fa-solid fa-floppy-disk"></i></div>
+                    <div>
+                        <div class="wa-card-title">Save Configuration</div>
+                        <div class="wa-card-subtitle">Changes apply instantly system-wide</div>
+                    </div>
+                </div>
+                <div class="wa-save-actions">
+                    <button type="submit" class="wa-btn wa-btn-primary" id="saveBtn">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Settings
+                    </button>
+                    <a href="{% url 'dashboard' %}" class="wa-btn wa-btn-secondary">
+                        <i class="fa-solid fa-xmark"></i> Cancel
+                    </a>
+                </div>
+                {% if messages %}
+                <div class="wa-messages">
+                    {% for message in messages %}
+                    <div class="wa-message wa-message-{{ message.tags }}">
+                        <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Info Card -->
+            <div class="wa-card wa-info-card">
+                <div class="wa-info-card-head">
+                    <i class="fa-solid fa-circle-question"></i> Setup Checklist
+                </div>
+                <div class="wa-checklist">
+                    <div class="wa-check-item">
+                        <i class="fa-solid fa-square-1"></i>
+                        <div>
+                            <strong>Create a Meta App</strong>
+                            <span>Go to <a href="https://developers.facebook.com/" target="_blank">developers.facebook.com</a> and create a Business app.</span>
+                        </div>
+                    </div>
+                    <div class="wa-check-item">
+                        <i class="fa-solid fa-square-2"></i>
+                        <div>
+                            <strong>Add WhatsApp Product</strong>
+                            <span>In your app dashboard, click <em>Add Product → WhatsApp</em>.</span>
+                        </div>
+                    </div>
+                    <div class="wa-check-item">
+                        <i class="fa-solid fa-square-3"></i>
+                        <div>
+                            <strong>Copy Phone Number ID &amp; Token</strong>
+                            <span>From the API Setup tab, copy your Phone Number ID and generate a System Token.</span>
+                        </div>
+                    </div>
+                    <div class="wa-check-item">
+                        <i class="fa-solid fa-square-4"></i>
+                        <div>
+                            <strong>Paste above &amp; Save</strong>
+                            <span>Enable the bot toggle and save. Test with Console mode first.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Provider Quick-Switch -->
+            <div class="wa-card wa-provider-quick-card">
+                <div class="wa-info-card-head">
+                    <i class="fa-solid fa-bolt"></i> Provider Summary
+                </div>
+                <div class="wa-provider-pills">
+                    <div class="wa-provider-pill wa-pill-meta">
+                        <i class="fa-brands fa-meta"></i>
+                        <div>
+                            <strong>Meta Cloud API</strong>
+                            <span>1,000 free/month · Best choice</span>
+                        </div>
+                        <span class="wa-pill-badge wa-pill-free">Free</span>
+                    </div>
+                    <div class="wa-provider-pill">
+                        <i class="fa-solid fa-terminal"></i>
+                        <div>
+                            <strong>Console (Dev)</strong>
+                            <span>Logs to terminal · No API needed</span>
+                        </div>
+                        <span class="wa-pill-badge wa-pill-dev">Dev</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</form>
+
+<style>
+/* ═══════════════════════════════════════════════
+   WhatsApp Settings – Premium Page Styles
+   Integrates with app design tokens (dashboard.css)
+═══════════════════════════════════════════════ */
+
+/* Page Header */
+.wa-page-icon {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%) !important;
+    box-shadow: 0 12px 28px rgba(37, 211, 102, 0.32) !important;
+}
+
+.wa-page-icon i {
+    font-size: 28px;
+    color: #fff;
+}
+
+.wa-header-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.22);
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+}
+
+.wa-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: wa-pulse 2s infinite;
+}
+
+.wa-status-active { background: #25d366; box-shadow: 0 0 0 3px rgba(37,211,102,.28); }
+.wa-status-inactive { background: #94a3b8; animation: none; }
+
+@keyframes wa-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(37,211,102,.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(37,211,102,.0); }
+}
+
+/* Layout */
+.wa-layout {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 320px;
+    gap: 22px;
+    margin-top: 22px;
+    align-items: start;
+}
+
+.wa-main { display: flex; flex-direction: column; gap: 20px; }
+.wa-sidebar-col { display: flex; flex-direction: column; gap: 18px; }
+
+/* Cards */
+.wa-card {
+    background: var(--panel);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.wa-card:hover { box-shadow: var(--shadow-md); }
+
+.wa-sticky-card { position: sticky; top: 88px; }
+
+/* Card Head */
+.wa-card-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-muted);
+}
+
+.wa-card-head-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.wa-card-head-icon-tpl {
+    background: rgba(16,163,74,0.12);
+    color: var(--success);
+}
+
+.wa-card-title { font-weight: 800; font-size: 15px; color: var(--text); line-height: 1.2; }
+.wa-card-subtitle { font-size: 12px; color: var(--text-soft); margin-top: 3px; }
+
+/* Card Body */
+.wa-card-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+
+/* Toggle Row */
+.wa-card-toggle { border-top: 3px solid #25d366; }
+
+.wa-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 22px;
+}
+
+.wa-toggle-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.wa-toggle-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    color: #fff;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(37,211,102,.28);
+}
+
+.wa-toggle-title { font-weight: 800; font-size: 15px; color: var(--text); }
+.wa-toggle-desc  { font-size: 13px; color: var(--text-soft); margin-top: 4px; max-width: 420px; }
+
+/* Switch */
+.wa-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.wa-switch input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.wa-switch-track {
+    width: 56px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--line);
+    transition: background 0.25s ease;
+    position: relative;
+    border: 2px solid transparent;
+}
+
+.wa-switch-track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.18);
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), background 0.25s ease;
+}
+
+.wa-switch input:checked + .wa-switch-track {
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(37,211,102,.32);
+}
+
+.wa-switch input:checked + .wa-switch-track::after { transform: translateX(26px); }
+
+/* Fields */
+.wa-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.wa-field { display: flex; flex-direction: column; gap: 6px; }
+.wa-field-full { grid-column: 1 / -1; }
+
+.wa-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.01em;
+}
+
+/* Form inputs – match app style */
+.wa-card input[type="text"],
+.wa-card input[type="password"],
+.wa-card input[type="url"],
+.wa-card textarea,
+.wa-card select {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--line);
+    background: var(--panel-muted);
+    color: var(--text);
+    font-size: 14px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    outline: none;
+}
+
+.wa-card input:focus,
+.wa-card textarea:focus,
+.wa-card select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+    background: var(--panel);
+}
+
+.wa-card textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+.wa-select-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wa-select-icon {
+    position: absolute;
+    left: 13px;
+    color: var(--text-soft);
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.wa-select-wrap select { padding-left: 36px; }
+
+.wa-password-wrap { position: relative; }
+
+.wa-password-wrap input { padding-right: 44px; }
+
+.wa-eye-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: var(--text-faint);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: color 0.18s ease, background 0.18s ease;
+}
+
+.wa-eye-btn:hover { color: var(--primary); background: var(--primary-soft); }
+
+.wa-hint {
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.5;
+}
+
+/* Provider Groups */
+.wa-provider-group { animation: wa-fade-in 0.25s ease; }
+
+@keyframes wa-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.wa-provider-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.wa-provider-header-meta  { background: rgba(0,122,255,.08); color: #0a6ad4; border: 1px solid rgba(0,122,255,.18); }
+.wa-provider-header-twilio { background: rgba(249,60,60,.07); color: #c03535; border: 1px solid rgba(249,60,60,.18); }
+.wa-provider-header-custom { background: rgba(245,158,11,.08); color: #b45309; border: 1px solid rgba(245,158,11,.18); }
+
+.wa-ext-link {
+    margin-left: auto;
+    font-size: 12px;
+    color: inherit;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+    transition: opacity 0.18s ease;
+}
+
+.wa-ext-link:hover { opacity: 1; }
+
+/* Info Boxes */
+.wa-info-box {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.wa-info-box > i { font-size: 16px; margin-top: 2px; flex-shrink: 0; }
+
+.wa-info-box-meta {
+    background: rgba(37,99,235,.06);
+    border: 1px solid rgba(37,99,235,.16);
+    color: var(--text-soft);
+}
+
+.wa-info-box-meta > i { color: var(--primary); }
+
+.wa-info-box-console {
+    background: rgba(15,23,42,.05);
+    border: 1px solid var(--line);
+    color: var(--text-soft);
+}
+
+.wa-info-box-console > i { color: var(--text); }
+
+/* Placeholder Chips */
+.wa-placeholder-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.wa-chip {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    background: var(--panel-strong);
+    color: var(--primary);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.12s ease;
+    user-select: none;
+}
+
+.wa-chip:hover {
+    background: var(--primary-soft);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+/* Divider */
+.wa-divider {
+    height: 1px;
+    background: var(--line);
+    margin: 4px 0;
+}
+
+/* Buttons */
+.wa-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px 18px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 0;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    text-decoration: none;
+}
+
+.wa-btn:hover { transform: translateY(-2px); }
+
+.wa-btn-primary {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    color: #fff;
+    box-shadow: 0 12px 26px rgba(37,211,102,.28);
+}
+
+.wa-btn-primary:hover { box-shadow: 0 16px 36px rgba(37,211,102,.38); }
+
+.wa-btn-secondary {
+    background: var(--panel-muted);
+    color: var(--text);
+    border: 1px solid var(--line);
+    box-shadow: none;
+}
+
+/* Save Card */
+.wa-save-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--line);
+}
+
+.wa-save-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    color: #fff;
+    font-size: 16px;
+    box-shadow: 0 6px 16px rgba(37,211,102,.26);
+}
+
+.wa-save-actions {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Messages */
+.wa-messages {
+    padding: 0 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wa-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.wa-message-success {
+    background: rgba(22,163,74,.08);
+    border: 1px solid rgba(22,163,74,.2);
+    color: var(--success);
+}
+
+.wa-message-error {
+    background: rgba(220,38,38,.06);
+    border: 1px solid rgba(220,38,38,.2);
+    color: var(--danger);
+}
+
+/* Info / Checklist Card */
+.wa-info-card { }
+.wa-info-card-head {
+    padding: 16px 18px;
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--text);
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wa-checklist {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.wa-check-item {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.wa-check-item > i {
+    font-size: 18px;
+    color: var(--primary);
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.wa-check-item strong { display: block; font-weight: 700; color: var(--text); }
+.wa-check-item span  { color: var(--text-soft); line-height: 1.5; font-size: 12px; }
+.wa-check-item a     { color: var(--primary); }
+
+/* Provider Pills */
+.wa-provider-pills { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+
+.wa-provider-pill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--panel-muted);
+    font-size: 13px;
+    transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.wa-provider-pill i { font-size: 20px; color: var(--text-soft); }
+.wa-provider-pill strong { display: block; font-weight: 700; color: var(--text); font-size: 13px; }
+.wa-provider-pill span   { display: block; color: var(--text-faint); font-size: 11px; }
+
+.wa-pill-meta i  { color: #1877f2; }
+
+.wa-pill-badge {
+    margin-left: auto;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.wa-pill-free { background: rgba(22,163,74,.12); color: var(--success); }
+.wa-pill-paid { background: rgba(249,115,22,.12); color: #c2410c; }
+.wa-pill-dev  { background: rgba(99,102,241,.12); color: #4f46e5; }
+
+/* Dark Mode */
+[data-theme="dark"] .wa-card {
+    background: var(--panel, #1e2a45);
+    border-color: rgba(255,255,255,0.07);
+}
+
+[data-theme="dark"] .wa-card input,
+[data-theme="dark"] .wa-card textarea,
+[data-theme="dark"] .wa-card select {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.1);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .wa-provider-header-meta  { background: rgba(0,122,255,.12); color: #60a5fa; }
+[data-theme="dark"] .wa-provider-header-twilio { background: rgba(249,60,60,.10); color: #f87171; }
+[data-theme="dark"] .wa-provider-header-custom { background: rgba(245,158,11,.10); color: #fbbf24; }
+
+[data-theme="dark"] .wa-btn-secondary {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.1);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .wa-chip {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .wa-provider-pill {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.08);
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .wa-layout { grid-template-columns: 1fr; }
+    .wa-sticky-card { position: static; }
+    .wa-sidebar-col { flex-direction: row; flex-wrap: wrap; }
+    .wa-sidebar-col > * { flex: 1 1 260px; }
+}
+
+@media (max-width: 700px) {
+    .wa-fields-grid { grid-template-columns: 1fr; }
+    .wa-sidebar-col { flex-direction: column; }
+}
+</style>
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const providerSelect = document.getElementById("{{ form.provider.id_for_label }}");
+    const enableToggle   = document.getElementById("{{ form.is_enabled.id_for_label }}");
+    const statusDot      = document.getElementById("headerStatusDot");
+    const statusLabel    = document.getElementById("headerStatusLabel");
+
+    /* ─── Provider Field Visibility ─── */
+    function updateProviderFields() {
+        const val = providerSelect ? providerSelect.value : "console";
+        document.querySelectorAll(".wa-provider-group").forEach(el => {
+            el.style.display = "none";
+        });
+        const target = document.getElementById("provider-fields-" + val);
+        if (target) target.style.display = "block";
+    }
+
+    if (providerSelect) {
+        providerSelect.addEventListener("change", updateProviderFields);
+        updateProviderFields();
+    }
+
+    /* ─── Enable Toggle Status Badge ─── */
+    function updateStatusBadge() {
+        if (!enableToggle || !statusDot || !statusLabel) return;
+        if (enableToggle.checked) {
+            statusDot.className = "wa-status-dot wa-status-active";
+            statusLabel.textContent = "Active";
+        } else {
+            statusDot.className = "wa-status-dot wa-status-inactive";
+            statusLabel.textContent = "Inactive";
+        }
+    }
+
+    if (enableToggle) {
+        enableToggle.addEventListener("change", updateStatusBadge);
+        updateStatusBadge();
+    }
+
+    /* ─── Save Button Loading State ─── */
+    const form    = document.getElementById("whatsapp-settings-form");
+    const saveBtn = document.getElementById("saveBtn");
+
+    if (form && saveBtn) {
+        form.addEventListener("submit", function () {
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+            saveBtn.disabled = true;
+        });
+    }
+});
+
+/* ─── Token Eye Toggle ─── */
+function toggleTokenVisibility(btn) {
+    const wrap  = btn.closest(".wa-password-wrap");
+    const input = wrap ? wrap.querySelector("input") : null;
+    if (!input) return;
+    const isPass = input.type === "password";
+    input.type   = isPass ? "text" : "password";
+    const icon   = btn.querySelector("i");
+    if (icon) icon.className = isPass ? "fa-regular fa-eye-slash" : "fa-regular fa-eye";
+}
+
+/* ─── Placeholder Chip Insert ─── */
+function insertPlaceholder(fieldId, placeholder) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    const start = el.selectionStart;
+    const end   = el.selectionEnd;
+    const val   = el.value;
+    el.value = val.substring(0, start) + placeholder + val.substring(end);
+    el.selectionStart = el.selectionEnd = start + placeholder.length;
+    el.focus();
+
+    /* quick flash feedback */
+    el.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.28)";
+    setTimeout(() => { el.style.boxShadow = ""; }, 600);
+}
+</script>
+{% endblock %}
+
+{% endblock %}

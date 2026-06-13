@@ -1,8 +1,23 @@
 from datetime import date
+import sys
+from unittest.mock import patch, MagicMock
+
+# Stub twilio module for environments where it is not installed
+if "twilio" not in sys.modules:
+    mock_twilio = MagicMock()
+    sys.modules["twilio"] = mock_twilio
+    sys.modules["twilio.rest"] = mock_twilio.rest
 
 from django.contrib.auth.models import Group, User
-from django.test import Client, TestCase, override_settings
+from django.test import Client, TestCase, override_settings, TransactionTestCase
 from django.urls import reverse
+
+from core.services.whatsapp_service import (
+    format_whatsapp_number,
+    send_whatsapp_message,
+    send_admission_notification,
+    send_payment_notification,
+)
 
 from core.models import (
     AdmittedStudent,
@@ -13,6 +28,7 @@ from core.models import (
     FeePayment,
     LoginAttempt,
     StudentFinanceDetail,
+    WhatsAppConfig,
 )
 from core.permissions import ROLE_ADMIN, ROLE_ATTENDANCE_MANAGER, ensure_role_groups
 
@@ -668,4 +684,394 @@ class ERPFoundationTests(TestCase):
             payload = response.json()
             self.assertFalse(payload["success"])
             self.assertIn("SQLite", payload["error"])
+
+
+class WhatsAppNotificationTests(TransactionTestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="password123")
+        self.whatsapp_config = WhatsAppConfig.get_solo()
+        self.whatsapp_config.is_enabled = True
+        self.whatsapp_config.provider = "console"
+        self.whatsapp_config.save()
+        
+        self.student = AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Rahul",
+            father_name="Kumar",
+            surname="Sharma",
+            date_of_birth="2000-01-01",
+            mobile_own="9876543210",
+            gender="Male",
+            marital_status="Single",
+            address="Some Address",
+            city="Pune",
+            tehsil_block="Pune",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            total_fees=5000.00
+        )
+
+    def test_format_whatsapp_number(self):
+        # 10-digit Indian numbers should get prepended with +91
+        self.assertEqual(format_whatsapp_number("9876543210"), "+919876543210")
+        # Numbers starting with + should not change
+        self.assertEqual(format_whatsapp_number("+14155238886"), "+14155238886")
+        # Numbers starting with country code but no + should get +
+        self.assertEqual(format_whatsapp_number("919876543210"), "+919876543210")
+        # Return empty string for invalid input
+        self.assertEqual(format_whatsapp_number(""), "")
+
+    def test_send_whatsapp_message_disabled(self):
+        self.whatsapp_config.is_enabled = False
+        self.whatsapp_config.save()
+        self.assertFalse(send_whatsapp_message("9876543210", "Hello Test"))
+
+    def test_send_whatsapp_message_console(self):
+        self.whatsapp_config.is_enabled = True
+        self.whatsapp_config.provider = "console"
+        self.whatsapp_config.save()
+        self.assertTrue(send_whatsapp_message("9876543210", "Hello Test"))
+
+    @patch("core.services.whatsapp_service.logger")
+    @patch("twilio.rest.Client")
+    def test_send_whatsapp_message_twilio(self, mock_client_class, mock_logger):
+        self.whatsapp_config.is_enabled = True
+        self.whatsapp_config.provider = "twilio"
+        self.whatsapp_config.twilio_sid = "ACxxxx"
+        self.whatsapp_config.twilio_auth_token = "auth_token"
+        self.whatsapp_config.twilio_from = "whatsapp:+14155238886"
+        self.whatsapp_config.save()
+
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+        mock_message = MagicMock()
+        mock_message.sid = "SMxxxx"
+        mock_client.messages.create.return_value = mock_message
+
+        res = send_whatsapp_message("9876543210", "Hello Twilio")
+        self.assertTrue(res)
+        mock_client.messages.create.assert_called_once_with(
+            body="Hello Twilio",
+            from_="whatsapp:+14155238886",
+            to="whatsapp:+919876543210"
+        )
+
+    @patch("urllib.request.urlopen")
+    def test_send_whatsapp_message_meta(self, mock_urlopen):
+        self.whatsapp_config.is_enabled = True
+        self.whatsapp_config.provider = "meta"
+        self.whatsapp_config.meta_token = "meta_token"
+        self.whatsapp_config.meta_phone_id = "phone_id"
+        self.whatsapp_config.save()
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = b'{"success": true}'
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        res = send_whatsapp_message("9876543210", "Hello Meta")
+        self.assertTrue(res)
+
+        args, kwargs = mock_urlopen.call_args
+        req = args[0]
+        self.assertEqual(req.get_full_url(), "https://graph.facebook.com/v18.0/phone_id/messages")
+        self.assertEqual(req.get_header("Authorization"), "Bearer meta_token")
+        self.assertEqual(req.get_header("Content-type"), "application/json")
+
+    @patch("urllib.request.urlopen")
+    def test_send_whatsapp_message_custom(self, mock_urlopen):
+        self.whatsapp_config.is_enabled = True
+        self.whatsapp_config.provider = "custom"
+        self.whatsapp_config.custom_url = "https://api.ultramsg.com/instance123/messages/chat"
+        self.whatsapp_config.custom_token = "custom_token"
+        self.whatsapp_config.save()
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = b"success"
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        res = send_whatsapp_message("9876543210", "Hello Custom")
+        self.assertTrue(res)
+
+        args, kwargs = mock_urlopen.call_args
+        req = args[0]
+        self.assertEqual(req.get_full_url(), "https://api.ultramsg.com/instance123/messages/chat")
+        self.assertEqual(req.get_header("Authorization"), "Bearer custom_token")
+
+    @override_settings(WHATSAPP_ENABLED=True, WHATSAPP_PROVIDER="console")
+    @patch("core.services.whatsapp_service.send_whatsapp_message")
+    def test_send_admission_notification(self, mock_send_message):
+        send_admission_notification(self.student)
+        mock_send_message.assert_called_once()
+        args, kwargs = mock_send_message.call_args
+        self.assertEqual(args[0], "9876543210")
+        self.assertIn("Sharma Rahul Kumar", args[1])
+        self.assertIn("MS-CIT", args[1])
+
+    @override_settings(WHATSAPP_ENABLED=True, WHATSAPP_PROVIDER="console")
+    @patch("core.services.whatsapp_service.send_whatsapp_message")
+    def test_send_payment_notification(self, mock_send_message):
+        payment = FeePayment.objects.create(
+            student=self.student,
+            amount=1000.00,
+            payment_mode="Cash",
+            payment_date="2026-06-09",
+            remarks="Payment 1",
+            total_fees_at_payment=5000.00,
+            paid_before_this=0.00,
+            remaining_after_this=4000.00
+        )
+        send_payment_notification(payment)
+        mock_send_message.assert_called_once()
+        args, kwargs = mock_send_message.call_args
+        self.assertEqual(args[0], "9876543210")
+        self.assertIn("Sharma Rahul Kumar", args[1])
+        self.assertIn("1000", args[1])
+        self.assertIn("4000", args[1])
+
+    @override_settings(WHATSAPP_ENABLED=True, WHATSAPP_PROVIDER="console")
+    @patch("core.services.whatsapp_service.send_admission_notification")
+    def test_create_admission_triggers_whatsapp(self, mock_send_adm):
+        from core.forms import AdmittedStudentForm
+        from core.services.admission_service import create_admission
+        form_data = {
+            "course": "MS-CIT",
+            "student_name": "Ajit",
+            "father_name": "Sunil",
+            "surname": "Jadhav",
+            "date_of_birth": "2002-05-20",
+            "mobile_own": "9876540000",
+            "gender": "Male",
+            "marital_status": "Single",
+            "address": "Address",
+            "city": "Pune",
+            "tehsil_block": "Haveli",
+            "district": "Pune",
+            "pin_code": "411001",
+            "educational_qualification": "Graduate",
+            "total_fees": "5000.00"
+        }
+        form = AdmittedStudentForm(data=form_data)
+        self.assertTrue(form.is_valid())
+
+        create_admission(form=form, actor=self.user)
+        mock_send_adm.assert_called_once()
+
+    @override_settings(WHATSAPP_ENABLED=True, WHATSAPP_PROVIDER="console")
+    @patch("core.services.whatsapp_service.send_payment_notification")
+    def test_record_fee_payment_triggers_whatsapp(self, mock_send_payment):
+        from core.services.fee_service import record_fee_payment
+        record_fee_payment(
+            student_id=self.student.id,
+            amount="1000.00",
+            payment_mode="Cash",
+            payment_date="2026-06-09",
+            remarks="Payment 1"
+        )
+        mock_send_payment.assert_called_once()
+
+    def test_whatsapp_settings_view_unauthenticated(self):
+        response = self.client.get(reverse("whatsapp_settings"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_whatsapp_settings_view_non_staff_denied(self):
+        non_staff = User.objects.create_user(username="studentuser", password="password123")
+        self.client.force_login(non_staff)
+        response = self.client.get(reverse("whatsapp_settings"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_whatsapp_settings_view_staff_allowed(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("whatsapp_settings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "WhatsApp Bot Settings")
+
+    def test_whatsapp_settings_view_post_saves(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("whatsapp_settings"),
+            {
+                "is_enabled": "on",
+                "provider": "meta",
+                "meta_token": "new_meta_token",
+                "meta_phone_id": "new_phone_id",
+                "twilio_from": "whatsapp:+14155238886",
+                "admission_template": "Hello {student_name}!",
+                "payment_template": "Receipt {receipt_no}.",
+                "enquiry_template": "Enquiry {student_name}.",
+                "absent_template": "Absent {student_name}."
+            },
+            follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+
+        from core.models import WhatsAppConfig
+        config = WhatsAppConfig.get_solo()
+        self.assertTrue(config.is_enabled)
+        self.assertEqual(config.provider, "meta")
+        self.assertEqual(config.meta_token, "new_meta_token")
+        self.assertEqual(config.meta_phone_id, "new_phone_id")
+        self.assertEqual(config.admission_template, "Hello {student_name}!")
+
+    @override_settings(WHATSAPP_ENABLED=True, WHATSAPP_PROVIDER="console")
+    @patch("core.services.whatsapp_service.send_whatsapp_message")
+    def test_send_enquiry_notification(self, mock_send_message):
+        from core.models import Enquiry
+        from core.services.whatsapp_service import send_enquiry_notification
+        enquiry = Enquiry.objects.create(
+            name="Amit",
+            mobile="9876543211",
+            course="MS-CIT"
+        )
+        send_enquiry_notification(enquiry)
+        mock_send_message.assert_called_once()
+        args, kwargs = mock_send_message.call_args
+        self.assertEqual(args[0], "9876543211")
+        self.assertIn("Amit", args[1])
+
+    @override_settings(WHATSAPP_ENABLED=True, WHATSAPP_PROVIDER="console")
+    @patch("core.services.whatsapp_service.send_whatsapp_message")
+    def test_send_absent_notification(self, mock_send_message):
+        from core.services.whatsapp_service import send_absent_notification
+        send_absent_notification(self.student, date(2026, 6, 11), "10:00 AM", "theory")
+        mock_send_message.assert_called_once()
+        args, kwargs = mock_send_message.call_args
+        self.assertEqual(args[0], "9876543210")
+        self.assertIn("Sharma Rahul Kumar", args[1])
+        self.assertIn("11-06-2026", args[1])
+
+
+class StudentExamRecordTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Group
+        from decimal import Decimal
+        ensure_role_groups()
+        self.client = Client()
+        self.admin_user = User.objects.create_superuser(username="adminuser", password="password123")
+        self.counselor_user = User.objects.create_user(username="counseloruser", password="password123")
+        
+        counselor_group, _ = Group.objects.get_or_create(name="Counselor")
+        self.counselor_user.groups.add(counselor_group)
+        
+        self.student = AdmittedStudent.objects.create(
+            course="MS-CIT",
+            student_name="Rahul",
+            father_name="Kumar",
+            surname="Sharma",
+            date_of_birth="2000-01-01",
+            mobile_own="9876543210",
+            gender="Male",
+            marital_status="Single",
+            address="Pune",
+            city="Pune",
+            tehsil_block="Pune",
+            district="Pune",
+            pin_code="411001",
+            educational_qualification="Graduate",
+            total_fees=5000.00,
+            student_id="STU12345"
+        )
+
+    def test_exam_record_crud(self):
+        from core.models import StudentExamRecord
+        from decimal import Decimal
+        self.client.force_login(self.admin_user)
+        
+        # Add
+        response = self.client.post(
+            reverse("add_exam_record"),
+            {
+                "student": self.student.id,
+                "student_name": "Rahul Sharma",
+                "learner_id": "STU12345",
+                "exam_date": "2026-06-11",
+                "course": "MS-CIT",
+                "course_batch": "June 2026",
+                "result": "Pass",
+                "percentage": "85.50"
+            },
+            follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(StudentExamRecord.objects.filter(student_name="Rahul Sharma").exists())
+        record = StudentExamRecord.objects.get(student_name="Rahul Sharma")
+        
+        # Edit
+        response = self.client.post(
+            reverse("edit_exam_record", args=[record.id]),
+            {
+                "student": self.student.id,
+                "student_name": "Rahul Sharma Edited",
+                "learner_id": "STU12345",
+                "exam_date": "2026-06-11",
+                "course": "MS-CIT",
+                "course_batch": "June 2026",
+                "result": "Pass",
+                "percentage": "90.00"
+            },
+            follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+        record.refresh_from_db()
+        self.assertEqual(record.student_name, "Rahul Sharma Edited")
+        self.assertEqual(record.percentage, Decimal("90.00"))
+        
+        # Delete
+        response = self.client.post(
+            reverse("delete_exam_record", args=[record.id]),
+            follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(StudentExamRecord.objects.filter(id=record.id).exists())
+
+    def test_parse_excel_date(self):
+        from core.views import parse_excel_date
+        from datetime import datetime
+        dt_val = datetime(2026, 6, 11)
+        self.assertEqual(parse_excel_date(dt_val), date(2026, 6, 11))
+        self.assertEqual(parse_excel_date("2026-06-11"), date(2026, 6, 11))
+        self.assertEqual(parse_excel_date("11-06-2026"), date(2026, 6, 11))
+        self.assertEqual(parse_excel_date("11/06/2026"), date(2026, 6, 11))
+        self.assertEqual(parse_excel_date(46182), date(2026, 6, 9))
+
+    def test_import_exam_records_excel(self):
+        from core.models import StudentExamRecord
+        import openpyxl
+        from io import BytesIO
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["Learner ID", "Student Name", "Exam Date", "Course", "Course Batch", "Result", "Percentage"])
+        ws.append(["STU12345", "Rahul Sharma", "2026-06-11", "MS-CIT", "June 2026", "Pass", "85.50"])
+        ws.append(["", "Walkin Student", "2026-06-12", "Tally", "June 2026", "Fail", "35.00"])
+
+        f = BytesIO()
+        wb.save(f)
+        f.seek(0)
+        excel_file = SimpleUploadedFile("exams.xlsx", f.read(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+        self.client.force_login(self.counselor_user)
+        response = self.client.post(
+            reverse("import_exam_records"),
+            {"excel_file": excel_file},
+            follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(StudentExamRecord.objects.count(), 2)
+        
+        rec1 = StudentExamRecord.objects.get(student_name="Rahul Sharma")
+        self.assertEqual(rec1.student, self.student)
+        self.assertEqual(rec1.result, "Pass")
+        
+        rec2 = StudentExamRecord.objects.get(student_name="Walkin Student")
+        self.assertIsNone(rec2.student)
+        self.assertEqual(rec2.result, "Fail")
+
+
 

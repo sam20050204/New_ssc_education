@@ -70,6 +70,7 @@
                     <th>💰 Amount Paid</th>
                     <th>⏳ Remaining</th>
                     <th>💯 Total Fees</th>
+                    <th>📲 Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -104,6 +105,19 @@
                     </td>
                     <td class="amount-cell">
                         <span class="total-fees">₹{{ item.total_fees }}</span>
+                    </td>
+                    <td class="amount-cell">
+                        {% if item.student.mobile_own %}
+                        <button
+                            class="whatsapp-btn"
+                            onclick="sendWhatsApp('{{ item.student.mobile_own }}', '{{ item.student.full_name|escapejs }}', '{{ item.student.course|default:''|escapejs }}', '{{ item.remaining }}')"
+                            title="Send WhatsApp Reminder"
+                        >
+                            💬 Remind
+                        </button>
+                        {% else %}
+                        <span class="text-muted" title="No mobile number">—</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -300,5 +314,53 @@
 </div>
 
 <script src="{% static 'core/payment_tracking.js' %}?v={{ STATIC_VERSION }}"></script>
+
+<style>
+/* WhatsApp Reminder Button */
+.whatsapp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #25d366, #128c4e);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 2px 6px rgba(37, 211, 102, 0.35);
+}
+.whatsapp-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.5);
+}
+.whatsapp-btn:active {
+    transform: translateY(0);
+}
+</style>
+
+<script>
+function sendWhatsApp(mobile, studentName, course, remaining) {
+    // Normalize mobile number — strip spaces, dashes, and add country code if missing
+    let phone = String(mobile).replace(/[\s\-()]/g, '');
+    if (!phone.startsWith('+')) {
+        phone = '91' + phone.replace(/^0/, ''); // default to India (+91)
+    } else {
+        phone = phone.replace('+', '');
+    }
+
+    const courseText = course ? ` for the course *${course}*` : '';
+    const message =
+        `Dear *${studentName}*, this is a friendly reminder from *Shri Samarth Computer Education*.` +
+        `\n\nYour pending fee balance${courseText} is *₹${remaining}*.` +
+        `\n\nKindly clear your dues at the earliest. Thank you! 🙏`;
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
+</script>
 
 {% endblock %}

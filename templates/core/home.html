@@ -2,24 +2,49 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SSC Educations</title>
+<title>Shri Samarth Computer Education</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 {% load static %}
-<link rel="stylesheet" href="{% static 'core/style.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+<link rel="stylesheet" href="{% static 'core/style.css' %}?v={{ STATIC_VERSION }}">
+<script>
+    (function() {
+        try {
+            document.documentElement.setAttribute('data-theme', localStorage.getItem('erp-theme') || 'light');
+        } catch (error) {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+    })();
+</script>
 </head>
 
 <body>
+<script>
+    if (document.documentElement.getAttribute('data-theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.add('light-mode');
+    }
+</script>
 
 <!-- NAVBAR -->
 <nav>
-    <h2>Shri Samarth Computer Educations</h2>
+    <h2>Shri Samarth Education</h2>
     <ul>
         <li><a href="#home">Home</a></li>
         <li><a href="#programs">Courses</a></li>
-
+        <li><a href="#testimonials">Reviews</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li>
+            <button id="home-theme-toggle" class="theme-toggle-btn" type="button" title="Toggle theme" aria-label="Toggle theme">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+        </li>
         {% if user.is_authenticated %}
-            <li>Hello, {{ user.username }}</li>
             <li><a href="{% url 'dashboard' %}" class="login-btn">Dashboard</a></li>
             <li>
                 <form method="post" action="{% url 'logout' %}" id="home-logout-form" style="display:none;">
@@ -28,7 +53,7 @@
                 <a href="#" onclick="document.getElementById('home-logout-form').submit(); return false;" class="login-btn">Logout</a>
             </li>
         {% else %}
-            <li><a href="{% url 'login' %}" class="login-btn">Login</a></li>
+            <li><a href="{% url 'login' %}" class="login-btn">Login Portal</a></li>
         {% endif %}
     </ul>
 </nav>
@@ -37,42 +62,160 @@
 <div class="hero" id="home">
     <h1>Build Your Career with Industry-Ready Education</h1>
     <p>
-        SSC Educations provides professional computer training,
-        practical skills, and career guidance.
+        Shri Samarth Computer Education provides professional IT training, 
+        practical certification programs, and expert career guidance to excel in modern workplaces.
     </p>
-    <button class="btn" onclick="openModal()">Enquire Now</button>
+    <button class="btn-hero" onclick="openModal()">Enquire Now &nbsp;<i class="fa-solid fa-arrow-right"></i></button>
+</div>
+
+<!-- TRUST STATS STRIP -->
+<div class="stats-strip">
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.students }}+</div>
+        <div class="stat-label">Students Trained</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.courses }}+</div>
+        <div class="stat-label">Courses Offered</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.batches }}+</div>
+        <div class="stat-label">Daily Batches</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-num">{{ stats.success_rate }}%</div>
+        <div class="stat-label">Completion Rate</div>
+    </div>
 </div>
 
 <!-- COURSES -->
 <section id="programs">
-    <h2>Our Courses</h2>
+    <h2>Our Professional Courses</h2>
     <div class="programs">
+        {% for course in all_courses %}
         <div class="box">
+            <div class="box-icon">
+                {% if "Tally" in course.name %}
+                    <i class="fa-solid fa-calculator"></i>
+                {% elif "Excel" in course.name %}
+                    <i class="fa-solid fa-chart-simple"></i>
+                {% elif "MS-CIT" in course.name or "Computer" in course.name %}
+                    <i class="fa-solid fa-desktop"></i>
+                {% elif "Scratch" in course.name or "Python" in course.name or "Code" in course.name %}
+                    <i class="fa-solid fa-code"></i>
+                {% elif "IOT" in course.name %}
+                    <i class="fa-solid fa-microchip"></i>
+                {% else %}
+                    <i class="fa-solid fa-graduation-cap"></i>
+                {% endif %}
+            </div>
+            <h3>{{ course.name }}</h3>
+            <p>{{ course.description|default:"Acquire industry-ready professional training with hands-on practice, verified credentials, and career readiness guides." }}</p>
+        </div>
+        {% empty %}
+        <div class="box">
+            <div class="box-icon"><i class="fa-solid fa-desktop"></i></div>
             <h3>MS-CIT</h3>
-            <p>Computer fundamentals for modern careers.</p>
+            <p>Computer fundamentals, OS basics, and office productivity tools for modern careers.</p>
         </div>
         <div class="box">
-            <h3>Tally</h3>
-            <p>Accounting & GST with real-world practice.</p>
+            <div class="box-icon"><i class="fa-solid fa-calculator"></i></div>
+            <h3>Tally Prime</h3>
+            <p>Professional business accounting, inventory management, and GST taxation computations.</p>
         </div>
         <div class="box">
+            <div class="box-icon"><i class="fa-solid fa-chart-simple"></i></div>
             <h3>Advance Excel</h3>
-            <p>Data analysis, dashboards, automation.</p>
+            <p>Data analysis, lookup functions, pivot tables, dashboard visualization, and macros.</p>
         </div>
-        <div class="box">
-            <h3>IOT</h3>
-            <p>Internet of Things programming and projects.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+    <h2>Student Testimonials</h2>
+    <div class="testimonials-section">
+        <button class="slider-control-btn prev" id="sliderPrev" aria-label="Previous slide"><i class="fa-solid fa-chevron-left"></i></button>
+        
+        <div class="slider-container">
+            <div class="slider-track" id="sliderTrack">
+                <div class="testimonial-slide">
+                    <div class="testimonial-card">
+                        <p class="testimonial-quote">"Shri Samarth Computer Education completely transformed my career path. The practical accounting labs in Tally Prime were extremely helpful, and I landed a job as an accountant right after graduation!"</p>
+                        <div class="testimonial-author">Amit Shinde</div>
+                        <div class="testimonial-course">Tally Prime Graduate</div>
+                    </div>
+                </div>
+                <div class="testimonial-slide">
+                    <div class="testimonial-card">
+                        <p class="testimonial-quote">"The Advance Excel training was incredibly structured and thorough. The trainers teach with real business spreadsheets. It helped me automate my daily office reporting tasks!"</p>
+                        <div class="testimonial-author">Sneha Patil</div>
+                        <div class="testimonial-course">Corporate Dashboard Professional</div>
+                    </div>
+                </div>
+                <div class="testimonial-slide">
+                    <div class="testimonial-card">
+                        <p class="testimonial-quote">"The facilities are state-of-the-art and the staff is very supportive. I learned MS-CIT and Scratch here. The labs are always open for additional practice hours."</p>
+                        <div class="testimonial-author">Rahul More</div>
+                        <div class="testimonial-course">Student (MS-CIT & Scratch)</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="box">
-            <h3>Scratch</h3>
-            <p>Creative coding for beginners and kids.</p>
+
+        <button class="slider-control-btn next" id="sliderNext" aria-label="Next slide"><i class="fa-solid fa-chevron-right"></i></button>
+        
+        <div class="slider-dots" id="sliderDots">
+            <span class="slider-dot active" data-index="0"></span>
+            <span class="slider-dot" data-index="1"></span>
+            <span class="slider-dot" data-index="2"></span>
+        </div>
+    </div>
+</section>
+
+<!-- CONTACT & MAP -->
+<section id="contact">
+    <h2>Contact & Location</h2>
+    <div class="contact-layout">
+        <div class="contact-info">
+            <div class="contact-card">
+                <div class="contact-icon"><i class="fa-solid fa-location-dot"></i></div>
+                <div class="contact-details">
+                    <h4>Visit Our Campus</h4>
+                    <p>Shri Samarth Computer Education, Main Road,<br>Opposite City Library, Maharastra</p>
+                </div>
+            </div>
+            <div class="contact-card">
+                <div class="contact-icon"><i class="fa-solid fa-phone"></i></div>
+                <div class="contact-details">
+                    <h4>Call or WhatsApp Us</h4>
+                    <p>Mobile: +91 98765 43210<br>Office: 022 2345 6789</p>
+                </div>
+            </div>
+            <div class="contact-card">
+                <div class="contact-icon"><i class="fa-solid fa-envelope"></i></div>
+                <div class="contact-details">
+                    <h4>Email Support</h4>
+                    <p>info@shrisamarthcomputer.com<br>admissions@shrisamarthcomputer.com</p>
+                </div>
+            </div>
+        </div>
+        <div class="map-wrapper">
+            <!-- Mock Map Widget representing campus coordinates -->
+            <iframe 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3782.121169878253!2d73.8477873759325!3d18.524223967705435!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1m3!2sid!3s0x3bc2c07c132223a3%3A0x889812af1aa9b922!2sSambhaji%20Park!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
+                loading="lazy" 
+                referrerpolicy="no-referrer-when-downgrade"
+                title="Shri Samarth Education Campus Map">
+            </iframe>
         </div>
     </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
-    <p>© 2025 SSC Educations | All Rights Reserved</p>
+    <p>© 2026 Shri Samarth Computer Education | All Rights Reserved</p>
 </footer>
 
 <!-- ENQUIRY MODAL -->
@@ -80,8 +223,8 @@
     <div class="modal-content">
         <!-- Modal Header -->
         <div class="modal-header">
-            <h3>📝 Enquiry Form</h3>
-            <button class="close" onclick="closeModal()" type="button">&times;</button>
+            <h3>📝 Quick Enquiry Form</h3>
+            <button class="close" onclick="closeModal()" type="button" aria-label="Close modal">&times;</button>
         </div>
 
         <!-- Modal Body -->
@@ -97,27 +240,27 @@
                     <!-- LEFT: Personal Information -->
                     <div class="form-section">
                         <h4>👤 Personal Information</h4>
-                        <input type="text" name="name" id="name" placeholder="Full Name *" required>
+                        <input type="text" name="name" id="name" placeholder="Full Name *" required aria-label="Full Name">
                         <input type="text" name="mobile" id="mobile" placeholder="Mobile Number (10 digits) *" 
-                               pattern="[0-9]{10}" maxlength="10" required>
-                        <input type="text" name="education" id="education" placeholder="Education Qualification *" required>
+                               pattern="[0-9]{10}" maxlength="10" required aria-label="Mobile Number">
+                        <input type="text" name="education" id="education" placeholder="Education Qualification *" required aria-label="Education Qualification">
                     </div>
 
                     <!-- RIGHT: Address Information -->
                     <div class="form-section">
                         <h4>🏠 Address Information</h4>
                         <p class="form-note">All address fields are optional</p>
-                        <textarea name="address" id="address" placeholder="Full Address (Optional)"></textarea>
-                        <input type="text" name="city" id="city" placeholder="City (Optional)">
-                        <input type="text" name="taluka" id="taluka" placeholder="Taluka (Optional)">
-                        <input type="text" name="district" id="district" placeholder="District (Optional)">
+                        <textarea name="address" id="address" placeholder="Full Address (Optional)" aria-label="Full Address"></textarea>
+                        <input type="text" name="city" id="city" placeholder="City (Optional)" aria-label="City">
+                        <input type="text" name="taluka" id="taluka" placeholder="Taluka (Optional)" aria-label="Taluka">
+                        <input type="text" name="district" id="district" placeholder="District (Optional)" aria-label="District">
                     </div>
                 </div>
 
                 <!-- BOTTOM: Course Selection (Full Width) -->
                 <div class="course-section">
                     <h4>📚 Course Selection</h4>
-                    <select name="course" id="course" required>
+                    <select name="course" id="course" required aria-label="Course select">
                         <option value="">-- Select Course --</option>
                         <option value="MS-CIT">MS-CIT</option>
                         <option value="Tally">Tally</option>
@@ -138,7 +281,7 @@
                     <!-- Custom course field (hidden by default) -->
                     <input type="text" name="other_course" id="otherCourse" 
                            placeholder="Please specify course name *" 
-                           style="display: none;">
+                           style="display: none;" aria-label="Specify other course">
                 </div>
 
                 <!-- Form Actions -->
@@ -151,9 +294,23 @@
     </div>
 </div>
 
-<script src="{% static 'core/main.js' %}?v={{ STATIC_VERSION }}"></script>
-
 <script>
+// Modal Controls
+const modal = document.getElementById('enquiryModal');
+function openModal() {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+window.onclick = function(event) {
+    if (event.target === modal) {
+        closeModal();
+    }
+}
+
 // Course selection - show/hide other course field
 document.getElementById('course').addEventListener('change', function() {
     const otherCourseField = document.getElementById('otherCourse');
@@ -175,7 +332,6 @@ document.getElementById('enquiryForm').addEventListener('submit', function(e) {
     const submitBtn = this.querySelector('.btn-submit');
     const originalText = submitBtn.innerHTML;
     
-    // Show loading state
     submitBtn.innerHTML = '⏳ Submitting...';
     submitBtn.disabled = true;
     
@@ -188,24 +344,19 @@ document.getElementById('enquiryForm').addEventListener('submit', function(e) {
     })
     .then(response => {
         if (response.ok) {
-            // Show success message
             const successMsg = document.getElementById('successMessage');
             successMsg.textContent = '✅ Enquiry submitted successfully!';
             successMsg.classList.add('show');
             
-            // Clear form fields
             document.getElementById('enquiryForm').reset();
-            
-            // Hide "Other" course field if shown
             document.getElementById('otherCourse').style.display = 'none';
             document.getElementById('otherCourse').required = false;
             
-            // Hide success message after 3 seconds
             setTimeout(() => {
                 successMsg.classList.remove('show');
-            }, 3000);
+                closeModal();
+            }, 2000);
             
-            // Reset submit button
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         } else {
@@ -219,6 +370,86 @@ document.getElementById('enquiryForm').addEventListener('submit', function(e) {
         submitBtn.disabled = false;
     });
 });
+
+// Testimonial Slider
+const track = document.getElementById('sliderTrack');
+const slides = Array.from(track.children);
+const prevBtn = document.getElementById('sliderPrev');
+const nextBtn = document.getElementById('sliderNext');
+const dotsContainer = document.getElementById('sliderDots');
+const dots = Array.from(dotsContainer.children);
+
+let currentIdx = 0;
+
+function updateSlider(idx) {
+    track.style.transform = `translateX(-${idx * 100}%)`;
+    dots.forEach((dot, index) => {
+        dot.classList.toggle('active', index === idx);
+    });
+    currentIdx = idx;
+}
+
+nextBtn.addEventListener('click', () => {
+    let nextIdx = currentIdx + 1;
+    if (nextIdx >= slides.length) nextIdx = 0;
+    updateSlider(nextIdx);
+});
+
+prevBtn.addEventListener('click', () => {
+    let prevIdx = currentIdx - 1;
+    if (prevIdx < 0) prevIdx = slides.length - 1;
+    updateSlider(prevIdx);
+});
+
+dots.forEach((dot, index) => {
+    dot.addEventListener('click', () => updateSlider(index));
+});
+
+// Auto slide testimonials every 6 seconds
+setInterval(() => {
+    let nextIdx = currentIdx + 1;
+    if (nextIdx >= slides.length) nextIdx = 0;
+    updateSlider(nextIdx);
+}, 6000);
+
+// Landing page Dark/Light Mode toggle script
+const themeToggle = document.getElementById('home-theme-toggle');
+const themeIcon = themeToggle.querySelector('i');
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'dark') {
+        document.body.classList.remove('light-mode');
+        document.body.classList.add('dark-mode');
+        themeIcon.className = 'fa-solid fa-sun';
+    } else {
+        document.body.classList.remove('dark-mode');
+        document.body.classList.add('light-mode');
+        themeIcon.className = 'fa-solid fa-moon';
+    }
+    localStorage.setItem('erp-theme', theme);
+}
+
+themeToggle.addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+});
+
+// Initialize theme icon on load
+const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+applyTheme(currentTheme);
+
+// Scroll animations for sections
+const sections = document.querySelectorAll('section');
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('show');
+        }
+    });
+}, { threshold: 0.15 });
+
+sections.forEach(sec => observer.observe(sec));
 </script>
 
 {% if messages %}
@@ -229,6 +460,12 @@ document.getElementById('enquiryForm').addEventListener('submit', function(e) {
       </div>
     {% endfor %}
   </div>
+  <script>
+      setTimeout(() => {
+          const container = document.getElementById('toast-container');
+          if (container) container.remove();
+      }, 4000);
+  </script>
 {% endif %}
 
 </body>

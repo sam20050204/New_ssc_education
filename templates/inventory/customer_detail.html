@@ -1,0 +1,213 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}{{ customer.name }}{% endblock %}
+
+{% block page_actions %}
+<div style="display:flex; gap:10px;">
+    <a href="{% url 'inventory:edit-customer' customer.pk %}" class="btn btn-primary">
+        <i class="fas fa-pen"></i> Edit
+    </a>
+    <a href="{% url 'inventory:customer-list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> All Customers
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .cust-hero {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 24px;
+        align-items: center;
+        padding: 28px 28px 20px;
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+        border-radius: var(--inventory-radius-md);
+        color: #fff;
+        margin-bottom: 20px;
+    }
+
+    .cust-hero-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.18);
+        border: 3px solid rgba(255,255,255,0.40);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+    }
+
+    .cust-hero-name {
+        font-size: 1.7rem;
+        font-weight: 800;
+        margin: 0;
+        line-height: 1.15;
+    }
+
+    .cust-hero-meta {
+        opacity: 0.85;
+        font-size: 0.92rem;
+        margin-top: 4px;
+    }
+
+    .cust-stat-strip {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .cust-stat-tile {
+        padding: 18px 20px;
+        background: #fff;
+        border: 1px solid var(--inventory-line);
+        border-radius: var(--inventory-radius-md);
+        box-shadow: var(--inventory-shadow-sm);
+    }
+
+    .cust-stat-tile label {
+        display: block;
+        font-size: 0.74rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: var(--inventory-muted);
+        margin-bottom: 6px;
+    }
+
+    .cust-stat-tile strong {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--inventory-ink);
+    }
+
+    .receipt-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 14px 18px;
+        border-bottom: 1px solid #eef3f8;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.15s;
+    }
+
+    .receipt-row:last-child { border-bottom: 0; }
+    .receipt-row:hover { background: #f8fcff; }
+    .receipt-no { font-weight: 800; color: var(--inventory-ink); }
+    .receipt-meta { font-size: 0.83rem; color: var(--inventory-muted); }
+    .receipt-amount { font-weight: 800; font-size: 1.05rem; color: var(--inventory-success); text-align: right; }
+    .receipt-amount small { display:block; font-size:0.78rem; color:var(--inventory-muted); font-weight:600; }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<div class="inventory-container">
+    <div class="inventory-page-shell">
+
+        <!-- Hero Banner -->
+        <div class="cust-hero">
+            <div class="cust-hero-avatar">{{ customer.name|slice:":2"|upper }}</div>
+            <div>
+                <h1 class="cust-hero-name">{{ customer.name }}</h1>
+                <div class="cust-hero-meta">
+                    {% if customer.phone %}<i class="fas fa-phone fa-xs"></i> {{ customer.phone }}{% endif %}
+                    {% if customer.email %} &bull; <i class="fas fa-envelope fa-xs"></i> {{ customer.email }}{% endif %}
+                    {% if customer.city %} &bull; <i class="fas fa-location-dot fa-xs"></i> {{ customer.city }}{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="cust-stat-strip">
+            <div class="cust-stat-tile">
+                <label>Total Orders</label>
+                <strong>{{ total_receipts }}</strong>
+            </div>
+            <div class="cust-stat-tile">
+                <label>Total Spent</label>
+                <strong>Rs {{ total_spent|floatformat:0 }}</strong>
+            </div>
+            {% if customer.address %}
+            <div class="cust-stat-tile">
+                <label>Address</label>
+                <strong style="font-size:1rem;">{{ customer.address|truncatechars:60 }}</strong>
+            </div>
+            {% endif %}
+            {% if customer.notes %}
+            <div class="cust-stat-tile">
+                <label>Notes</label>
+                <strong style="font-size:0.95rem; font-weight:600;">{{ customer.notes|truncatechars:80 }}</strong>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Purchase History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-receipt" style="color:var(--inventory-primary); margin-right:8px;"></i>
+                    Purchase History
+                </h5>
+                <a href="{% url 'inventory:add-sale' %}" class="btn btn-sm btn-success">
+                    <i class="fas fa-plus"></i> New Sale
+                </a>
+            </div>
+
+            {% if page_obj %}
+            <div>
+                {% for receipt in page_obj %}
+                <a href="{% url 'inventory:sale-receipt-detail' receipt.pk %}" class="receipt-row">
+                    <div>
+                        <div class="receipt-no">{{ receipt.receipt_no }}</div>
+                        <div class="receipt-meta">
+                            {{ receipt.sale_date|date:"d M Y" }}
+                            &bull; <span class="badge bg-secondary" style="font-size:.76rem;">{{ receipt.payment_mode }}</span>
+                            &bull; {{ receipt.lines.count }} item{{ receipt.lines.count|pluralize }}
+                        </div>
+                    </div>
+                    <div class="receipt-amount">
+                        Rs {{ receipt.grand_total|floatformat:2 }}
+                        <small>incl. GST Rs {{ receipt.gst_amount|floatformat:2 }}</small>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+
+            {% if page_obj.has_other_pages %}
+            <div class="card-footer">
+                <nav><ul class="pagination mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Prev</a></li>
+                    {% endif %}
+                    <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span></li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                    {% endif %}
+                </ul></nav>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="card-body">
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-receipt"></i></div>
+                    <h3>No purchases yet</h3>
+                    <p>Record a sale for this customer to see it here.</p>
+                    <a href="{% url 'inventory:add-sale' %}" class="btn btn-success">Record Sale</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

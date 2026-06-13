@@ -2,20 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login | SSC Educations</title>
+    <title>Login | Shri Samarth Education</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     {% load static %}
-    <link rel="stylesheet" href="{% static 'core/login.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'core/login.css' %}?v={{ STATIC_VERSION }}">
 </head>
 <body>
 
 <!-- NAVBAR -->
 <nav class="navbar">
-    <div class="logo">SSC Educations</div>
+    <div class="logo">Shri Samarth Education</div>
     <ul>
         <li><a href="{% url 'home' %}">Home</a></li>
-        <li><a href="{% url 'login' %}" class="active">Login</a></li>
+        <li><a href="{% url 'login' %}" class="active">Login Portal</a></li>
     </ul>
 </nav>
 
@@ -23,24 +27,41 @@
 <div class="login-wrapper">
 
     <div class="login-card">
+        <!-- Brand Mark Icon -->
+        <div class="login-brand-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        
         <h2>Welcome Back 👋</h2>
-        <p>Login to access your dashboard</p>
+        <p>Login to access your administrative console</p>
 
         {% if form.errors %}
-            <div class="error">Invalid username or password</div>
+            <div class="error"><i class="fa-solid fa-triangle-exclamation"></i> Invalid username or password</div>
         {% endif %}
 
-        <form method="post">
+        <form method="post" id="loginForm">
             {% csrf_token %}
 
-            <input type="text" name="username" placeholder="Username" required>
-
-            <div class="password-box">
-                <input type="password" name="password" id="password" placeholder="Password" required>
-                <span onclick="togglePassword()">Show</span>
+            <!-- Username Field -->
+            <div class="input-group">
+                <i class="fa-solid fa-user field-icon"></i>
+                <input type="text" name="username" placeholder="Username" required aria-label="Username">
             </div>
 
-            <button type="submit">Login</button>
+            <!-- Password Field -->
+            <div class="input-group">
+                <i class="fa-solid fa-lock field-icon"></i>
+                <input type="password" name="password" id="password" placeholder="Password" required aria-label="Password">
+                <span class="password-toggle" onclick="togglePassword()" id="eyeToggleBtn" role="button" aria-label="Toggle password visibility">
+                    <i class="fa-solid fa-eye"></i>
+                </span>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn-login" id="loginSubmitBtn">
+                <span class="btn-text">Log In &nbsp;<i class="fa-solid fa-right-to-bracket"></i></span>
+                <span class="btn-loader" style="display: none;"><i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...</span>
+            </button>
         </form>
     </div>
 

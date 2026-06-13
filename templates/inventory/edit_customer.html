@@ -1,0 +1,88 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Edit {{ customer.name }}{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<div class="inventory-container">
+    <div class="inventory-page-shell" style="max-width:640px; margin:0 auto;">
+
+        <div class="inventory-page-head">
+            <div>
+                <h1><i class="fas fa-pen" style="margin-right:12px; opacity:.85;"></i>Edit Customer</h1>
+                <p>Update details for <strong>{{ customer.name }}</strong>.</p>
+            </div>
+            <a href="{% url 'inventory:customer-detail' customer.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+
+        {% if messages %}
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+            {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Customer Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control form-control-lg"
+                               value="{{ customer.name }}" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Phone Number</label>
+                            <input type="tel" name="phone" class="form-control" value="{{ customer.phone }}">
+                            <div class="form-text">Used for WhatsApp notifications</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ customer.email }}">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">Address</label>
+                            <textarea name="address" class="form-control" rows="2">{{ customer.address }}</textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">City</label>
+                            <input type="text" name="city" class="form-control" value="{{ customer.city }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Notes</label>
+                        <textarea name="notes" class="form-control" rows="2">{{ customer.notes }}</textarea>
+                    </div>
+
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <a href="{% url 'inventory:customer-detail' customer.pk %}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                        <form method="post" action="{% url 'inventory:delete-customer' customer.pk %}"
+                              style="margin-left:auto;"
+                              onsubmit="return confirm('Remove this customer? Their sales history will be kept.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger btn-lg">
+                                <i class="fas fa-trash"></i> Remove
+                            </button>
+                        </form>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

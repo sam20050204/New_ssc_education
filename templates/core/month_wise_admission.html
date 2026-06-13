@@ -41,6 +41,31 @@
 
 {% block content %}
 <div class="admission-section">
+
+    <!-- ========== CHART SECTION ========== -->
+    <div class="charts-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:32px;">
+
+        <!-- Bar Chart: Admissions by Month -->
+        <div class="chart-card" style="background:var(--card-bg,#fff); border-radius:16px; padding:24px; box-shadow:0 2px 12px rgba(0,0,0,.08); border:1px solid var(--border-color,#e2e8f0);">
+            <h3 style="margin:0 0 16px; font-size:15px; font-weight:700; color:var(--text-primary,#1e293b);">
+                📊 Monthly Admissions — {{ selected_year }}
+            </h3>
+            <div style="position:relative; height:260px;">
+                <canvas id="admissionsBarChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Line Chart: Profit by Month -->
+        <div class="chart-card" style="background:var(--card-bg,#fff); border-radius:16px; padding:24px; box-shadow:0 2px 12px rgba(0,0,0,.08); border:1px solid var(--border-color,#e2e8f0);">
+            <h3 style="margin:0 0 16px; font-size:15px; font-weight:700; color:var(--text-primary,#1e293b);">
+                📈 Monthly Gross Profit — {{ selected_year }}
+            </h3>
+            <div style="position:relative; height:260px;">
+                <canvas id="profitLineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <!-- Month Wise Admission Table -->
     <div class="table-wrapper">
         <h2>Admission Details of Year {{ selected_year|default:'2025' }}</h2>
@@ -211,5 +236,125 @@
         </table>
     </div>
 </div>
+
+<!-- Chart.js CDN + Chart Initialization -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    // ─── Colour palette ─────────────────────────────────────────────────────
+    const PALETTE = [
+        '#0f766e','#f97316','#6366f1','#ec4899','#14b8a6',
+        '#f59e0b','#8b5cf6','#06b6d4','#10b981','#ef4444',
+        '#3b82f6','#a855f7',
+    ];
+
+    const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const MONTH_KEYS   = ['jan','feb','march','april','may','jun','jul','aug','sep','oct','nov','dec'];
+
+    // ─── Raw context data from Django ────────────────────────────────────────
+    const admissionRaw = {{ monthly_admission_data|safe }};
+    const profitRaw    = {{ monthly_profit_data|safe }};
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+    function parseCount(v) {
+        if (!v || v === '-') return 0;
+        return parseInt(v, 10) || 0;
+    }
+
+    function parseProfit(v) {
+        if (!v || v === '-') return 0;
+        // strip ₹, commas, spaces
+        return parseFloat(String(v).replace(/[₹,\s]/g, '')) || 0;
+    }
+
+    function isDark() {
+        return document.documentElement.classList.contains('dark-mode') ||
+               document.body.classList.contains('dark-mode');
+    }
+
+    function gridColor() { return isDark() ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'; }
+    function tickColor()  { return isDark() ? '#94a3b8' : '#64748b'; }
+
+    // ─── Bar Chart: Monthly Admissions ───────────────────────────────────────
+    const barDatasets = admissionRaw.map((row, i) => ({
+        label: row.course,
+        data: MONTH_KEYS.map(k => parseCount(row[k])),
+        backgroundColor: PALETTE[i % PALETTE.length] + 'cc',
+        borderColor:     PALETTE[i % PALETTE.length],
+        borderWidth: 1.5,
+        borderRadius: 6,
+    }));
+
+    if (document.getElementById('admissionsBarChart')) {
+        new Chart(document.getElementById('admissionsBarChart'), {
+            type: 'bar',
+            data: { labels: MONTH_LABELS, datasets: barDatasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: tickColor(), font: { size: 11 }, boxWidth: 12, padding: 12 } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} student${ctx.parsed.y !== 1 ? 's' : ''}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: false, ticks: { color: tickColor() }, grid: { color: gridColor() } },
+                    y: {
+                        beginAtZero: true, ticks: { color: tickColor(), stepSize: 1 },
+                        grid: { color: gridColor() },
+                        title: { display: true, text: 'Students', color: tickColor(), font: { size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // ─── Line Chart: Monthly Gross Profit ────────────────────────────────────
+    const lineDatasets = profitRaw.map((row, i) => ({
+        label: row.course,
+        data: MONTH_KEYS.map(k => parseProfit(row[k])),
+        borderColor:     PALETTE[i % PALETTE.length],
+        backgroundColor: PALETTE[i % PALETTE.length] + '22',
+        pointBackgroundColor: PALETTE[i % PALETTE.length],
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0.35,
+        fill: false,
+    }));
+
+    if (document.getElementById('profitLineChart')) {
+        new Chart(document.getElementById('profitLineChart'), {
+            type: 'line',
+            data: { labels: MONTH_LABELS, datasets: lineDatasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: tickColor(), font: { size: 11 }, boxWidth: 12, padding: 12 } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.dataset.label}: ₹ ${ctx.parsed.y.toLocaleString('en-IN', {minimumFractionDigits:2})}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: tickColor() }, grid: { color: gridColor() } },
+                    y: {
+                        beginAtZero: true, ticks: { color: tickColor(), callback: v => '₹' + v.toLocaleString('en-IN') },
+                        grid: { color: gridColor() },
+                        title: { display: true, text: 'Profit (₹)', color: tickColor(), font: { size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+})();
+</script>
 
 {% endblock %}

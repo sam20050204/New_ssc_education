@@ -4,9 +4,9 @@
 {% block page_title %}Sales History{% endblock %}
 
 {% block page_actions %}
-<div class="list-top-actions">
-    <a href="{% url 'inventory:add-sale' %}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Record Sale
+<div style="display:flex; gap:10px;">
+    <a href="{% url 'inventory:add-sale' %}" class="btn btn-success">
+        <i class="fas fa-cash-register"></i> Record Sale
     </a>
 </div>
 {% endblock %}
@@ -14,214 +14,296 @@
 {% block extra_css %}
 {{ block.super }}
 <style>
-    .history-shell {
+    /* Summary strip */
+    .history-summary {
         display: grid;
-        gap: 20px;
-    }
-
-    .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
     }
 
     .summary-tile {
-        padding: 18px;
-        border-radius: 20px;
-        background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+        padding: 18px 20px;
+        border-radius: var(--inventory-radius-md);
+        background: #fff;
         border: 1px solid var(--inventory-line);
         box-shadow: var(--inventory-shadow-sm);
+        position: relative;
+        overflow: hidden;
     }
+
+    .summary-tile::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+    }
+
+    .summary-tile.green::before  { background: linear-gradient(90deg, #10b981, #34d399); }
+    .summary-tile.blue::before   { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .summary-tile.purple::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
 
     .summary-tile label {
         display: block;
-        margin-bottom: 6px;
-        color: var(--inventory-muted);
-        font-size: 0.76rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        font-size: 0.72rem;
         font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: var(--inventory-muted);
+        margin-bottom: 6px;
     }
 
     .summary-tile strong {
         display: block;
-        color: var(--inventory-ink);
-        font-size: 1.5rem;
+        font-size: 1.55rem;
         font-weight: 800;
-    }
-
-    .receipt-lines {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
-
-    .receipt-lines .badge {
-        background: #eef6fb;
         color: var(--inventory-ink);
-        border: 1px solid var(--inventory-line);
+        line-height: 1.1;
+    }
+
+    /* Filter bar */
+    .filter-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto auto auto;
+        gap: 12px;
+        align-items: end;
     }
 
     @media (max-width: 900px) {
-        .summary-grid {
-            grid-template-columns: 1fr;
-        }
+        .filter-bar { grid-template-columns: 1fr 1fr; }
     }
+
+    @media (max-width: 600px) {
+        .filter-bar { grid-template-columns: 1fr; }
+    }
+
+    /* Table Styling */
+    .receipts-table th {
+        font-size: 0.73rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--inventory-muted);
+        padding: 12px 16px;
+        background: #f8fbff;
+        border-bottom: 2px solid var(--inventory-line);
+    }
+
+    .receipts-table td {
+        padding: 13px 16px;
+        vertical-align: middle;
+        border-bottom: 1px solid #eef3f8;
+    }
+
+    .receipts-table tr:hover td { background: #f8fcff; }
+    .receipts-table tr:last-child td { border-bottom: 0; }
+
+    .receipt-no-badge {
+        font-family: monospace;
+        font-size: 0.85rem;
+        font-weight: 700;
+        background: rgba(15,118,110,0.08);
+        color: #0f766e;
+        padding: 4px 10px;
+        border-radius: 8px;
+        letter-spacing: 0.02em;
+    }
+
+    .customer-cell strong { font-weight: 700; color: var(--inventory-ink); font-size: 0.95rem; }
+    .customer-cell small  { font-size: 0.82rem; color: var(--inventory-muted); }
+
+    .item-pills { display:flex; gap:5px; flex-wrap:wrap; }
+    .item-pill {
+        background: #eef3f8;
+        border: 1px solid var(--inventory-line);
+        color: var(--inventory-ink);
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .amount-cell strong { font-size: 1.05rem; font-weight: 800; color: var(--inventory-success); }
+    .amount-cell small  { font-size: 0.79rem; color: var(--inventory-muted); display: block; }
 </style>
 {% endblock %}
 
 {% block content %}
 {{ block.super }}
-
 <div class="inventory-container">
-    <div class="history-shell">
-        <div class="summary-grid">
-            <div class="summary-tile">
-                <label>Total Receipts</label>
-                <strong>{{ sales_totals.total_receipts|default:0 }}</strong>
-            </div>
-            <div class="summary-tile">
-                <label>Total Sales</label>
-                <strong>Rs {{ sales_totals.total_sales|default:0|floatformat:2 }}</strong>
-            </div>
-            <div class="summary-tile">
-                <label>Total GST</label>
-                <strong>Rs {{ sales_totals.total_gst|default:0|floatformat:2 }}</strong>
+    <div class="inventory-page-shell">
+
+        <div class="inventory-page-head">
+            <div>
+                <h1><i class="fas fa-receipt" style="margin-right:14px; opacity:.85;"></i>Sales History</h1>
+                <p>Complete record of all customer sales receipts</p>
             </div>
         </div>
 
-        <div class="card">
+        <!-- Summary Strip -->
+        <div class="history-summary">
+            <div class="summary-tile green">
+                <label>Total Receipts</label>
+                <strong>{{ sales_totals.total_receipts|default:0 }}</strong>
+            </div>
+            <div class="summary-tile blue">
+                <label>Total Revenue</label>
+                <strong>Rs {{ sales_totals.total_sales|default:0|floatformat:0 }}</strong>
+            </div>
+            <div class="summary-tile purple">
+                <label>Total GST</label>
+                <strong>Rs {{ sales_totals.total_gst|default:0|floatformat:0 }}</strong>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="card" style="margin-bottom:20px;">
             <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Search</label>
-                        <input type="text" name="search" class="form-control" placeholder="Receipt, customer, phone, item" value="{{ request.GET.search }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Payment Mode</label>
-                        <select name="payment_mode" class="form-select">
-                            <option value="">All Modes</option>
-                            {% for mode in payment_modes %}
-                            <option value="{{ mode }}" {% if request.GET.payment_mode == mode %}selected{% endif %}>{{ mode }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">From</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">To</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
-                    </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-filter"></i>
-                        </button>
-                    </div>
-                    <div class="col-12">
-                        <a href="{% url 'inventory:sale-history' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> Clear Filters
-                        </a>
+                <form method="get">
+                    <div class="filter-bar">
+                        <div>
+                            <label class="form-label fw-semibold">Search</label>
+                            <input type="text" name="search" class="form-control"
+                                   placeholder="Receipt No, customer, phone…"
+                                   value="{{ request.GET.search }}">
+                        </div>
+                        <div>
+                            <label class="form-label fw-semibold">Payment Mode</label>
+                            <select name="payment_mode" class="form-select">
+                                <option value="">All Modes</option>
+                                {% for mode in payment_modes %}
+                                <option value="{{ mode }}" {% if request.GET.payment_mode == mode %}selected{% endif %}>{{ mode }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label fw-semibold">From</label>
+                            <input type="date" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
+                        </div>
+                        <div>
+                            <label class="form-label fw-semibold">To</label>
+                            <input type="date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
+                        </div>
+                        <div style="display:flex; gap:8px; align-self:end;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <a href="{% url 'inventory:sale-history' %}" class="btn btn-outline-secondary" title="Clear filters">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </div>
                     </div>
                 </form>
             </div>
         </div>
 
+        <!-- Receipts Table -->
         {% if receipts %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>Receipt</th>
-                        <th>Customer</th>
-                        <th>Sale Date</th>
-                        <th>Items</th>
-                        <th>Payment</th>
-                        <th>Total</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for receipt in receipts %}
-                    <tr>
-                        <td>
-                            <strong>{{ receipt.receipt_no }}</strong><br>
-                            <small class="text-muted">{{ receipt.lines.count }} line{{ receipt.lines.count|pluralize }}</small>
-                        </td>
-                        <td>
-                            <strong>{{ receipt.customer_name }}</strong><br>
-                            <small class="text-muted">{{ receipt.customer_phone|default:"No phone" }}</small>
-                        </td>
-                        <td>{{ receipt.sale_date|date:"d M Y" }}</td>
-                        <td>
-                            <div class="receipt-lines">
-                                {% for line in receipt.lines.all|slice:":3" %}
-                                <span class="badge">{{ line.item.name }} x{{ line.quantity }}</span>
-                                {% endfor %}
-                                {% if receipt.lines.count > 3 %}
-                                <span class="badge">+{{ receipt.lines.count|add:"-3" }} more</span>
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table receipts-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Receipt #</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Items</th>
+                            <th>Payment</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for receipt in receipts %}
+                        <tr>
+                            <td>
+                                <span class="receipt-no-badge">{{ receipt.receipt_no }}</span>
+                            </td>
+                            <td class="customer-cell">
+                                <strong>{{ receipt.customer_name }}</strong>
+                                {% if receipt.customer_phone %}
+                                <small><i class="fas fa-phone fa-xs"></i> {{ receipt.customer_phone }}</small>
                                 {% endif %}
-                            </div>
-                        </td>
-                        <td>{{ receipt.payment_mode }}</td>
-                        <td>
-                            <strong>Rs {{ receipt.grand_total|floatformat:2 }}</strong><br>
-                            <small class="text-muted">GST Rs {{ receipt.gst_amount|floatformat:2 }}</small>
-                        </td>
-                        <td>
-                            <div class="action-buttons">
-                                <a href="{% url 'inventory:sale-receipt-detail' receipt.pk %}" class="btn btn-sm btn-primary" title="Open Receipt">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{% url 'inventory:sale-receipt-detail' receipt.pk %}" class="btn btn-sm btn-secondary" title="Print" onclick="window.open(this.href, '_blank'); return false;">
-                                    <i class="fas fa-print"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                            <td style="white-space:nowrap; color:var(--inventory-muted); font-size:0.9rem;">
+                                {{ receipt.sale_date|date:"d M Y" }}
+                            </td>
+                            <td>
+                                <div class="item-pills">
+                                    {% for line in receipt.lines.all|slice:":3" %}
+                                    <span class="item-pill">{{ line.item.name }} ×{{ line.quantity }}</span>
+                                    {% endfor %}
+                                    {% if receipt.lines.count > 3 %}
+                                    <span class="item-pill" style="background:#e0e7ff; color:#4338ca;">+{{ receipt.lines.count|add:"-3" }} more</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ receipt.payment_mode }}</span>
+                            </td>
+                            <td class="amount-cell">
+                                <strong>Rs {{ receipt.grand_total|floatformat:2 }}</strong>
+                                <small>GST Rs {{ receipt.gst_amount|floatformat:2 }}</small>
+                            </td>
+                            <td>
+                                <div style="display:flex; gap:6px;">
+                                    <a href="{% url 'inventory:sale-receipt-detail' receipt.pk %}"
+                                       class="btn btn-sm btn-outline-primary" title="View Receipt">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:sale-receipt-detail' receipt.pk %}"
+                                       class="btn btn-sm btn-outline-secondary" title="Print"
+                                       onclick="window.open(this.href,'_blank'); return false;">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if is_paginated %}
+            <div class="card-footer">
+                <nav>
+                    <ul class="pagination mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Previous</a>
+                        </li>
+                        {% endif %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Last</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
         </div>
 
-        {% if is_paginated %}
-        <nav aria-label="Page navigation" class="mt-4">
-            <ul class="pagination">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">First</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
-                </li>
-                {% endif %}
-
-                <li class="page-item disabled">
-                    <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-                </li>
-
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Last</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
         {% else %}
         <div class="empty-state">
             <div class="empty-state-icon"><i class="fas fa-receipt"></i></div>
-            <h3>No sales recorded</h3>
-            <p>Start by recording your first customer sale.</p>
-            <a href="{% url 'inventory:add-sale' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Record Sale
+            <h3>No sales found</h3>
+            <p>{% if request.GET.search or request.GET.payment_mode or request.GET.start_date %}No records match your filters.{% else %}Start by recording your first customer sale.{% endif %}</p>
+            <a href="{% url 'inventory:add-sale' %}" class="btn btn-success">
+                <i class="fas fa-cash-register"></i> Record Sale
             </a>
         </div>
         {% endif %}
+
     </div>
 </div>
 {% endblock %}

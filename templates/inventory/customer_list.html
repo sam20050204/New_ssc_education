@@ -1,0 +1,252 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Customers{% endblock %}
+
+{% block page_actions %}
+<div style="display:flex; gap:10px;">
+    <a href="{% url 'inventory:add-customer' %}" class="btn btn-success">
+        <i class="fas fa-user-plus"></i> Add Customer
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .cust-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 18px;
+    }
+
+    .cust-card {
+        background: #fff;
+        border: 1px solid var(--inventory-line);
+        border-radius: var(--inventory-radius-md);
+        box-shadow: var(--inventory-shadow-sm);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        position: relative;
+    }
+
+    .cust-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 40px rgba(15,23,42,0.10);
+    }
+
+    .cust-card::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #0f766e, #14b8a6);
+        border-radius: var(--inventory-radius-md) var(--inventory-radius-md) 0 0;
+    }
+
+    .cust-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0f766e, #14b8a6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        font-weight: 900;
+        color: #fff;
+        flex-shrink: 0;
+        letter-spacing: -0.03em;
+    }
+
+    .cust-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .cust-name {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: var(--inventory-ink);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .cust-phone {
+        font-size: 0.83rem;
+        color: var(--inventory-muted);
+    }
+
+    .cust-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .cust-stat {
+        background: #f8fbff;
+        border-radius: 12px;
+        padding: 10px 12px;
+        text-align: center;
+    }
+
+    .cust-stat-val {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--inventory-ink);
+        display: block;
+    }
+
+    .cust-stat-lbl {
+        font-size: 0.72rem;
+        color: var(--inventory-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        font-weight: 700;
+    }
+
+    .cust-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+    }
+
+    .cust-actions a {
+        flex: 1;
+        text-align: center;
+        padding: 8px;
+        border-radius: 10px;
+        font-size: 0.83rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: background 0.15s;
+    }
+
+    .cust-btn-view {
+        background: rgba(15,118,110,0.10);
+        color: #0f766e;
+    }
+
+    .cust-btn-view:hover {
+        background: rgba(15,118,110,0.20);
+        color: #0f766e;
+    }
+
+    .cust-btn-edit {
+        background: rgba(59,130,246,0.10);
+        color: #2563eb;
+    }
+
+    .cust-btn-edit:hover {
+        background: rgba(59,130,246,0.20);
+        color: #2563eb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<div class="inventory-container">
+    <div class="inventory-page-shell">
+
+        <div class="inventory-page-head">
+            <div>
+                <h1><i class="fas fa-users" style="margin-right:14px; opacity:.85;"></i>Customer Directory</h1>
+                <p>{{ total_customers }} active customer{{ total_customers|pluralize }} in your database</p>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="card">
+            <div class="card-body">
+                <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:200px;">
+                        <input type="text" name="search" class="form-control"
+                               placeholder="Search by name, phone, or email…"
+                               value="{{ request.GET.search }}"
+                               id="customerSearch">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    {% if request.GET.search %}
+                    <a href="{% url 'inventory:customer-list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        {% if customers %}
+        <div class="cust-grid">
+            {% for customer in customers %}
+            <div class="cust-card">
+                <div class="cust-header">
+                    <div class="cust-avatar">{{ customer.name|slice:":2"|upper }}</div>
+                    <div>
+                        <div class="cust-name">{{ customer.name }}</div>
+                        <div class="cust-phone">
+                            {% if customer.phone %}<i class="fas fa-phone fa-xs"></i> {{ customer.phone }}{% endif %}
+                            {% if customer.city %} &bull; {{ customer.city }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cust-stats">
+                    <div class="cust-stat">
+                        <span class="cust-stat-val">{{ customer.total_purchases }}</span>
+                        <span class="cust-stat-lbl">Orders</span>
+                    </div>
+                    <div class="cust-stat">
+                        <span class="cust-stat-val">Rs {{ customer.total_spent|floatformat:0 }}</span>
+                        <span class="cust-stat-lbl">Total Spent</span>
+                    </div>
+                </div>
+
+                <div class="cust-actions">
+                    <a href="{% url 'inventory:customer-detail' customer.pk %}" class="cust-btn-view">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                    <a href="{% url 'inventory:edit-customer' customer.pk %}" class="cust-btn-edit">
+                        <i class="fas fa-pen"></i> Edit
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if is_paginated %}
+        <nav>
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">First</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Prev</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Last</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-users"></i></div>
+            <h3>No customers yet</h3>
+            <p>Add your first customer to start tracking purchase history.</p>
+            <a href="{% url 'inventory:add-customer' %}" class="btn btn-success">
+                <i class="fas fa-user-plus"></i> Add Customer
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

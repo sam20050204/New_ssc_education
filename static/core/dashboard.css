@@ -358,6 +358,47 @@ textarea {
     font-size: 15px;
 }
 
+/* Sidebar menu toggle button (for collapsible submenus) */
+.menu-toggle {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 14px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--sidebar-text);
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.menu-toggle:hover {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-active-text);
+}
+
+.menu-toggle .menu-item-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-arrow {
+    font-size: 11px;
+    transition: transform 0.22s ease;
+    color: var(--sidebar-text-muted, #94a3b8);
+}
+
+.toggle-arrow.open {
+    transform: rotate(90deg);
+}
+
+
 .app-stage {
     min-width: 0;
     display: flex;

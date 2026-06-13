@@ -117,4 +117,11 @@ urlpatterns = [
         views.communication_thread_mark_read,
         name="communication_thread_mark_read",
     ),
+    path("admin/whatsapp-settings/", views.whatsapp_settings_view, name="whatsapp_settings"),
+    # Exam Records URLs
+    path("exams/", views.exam_record_list, name="exam_record_list"),
+    path("exams/add/", views.add_exam_record, name="add_exam_record"),
+    path("exams/<int:id>/edit/", views.edit_exam_record, name="edit_exam_record"),
+    path("exams/<int:id>/delete/", views.delete_exam_record, name="delete_exam_record"),
+    path("exams/import/", views.import_exam_records_excel, name="import_exam_records"),
 ]

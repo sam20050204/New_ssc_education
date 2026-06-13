@@ -1,30 +1,18 @@
 {% extends "inventory/base.html" %}
 {% load static %}
 
-{% block page_title %}Inventory Dashboard{% endblock %}
+{% block page_title %}Sales & Inventory Dashboard{% endblock %}
 
 {% block page_actions %}
 <div class="top-quick-actions">
-    <a href="{% url 'inventory:item-list' %}" class="btn btn-primary">
-        <i class="fas fa-boxes-stacked"></i> Items
+    <a href="{% url 'inventory:add-sale' %}" class="btn btn-success">
+        <i class="fas fa-cash-register"></i> Record Sale
     </a>
     <a href="{% url 'inventory:add-item' %}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Add Item
     </a>
-    <a href="{% url 'inventory:add-stock' %}" class="btn btn-success">
-        <i class="fas fa-shopping-cart"></i> Add Stock / Record Purchase
-    </a>
-    <a href="{% url 'inventory:add-sale' %}" class="btn btn-success">
-        <i class="fas fa-cash-register"></i> Record Sale
-    </a>
-    <a href="{% url 'inventory:sale-history' %}" class="btn btn-info">
-        <i class="fas fa-receipt"></i> Sales History
-    </a>
-    <a href="{% url 'inventory:supplier-list' %}" class="btn btn-info">
-        <i class="fas fa-truck-field"></i> Supplier Details
-    </a>
-    <a href="{% url 'inventory:add-supplier' %}" class="btn btn-info">
-        <i class="fas fa-building"></i> Add Supplier
+    <a href="{% url 'inventory:add-stock' %}" class="btn btn-primary">
+        <i class="fas fa-cart-plus"></i> Add Stock
     </a>
     <a href="{% url 'inventory:inventory-report' %}" class="btn btn-warning">
         <i class="fas fa-chart-column"></i> Reports
@@ -42,298 +30,340 @@
         justify-content: flex-end;
     }
 
-    .inventory-dashboard-shell {
+    /* Hero KPI Strip */
+    .kpi-strip {
         display: grid;
-        gap: 22px;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 16px;
     }
 
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 18px;
-    }
-
-    .dashboard-stat-link {
-        display: block;
-        color: inherit;
-    }
-
-    .dashboard-stat-link:hover .stat-card {
-        transform: translateY(-3px);
-        box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
-    }
-
-    .dashboard-stat-link .stat-card {
-        transition: transform 0.18s ease, box-shadow 0.18s ease;
-        margin-bottom: 0;
-    }
-
-    .dashboard-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.9fr);
-        gap: 20px;
-    }
-
-    .dashboard-stack {
-        display: grid;
-        gap: 20px;
-    }
-
-    .mini-stats {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-    }
-
-    .mini-stat {
-        padding: 16px;
-        border-radius: 18px;
-        background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+    .kpi-card {
+        position: relative;
+        overflow: hidden;
+        padding: 22px 20px;
+        border-radius: var(--inventory-radius-md);
         border: 1px solid var(--inventory-line);
+        background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+        box-shadow: var(--inventory-shadow-sm);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
 
-    .mini-stat label {
-        display: block;
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 24px 48px rgba(15, 23, 42, 0.10);
+    }
+
+    .kpi-card::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 4px;
+    }
+
+    .kpi-card.green::before  { background: linear-gradient(90deg, #10b981, #34d399); }
+    .kpi-card.blue::before   { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .kpi-card.orange::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .kpi-card.teal::before   { background: linear-gradient(90deg, #0f766e, #14b8a6); }
+    .kpi-card.purple::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+    .kpi-card.red::before    { background: linear-gradient(90deg, #dc2626, #f87171); }
+
+    .kpi-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        margin-bottom: 14px;
+    }
+    .kpi-icon.green  { background: rgba(16,185,129,0.12); color: #059669; }
+    .kpi-icon.blue   { background: rgba(59,130,246,0.12); color: #2563eb; }
+    .kpi-icon.orange { background: rgba(245,158,11,0.12); color: #d97706; }
+    .kpi-icon.teal   { background: rgba(15,118,110,0.12); color: #0f766e; }
+    .kpi-icon.purple { background: rgba(124,58,237,0.12); color: #7c3aed; }
+    .kpi-icon.red    { background: rgba(220,38,38,0.12);  color: #dc2626; }
+
+    .kpi-value {
+        font-size: clamp(1.7rem, 3vw, 2.2rem);
+        font-weight: 800;
+        color: var(--inventory-ink);
+        letter-spacing: -0.04em;
+        line-height: 1;
         margin-bottom: 6px;
-        color: var(--inventory-muted);
+    }
+
+    .kpi-label {
         font-size: 0.78rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        font-weight: 800;
+        color: var(--inventory-muted);
     }
 
-    .mini-stat strong {
-        font-size: 1.7rem;
-        font-weight: 800;
-        color: var(--inventory-ink);
+    .kpi-sub {
+        font-size: 0.82rem;
+        color: var(--inventory-muted);
+        margin-top: 4px;
     }
 
-    .status-meter {
+    /* Dashboard grid layout */
+    .dash-grid {
         display: grid;
-        gap: 14px;
-    }
-
-    .status-row {
-        display: grid;
-        gap: 8px;
-    }
-
-    .status-meta {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        align-items: center;
-    }
-
-    .split-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
         gap: 20px;
     }
 
-    .insight-list {
+    .dash-col { display: grid; gap: 20px; }
+
+    /* Recent sales table */
+    .sale-row {
         display: grid;
-        gap: 12px;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 13px 16px;
+        border-bottom: 1px solid #eef3f8;
+        transition: background 0.15s;
     }
-
-    .insight-item {
-        padding: 16px;
-        border-radius: 18px;
-        border: 1px solid var(--inventory-line);
-        background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+    .sale-row:last-child { border-bottom: 0; }
+    .sale-row:hover { background: #f8fcff; }
+    .sale-customer { font-weight: 700; color: var(--inventory-ink); }
+    .sale-meta { font-size: 0.83rem; color: var(--inventory-muted); }
+    .sale-amount {
+        font-weight: 800;
+        font-size: 1.05rem;
+        color: var(--inventory-success);
+        text-align: right;
+        white-space: nowrap;
     }
-
-    .insight-item-top {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 8px;
-    }
-
-    .insight-item strong {
-        color: var(--inventory-ink);
-    }
-
-    .insight-meta {
+    .sale-amount small {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 600;
         color: var(--inventory-muted);
-        font-size: 0.88rem;
-        line-height: 1.5;
     }
 
-    .timeline-table td:first-child,
-    .timeline-table th:first-child {
-        min-width: 180px;
+    /* Top items list */
+    .top-item-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 11px 16px;
+        border-bottom: 1px solid #eef3f8;
+    }
+    .top-item-row:last-child { border-bottom: 0; }
+    .top-item-name { font-weight: 700; color: var(--inventory-ink); font-size: 0.95rem; }
+    .top-item-qty {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 800;
+        background: rgba(15,118,110,0.10);
+        color: var(--inventory-primary);
     }
 
+    /* Stock meters */
+    .status-meter { display: grid; gap: 14px; }
+    .status-row   { display: grid; gap: 8px; }
+    .status-meta  { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+    /* Responsive */
     @media (max-width: 1080px) {
-        .dashboard-layout,
-        .split-grid {
-            grid-template-columns: 1fr;
-        }
+        .dash-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 720px) {
-        .mini-stats {
-            grid-template-columns: 1fr;
-        }
+        .kpi-strip { grid-template-columns: repeat(2, 1fr); }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 {{ block.super }}
-
 <div class="inventory-container">
-    <div class="inventory-dashboard-shell">
-        <div class="dashboard-grid">
-            <a href="{% url 'inventory:item-list' %}" class="dashboard-stat-link">
-                <div class="stat-card">
-                    <h5>Total Items</h5>
-                    <div class="stat-value">{{ total_items }}</div>
-                    <small>Open complete inventory register</small>
-                </div>
-            </a>
+    <div class="inventory-page-shell">
 
-            <a href="{% url 'inventory:category-list' %}" class="dashboard-stat-link">
-                <div class="stat-card success">
-                    <h5>Total Categories</h5>
-                    <div class="stat-value">{{ total_categories }}</div>
-                    <small>Product category structure</small>
-                </div>
-            </a>
-
-            <a href="{% url 'inventory:item-list' %}?low_stock=true" class="dashboard-stat-link">
-                <div class="stat-card warning">
-                    <h5>Low Stock Items</h5>
-                    <div class="stat-value">{{ low_stock_items }}</div>
-                    <small>Immediate replenishment focus</small>
-                </div>
-            </a>
-
-            <a href="{% url 'inventory:inventory-report' %}" class="dashboard-stat-link">
-                <div class="stat-card danger">
-                    <h5>Inventory Value</h5>
-                    <div class="stat-value">Rs {{ total_inventory_value|floatformat:0 }}</div>
-                    <small>At average purchase cost</small>
-                </div>
-            </a>
-
-            <div class="stat-card">
-                <h5>Selling Value</h5>
-                <div class="stat-value">Rs {{ total_selling_value|floatformat:0 }}</div>
-                <small>Projected gross revenue</small>
+        <!-- Page Header -->
+        <div class="inventory-page-head">
+            <div>
+                <h1><i class="fas fa-chart-line" style="margin-right:14px; opacity:.85;"></i>Sales &amp; Inventory Dashboard</h1>
+                <p>Real-time overview of your sales performance, inventory health, and stock alerts.</p>
             </div>
-
-            <div class="stat-card success">
-                <h5>Expected Profit</h5>
-                <div class="stat-value">Rs {{ total_potential_profit|floatformat:0 }}</div>
-                <small>Current stock profit potential</small>
+            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                <a href="{% url 'inventory:sale-history' %}" class="btn btn-success">
+                    <i class="fas fa-receipt"></i> Sales History
+                </a>
+                <a href="{% url 'inventory:item-list' %}" class="btn btn-primary">
+                    <i class="fas fa-boxes-stacked"></i> All Items
+                </a>
             </div>
         </div>
 
-        <div class="dashboard-layout">
-            <div class="dashboard-stack">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Inventory Performance</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mini-stats">
-                            <div class="mini-stat">
-                                <label>Total Items</label>
-                                <strong>{{ total_items }}</strong>
-                            </div>
-                            <div class="mini-stat">
-                                <label>Suppliers</label>
-                                <strong>{{ total_suppliers }}</strong>
-                            </div>
-                            <div class="mini-stat">
-                                <label>Purchases</label>
-                                <strong>{{ total_purchases }}</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="split-grid">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Recent Purchases</h5>
-                            <a href="{% url 'inventory:purchase-list' %}" class="btn btn-sm btn-outline-primary">View All</a>
-                        </div>
-                        {% if recent_purchases %}
-                        <div class="table-responsive">
-                            <table class="table timeline-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Supplier</th>
-                                        <th>Date</th>
-                                        <th>Qty</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for purchase in recent_purchases %}
-                                    <tr>
-                                        <td>
-                                            <a href="{% url 'inventory:item-detail' purchase.item.pk %}"><strong>{{ purchase.item.name }}</strong></a>
-                                            <br>
-                                            <small class="text-muted">{{ purchase.item.sku }}</small>
-                                        </td>
-                                        <td>{% if purchase.supplier %}{{ purchase.supplier.name }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
-                                        <td>{{ purchase.purchase_date|date:"d M Y" }}</td>
-                                        <td>{{ purchase.quantity }}</td>
-                                        <td>Rs {{ purchase.total_purchase_price|floatformat:2 }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="card-body">
-                            <p class="text-muted mb-0">No purchases recorded yet.</p>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Recently Updated Items</h5>
-                            <a href="{% url 'inventory:item-list' %}" class="btn btn-sm btn-outline-primary">All Items</a>
-                        </div>
-                        <div class="card-body">
-                            <div class="insight-list">
-                                {% for item in recent_items %}
-                                <div class="insight-item">
-                                    <div class="insight-item-top">
-                                        <a href="{% url 'inventory:item-detail' item.pk %}"><strong>{{ item.name }}</strong></a>
-                                        {% if item.is_low_stock %}
-                                        <span class="badge bg-danger">Low</span>
-                                        {% elif item.is_overstocked %}
-                                        <span class="badge bg-warning">Over</span>
-                                        {% else %}
-                                        <span class="badge bg-success">Healthy</span>
-                                        {% endif %}
-                                    </div>
-                                    <div class="insight-meta">
-                                        {{ item.category.name }} | SKU {{ item.sku }}<br>
-                                        Stock {{ item.current_stock }} | Sell Rs {{ item.selling_price|floatformat:2 }} | Avg Cost Rs {{ item.average_purchase_rate|floatformat:2 }}
-                                    </div>
-                                </div>
-                                {% empty %}
-                                <p class="text-muted mb-0">No items available.</p>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- KPI Strip Row 1: Sales -->
+        <div class="kpi-strip">
+            <div class="kpi-card green">
+                <div class="kpi-icon green"><i class="fas fa-indian-rupee-sign"></i></div>
+                <div class="kpi-value">Rs {{ today_revenue|floatformat:0 }}</div>
+                <div class="kpi-label">Today's Revenue</div>
+                <div class="kpi-sub">{{ today_receipts }} sale{{ today_receipts|pluralize }} today</div>
             </div>
 
-            <div class="dashboard-stack">
+            <div class="kpi-card blue">
+                <div class="kpi-icon blue"><i class="fas fa-calendar-check"></i></div>
+                <div class="kpi-value">Rs {{ month_revenue|floatformat:0 }}</div>
+                <div class="kpi-label">This Month</div>
+                <div class="kpi-sub">{{ month_receipts }} receipt{{ month_receipts|pluralize }}</div>
+            </div>
+
+            <div class="kpi-card purple">
+                <div class="kpi-icon purple"><i class="fas fa-users"></i></div>
+                <div class="kpi-value">{{ customer_count }}</div>
+                <div class="kpi-label">Customers This Month</div>
+                <div class="kpi-sub">Unique phone numbers</div>
+            </div>
+
+            <div class="kpi-card teal">
+                <div class="kpi-icon teal"><i class="fas fa-boxes-stacked"></i></div>
+                <div class="kpi-value">{{ total_items }}</div>
+                <div class="kpi-label">Total Items</div>
+                <div class="kpi-sub">{{ total_categories }} categories</div>
+            </div>
+
+            <div class="kpi-card orange">
+                <div class="kpi-icon orange"><i class="fas fa-triangle-exclamation"></i></div>
+                <div class="kpi-value">{{ low_stock_items }}</div>
+                <div class="kpi-label">Low Stock</div>
+                <div class="kpi-sub">Need replenishment</div>
+            </div>
+
+            <div class="kpi-card green">
+                <div class="kpi-icon green"><i class="fas fa-sack-dollar"></i></div>
+                <div class="kpi-value">Rs {{ total_potential_profit|floatformat:0 }}</div>
+                <div class="kpi-label">Expected Profit</div>
+                <div class="kpi-sub">From current stock</div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="dash-grid">
+
+            <!-- Left Column -->
+            <div class="dash-col">
+
+                <!-- Revenue Trend Chart -->
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0">Stock Status</h5>
+                        <h5 class="card-title mb-0"><i class="fas fa-chart-line" style="color:var(--inventory-primary); margin-right:8px;"></i>Weekly Sales Trend</h5>
+                        <span class="badge bg-success" style="background:rgba(15,118,110,0.15);color:var(--inventory-primary);font-size:0.75rem;padding:4px 10px;border-radius:999px;">Last 7 Days</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container" style="position: relative; height: 260px; width: 100%;">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Sales -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-receipt" style="color:var(--inventory-primary); margin-right:8px;"></i>Recent Sales</h5>
+                        <a href="{% url 'inventory:sale-history' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    {% if recent_sales %}
+                    <div>
+                        {% for receipt in recent_sales %}
+                        <a href="{% url 'inventory:sale-receipt-detail' receipt.pk %}" style="text-decoration:none; color:inherit; display:block;">
+                            <div class="sale-row">
+                                <div>
+                                    <div class="sale-customer">{{ receipt.customer_name }}</div>
+                                    <div class="sale-meta">
+                                        {{ receipt.receipt_no }} &bull; {{ receipt.sale_date|date:"d M Y" }} &bull;
+                                        <span class="badge bg-secondary" style="font-size:0.76rem;">{{ receipt.payment_mode }}</span>
+                                    </div>
+                                </div>
+                                <div class="sale-amount">
+                                    Rs {{ receipt.grand_total|floatformat:2 }}
+                                    <small>{{ receipt.lines.count }} item{{ receipt.lines.count|pluralize }}</small>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <div class="empty-state-icon"><i class="fas fa-receipt"></i></div>
+                            <h3>No sales yet</h3>
+                            <p>Record your first sale to see it here.</p>
+                            <a href="{% url 'inventory:add-sale' %}" class="btn btn-success">Record Sale</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Top Selling Items This Month -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-fire" style="color:#f59e0b; margin-right:8px;"></i>Top Items This Month</h5>
+                        <a href="{% url 'inventory:item-list' %}" class="btn btn-sm btn-outline-primary">All Items</a>
+                    </div>
+                    {% if top_items %}
+                    <div>
+                        {% for item in top_items %}
+                        <div class="top-item-row">
+                            <div>
+                                <div class="top-item-name">{{ item.item__name }}</div>
+                                <div class="sale-meta">Rs {{ item.total_revenue|floatformat:0 }} revenue</div>
+                            </div>
+                            <span class="top-item-qty"><i class="fas fa-cubes"></i> {{ item.total_qty }} sold</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="card-body">
+                        <p class="text-muted mb-0">No sales recorded this month yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- Right Column -->
+            <div class="dash-col">
+
+                <!-- Inventory Value Cards -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-warehouse" style="color:var(--inventory-primary); margin-right:8px;"></i>Inventory Value</h5>
+                    </div>
+                    <div class="card-body">
+                        <div style="display:grid; gap:12px;">
+                            <div class="insight-item">
+                                <label>Cost Value (Purchase)</label>
+                                <strong style="font-size:1.4rem; font-weight:800;">Rs {{ total_inventory_value|floatformat:0 }}</strong>
+                            </div>
+                            <div class="insight-item">
+                                <label>Selling Value</label>
+                                <strong style="font-size:1.4rem; font-weight:800;">Rs {{ total_selling_value|floatformat:0 }}</strong>
+                            </div>
+                            <div class="insight-item">
+                                <label>Expected Profit</label>
+                                <strong style="font-size:1.4rem; font-weight:800; color:var(--inventory-success);">Rs {{ total_potential_profit|floatformat:0 }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock Health -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-heart-pulse" style="color:#dc2626; margin-right:8px;"></i>Stock Health</h5>
+                        <span class="badge bg-secondary">{{ total_items }} items</span>
                     </div>
                     <div class="card-body">
                         <div class="status-meter">
@@ -368,13 +398,14 @@
                     </div>
                 </div>
 
+                <!-- Low Stock Alerts -->
                 {% if low_stock_alerts %}
                 <div class="card border-warning">
-                    <div class="card-header bg-light border-warning">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-exclamation-triangle text-warning"></i>
-                            Low Stock Alerts
+                    <div class="card-header" style="background:#fffbeb; border-bottom:1px solid rgba(245,158,11,0.25);">
+                        <h5 class="card-title mb-0" style="color:#92400e;">
+                            <i class="fas fa-triangle-exclamation" style="color:#f59e0b;"></i>&nbsp;Low Stock Alerts
                         </h5>
+                        <a href="{% url 'inventory:low-stock-alerts' %}" class="btn btn-sm btn-warning">View All</a>
                     </div>
                     <div class="card-body">
                         <div class="insight-list">
@@ -385,8 +416,8 @@
                                     <span class="badge bg-danger">{{ alert.current_stock }}/{{ alert.minimum_stock }}</span>
                                 </div>
                                 <div class="insight-meta">
-                                    Stock below minimum threshold.<br>
-                                    <a href="{% url 'inventory:add-purchase' %}?item_id={{ alert.item.pk }}" class="btn btn-sm btn-primary mt-3">
+                                    Stock below minimum &bull;
+                                    <a href="{% url 'inventory:add-purchase' %}?item_id={{ alert.item.pk }}" class="btn btn-sm btn-primary" style="margin-top:6px;">
                                         <i class="fas fa-plus"></i> Replenish
                                     </a>
                                 </div>
@@ -396,8 +427,143 @@
                     </div>
                 </div>
                 {% endif %}
+
+                <!-- Quick Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-info-circle" style="color:var(--inventory-info); margin-right:8px;"></i>Quick Stats</h5>
+                    </div>
+                    <div class="card-body">
+                        <div style="display:grid; gap:10px;">
+                            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef3f8;">
+                                <span class="text-muted">Total Receipts</span>
+                                <strong>{{ total_sales_receipts }}</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef3f8;">
+                                <span class="text-muted">Total Purchases</span>
+                                <strong>{{ total_purchases }}</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef3f8;">
+                                <span class="text-muted">Suppliers</span>
+                                <strong>{{ total_suppliers }}</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; padding:8px 0;">
+                                <span class="text-muted">Categories</span>
+                                <strong>{{ total_categories }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
+
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById("revenueChart").getContext("2d");
+        
+        const isDarkMode = document.body.classList.contains('dark-mode') || document.documentElement.getAttribute('data-theme') === 'dark';
+        const gridColor = isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
+        const labelColor = isDarkMode ? "#94a3b8" : "#64748b";
+        
+        const chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: {{ chart_labels|safe }},
+                datasets: [{
+                    label: "Daily Revenue",
+                    data: {{ chart_data|safe }},
+                    borderColor: "#0f766e",
+                    backgroundColor: "rgba(15, 118, 110, 0.08)",
+                    borderWidth: 3.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: "#0f766e",
+                    pointBorderColor: isDarkMode ? "#1e293b" : "#ffffff",
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 7,
+                    pointRadius: 4.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",
+                        titleColor: isDarkMode ? "#f8fafc" : "#0f172a",
+                        bodyColor: isDarkMode ? "#cbd5e1" : "#334155",
+                        borderColor: "rgba(15, 118, 110, 0.2)",
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 10,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return "Rs. " + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: labelColor,
+                            font: {
+                                family: "Manrope, sans-serif",
+                                weight: 600,
+                                size: 11
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: labelColor,
+                            font: {
+                                family: "Manrope, sans-serif",
+                                size: 11
+                            },
+                            callback: function(value) {
+                                return "Rs. " + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Theme sync listener
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class' || mutation.attributeName === 'data-theme') {
+                    const isDark = document.body.classList.contains('dark-mode') || document.documentElement.getAttribute('data-theme') === 'dark';
+                    chart.options.scales.x.ticks.color = isDark ? "#94a3b8" : "#64748b";
+                    chart.options.scales.y.ticks.color = isDark ? "#94a3b8" : "#64748b";
+                    chart.options.scales.y.grid.color = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
+                    chart.options.plugins.tooltip.backgroundColor = isDark ? "#1e293b" : "#ffffff";
+                    chart.options.plugins.tooltip.titleColor = isDark ? "#f8fafc" : "#0f172a";
+                    chart.options.plugins.tooltip.bodyColor = isDark ? "#cbd5e1" : "#334155";
+                    chart.update();
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+        observer.observe(document.body, { attributes: true });
+    });
+</script>
 {% endblock %}

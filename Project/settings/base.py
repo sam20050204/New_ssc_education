@@ -304,3 +304,30 @@ ROLES = {
     'STAFF': 'staff',
     'STUDENT': 'student',
 }
+
+# ==================== WHATSAPP BOT CONFIGURATION ====================
+WHATSAPP_ENABLED = config("WHATSAPP_ENABLED", default="false", cast=parse_bool)
+WHATSAPP_PROVIDER = config("WHATSAPP_PROVIDER", default="console").strip().lower()
+
+# Twilio Settings
+WHATSAPP_TWILIO_SID = config("WHATSAPP_TWILIO_SID", default="")
+WHATSAPP_TWILIO_AUTH_TOKEN = config("WHATSAPP_TWILIO_AUTH_TOKEN", default="")
+WHATSAPP_TWILIO_FROM = config("WHATSAPP_TWILIO_FROM", default="")
+
+# Meta (Facebook Cloud API) Settings
+WHATSAPP_META_TOKEN = config("WHATSAPP_META_TOKEN", default="")
+WHATSAPP_META_PHONE_ID = config("WHATSAPP_META_PHONE_ID", default="")
+
+# Custom HTTP Gateway (Optional)
+WHATSAPP_CUSTOM_URL = config("WHATSAPP_CUSTOM_URL", default="")
+WHATSAPP_CUSTOM_TOKEN = config("WHATSAPP_CUSTOM_TOKEN", default="")
+
+# Templates
+WHATSAPP_ADMISSION_TEMPLATE = config(
+    "WHATSAPP_ADMISSION_TEMPLATE",
+    default="Hello {student_name}, welcome to Shri Samarth Computer Education! Your admission for the course {course_name} has been confirmed. Your Student ID is {student_id}. Thank you!"
+)
+WHATSAPP_PAYMENT_TEMPLATE = config(
+    "WHATSAPP_PAYMENT_TEMPLATE",
+    default="Dear {student_name}, we have received your payment of Rs. {amount} (Receipt: {receipt_no}) for the course {course_name}. Remaining fees: Rs. {remaining_fees}. Thank you! - Shri Samarth Computer Education"
+)

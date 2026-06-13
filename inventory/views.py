@@ -48,7 +48,6 @@ from inventory.services import (
 
 @login_required
 def inventory_dashboard(request):
-    """Main inventory dashboard with overview"""
     total_items = Item.objects.filter(is_active=True).count()
     low_stock_items = Item.objects.filter(
         is_active=True, current_stock__lte=F("minimum_stock")
@@ -57,8 +56,57 @@ def inventory_dashboard(request):
         is_active=True, current_stock__gt=F("maximum_stock")
     ).count()
 
+    # Calculate today's revenue and receipts
+    today = timezone.localdate()
+    today_sales = SaleReceipt.objects.filter(sale_date=today).aggregate(
+        revenue=Sum("grand_total"), count=Count("id")
+    )
+    today_revenue = today_sales["revenue"] or Decimal("0.00")
+    today_receipts = today_sales["count"] or 0
+
+    # Calculate this month's revenue and receipts
+    month_sales = SaleReceipt.objects.filter(
+        sale_date__year=today.year, sale_date__month=today.month
+    ).aggregate(revenue=Sum("grand_total"), count=Count("id"))
+    month_revenue = month_sales["revenue"] or Decimal("0.00")
+    month_receipts = month_sales["count"] or 0
+
+    # Calculate customers this month (unique phone numbers from this month's receipts)
+    customer_count = SaleReceipt.objects.filter(
+        sale_date__year=today.year, sale_date__month=today.month
+    ).values("customer_phone").distinct().count()
+
+    # Get recent sales
+    recent_sales = SaleReceipt.objects.prefetch_related("lines").order_by("-sale_date", "-created_at")[:5]
+
+    # Get top selling items this month
+    top_items = (
+        SaleReceiptLine.objects.filter(
+            receipt__sale_date__year=today.year,
+            receipt__sale_date__month=today.month
+        )
+        .values("item__name")
+        .annotate(
+            total_qty=Sum("quantity"),
+            total_revenue=Sum("line_total")
+        )
+        .order_by("-total_qty")[:5]
+    )
+
+    # 7-day revenue trend
+    from datetime import timedelta
+    chart_labels = []
+    chart_data = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        day_sales = SaleReceipt.objects.filter(sale_date=day).aggregate(
+            day_total=Sum("grand_total")
+        )
+        chart_labels.append(day.strftime("%a"))
+        chart_data.append(float(day_sales["day_total"] or 0))
+
     context = {
-        "page_title": "Inventory Dashboard",
+        "page_title": "Inventory & Sales Dashboard",
         "total_items": total_items,
         "total_categories": Category.objects.filter(is_active=True).count(),
         "total_suppliers": Supplier.objects.filter(is_active=True).count(),
@@ -71,6 +119,15 @@ def inventory_dashboard(request):
         "low_stock_pct": int((low_stock_items / total_items) * 100) if total_items else 0,
         "overstocked_pct": int((overstocked_items / total_items) * 100) if total_items else 0,
         "active_page": "inventory",
+        "today_revenue": today_revenue,
+        "today_receipts": today_receipts,
+        "month_revenue": month_revenue,
+        "month_receipts": month_receipts,
+        "customer_count": customer_count,
+        "recent_sales": recent_sales,
+        "top_items": top_items,
+        "chart_labels": chart_labels,
+        "chart_data": chart_data,
     }
 
     # Calculate inventory value

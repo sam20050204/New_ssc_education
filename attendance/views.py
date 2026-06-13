@@ -82,10 +82,13 @@ def save_attendance(request, date, batch_time, batch_type):
     students = AdmittedStudent.objects.filter(is_archived=False, batch_status="active", **filter_kwargs).order_by("full_name")
 
     if request.method == "POST":
+        absent_students = []
         with transaction.atomic():
             for student in students:
                 status = request.POST.get(f"attendance_{student.id}", "A")
                 remarks = request.POST.get(f"remarks_{student.id}", "").strip()
+                if status == "A":
+                    absent_students.append(student)
                 attendance, created = Attendance.objects.get_or_create(
                     student=student,
                     date=attendance_date,
@@ -102,6 +105,13 @@ def save_attendance(request, date, batch_time, batch_type):
                 attendance.remarks = remarks or attendance.remarks
                 attendance.marked_by = request.user
                 attendance.save()
+
+        if absent_students:
+            from core.services.whatsapp_service import send_absent_notification
+            def trigger_notifications():
+                for s in absent_students:
+                    send_absent_notification(s, attendance_date, batch_time, batch_type)
+            transaction.on_commit(trigger_notifications)
 
         messages.success(request, f"Attendance saved for {batch_type} batch on {attendance_date}.")
         return redirect("attendance_reports")

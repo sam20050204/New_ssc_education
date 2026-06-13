@@ -9,6 +9,7 @@ from django.db.models import Sum, F, DecimalField
 
 from inventory.models import (
     Category,
+    Customer,
     Supplier,
     Item,
     Purchase,
@@ -16,6 +17,23 @@ from inventory.models import (
     StockMovement,
     LowStockAlert,
 )
+
+
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ("name", "phone", "email", "city", "purchase_count", "total_spent_display", "is_active")
+    list_filter = ("is_active", "city", "created_at")
+    search_fields = ("name", "phone", "email")
+    readonly_fields = ("created_at", "updated_at")
+
+    def purchase_count(self, obj):
+        return obj.get_purchase_count()
+    purchase_count.short_description = "Purchases"
+
+    def total_spent_display(self, obj):
+        return f"₹ {obj.get_total_spent():.2f}"
+    total_spent_display.short_description = "Total Spent"
+
 
 
 @admin.register(Category)

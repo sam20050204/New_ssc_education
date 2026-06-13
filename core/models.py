@@ -840,3 +840,110 @@ class ThreadParticipantState(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - thread {self.thread_id}"
+
+
+class WhatsAppConfig(models.Model):
+    """Global system configuration for automated WhatsApp notifications"""
+
+    PROVIDER_CHOICES = [
+        ("console", "Console Log (Testing)"),
+        ("meta", "Meta WhatsApp Cloud API"),
+        ("twilio", "Twilio WhatsApp API"),
+        ("custom", "Custom HTTP Gateway"),
+    ]
+
+    is_enabled = models.BooleanField(default=False, verbose_name="Enable WhatsApp Bot")
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES, default="console")
+
+    # Meta Credentials
+    meta_token = models.CharField(max_length=500, blank=True, null=True, verbose_name="Meta Access Token")
+    meta_phone_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Meta Phone Number ID")
+
+    # Twilio Credentials
+    twilio_sid = models.CharField(max_length=100, blank=True, null=True, verbose_name="Twilio Account SID")
+    twilio_auth_token = models.CharField(max_length=100, blank=True, null=True, verbose_name="Twilio Auth Token")
+    twilio_from = models.CharField(max_length=100, blank=True, null=True, default="whatsapp:+14155238886", verbose_name="Twilio Sender Number")
+
+    # Custom API Gateway
+    custom_url = models.CharField(max_length=500, blank=True, null=True, verbose_name="Custom Gateway URL")
+    custom_token = models.CharField(max_length=255, blank=True, null=True, verbose_name="Custom Gateway Token")
+
+    # Message Templates
+    admission_template = models.TextField(
+        default="Hello {student_name}, welcome to Shri Samarth Computer Education! Your admission for the course {course_name} has been confirmed. Your Student ID is {student_id}. Thank you!",
+        help_text="Variables allowed: {student_name}, {course_name}, {student_id}"
+    )
+    payment_template = models.TextField(
+        default="Dear {student_name}, we have received your payment of Rs. {amount} (Receipt: {receipt_no}) for the course {course_name}. Remaining fees: Rs. {remaining_fees}. Thank you! - Shri Samarth Computer Education",
+        help_text="Variables allowed: {student_name}, {amount}, {receipt_no}, {course_name}, {remaining_fees}"
+    )
+    enquiry_template = models.TextField(
+        default="Hello {student_name}, thank you for your enquiry for the course {course_name} at Shri Samarth Computer Education. We will contact you soon. Contact: 9876543210.",
+        help_text="Variables allowed: {student_name}, {course_name}, {institute_name}, {contact_number}"
+    )
+    absent_template = models.TextField(
+        default="Dear {student_name}, you were absent today ({date}) for the {batch_type} batch at {batch_time}. Please make sure to attend regular classes. - Shri Samarth Computer Education",
+        help_text="Variables allowed: {student_name}, {date}, {batch_time}, {batch_type}"
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "WhatsApp Configuration"
+        verbose_name_plural = "WhatsApp Configurations"
+
+    def __str__(self):
+        return f"WhatsApp Config (Enabled: {self.is_enabled}, Provider: {self.provider})"
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(id=1)
+        return obj
+
+
+class StudentExamRecord(models.Model):
+    """Academic result records for student certifications."""
+
+    student = models.ForeignKey(
+        AdmittedStudent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="exam_records",
+        help_text="Link to admitted student if registered"
+    )
+    student_name = models.CharField(max_length=200, db_index=True)
+    learner_id = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="MKCL Learner ID or Student Registration ID"
+    )
+    exam_date = models.DateField(db_index=True)
+    course = models.CharField(max_length=100, db_index=True)
+    course_batch = models.CharField(
+        max_length=100,
+        db_index=True,
+        help_text="Batch month and year (e.g., January 2026)"
+    )
+    result = models.CharField(
+        max_length=20,
+        choices=[("Pass", "Pass"), ("Fail", "Fail")],
+        default="Pass"
+    )
+    percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))]
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-exam_date", "student_name"]
+        verbose_name = "Student Exam Record"
+        verbose_name_plural = "Student Exam Records"
+
+    def __str__(self):
+        return f"{self.student_name} - {self.course} ({self.result})"

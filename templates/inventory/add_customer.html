@@ -1,0 +1,79 @@
+{% extends "inventory/base.html" %}
+{% load static %}
+
+{% block page_title %}Add Customer{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<div class="inventory-container">
+    <div class="inventory-page-shell" style="max-width:640px; margin:0 auto;">
+
+        <div class="inventory-page-head">
+            <div>
+                <h1><i class="fas fa-user-plus" style="margin-right:12px; opacity:.85;"></i>Add New Customer</h1>
+                <p>Create a customer record to track purchase history and enable WhatsApp notifications.</p>
+            </div>
+            <a href="{% url 'inventory:customer-list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+
+        {% if messages %}
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+            {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post" id="addCustomerForm">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Customer Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control form-control-lg" placeholder="Full name" required autofocus>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Phone Number</label>
+                            <input type="tel" name="phone" class="form-control" placeholder="e.g. 9876543210">
+                            <div class="form-text">Used for WhatsApp receipt notifications</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="customer@email.com">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">Address</label>
+                            <textarea name="address" class="form-control" rows="2" placeholder="Street address…"></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">City</label>
+                            <input type="text" name="city" class="form-control" placeholder="City">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Notes</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Any notes about this customer…"></textarea>
+                    </div>
+
+                    <div style="display:flex; gap:12px;">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-user-plus"></i> Add Customer
+                        </button>
+                        <a href="{% url 'inventory:customer-list' %}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

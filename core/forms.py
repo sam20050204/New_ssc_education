@@ -10,7 +10,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from .constants import BATCH_TYPE_CHOICES, TIME_SLOT_CHOICES
-from .models import AdmittedStudent, Course, Enquiry, FeePayment
+from .models import AdmittedStudent, Course, Enquiry, FeePayment, WhatsAppConfig, StudentExamRecord
 from .utils import is_valid_mobile, is_valid_pincode
 from .validators import validate_image_file
 
@@ -398,3 +398,65 @@ class AttendanceForm(forms.Form):
         required=True,
         widget=forms.Select(attrs={"class": "form-control"}),
     )
+
+
+class WhatsAppConfigForm(forms.ModelForm):
+    """Form for configuring WhatsApp integration settings"""
+
+    class Meta:
+        model = WhatsAppConfig
+        fields = [
+            "is_enabled",
+            "provider",
+            "meta_token",
+            "meta_phone_id",
+            "twilio_sid",
+            "twilio_auth_token",
+            "twilio_from",
+            "custom_url",
+            "custom_token",
+            "admission_template",
+            "payment_template",
+            "enquiry_template",
+            "absent_template",
+        ]
+        widgets = {
+            "is_enabled": forms.CheckboxInput(attrs={"class": "form-check-input", "role": "switch"}),
+            "provider": forms.Select(attrs={"class": "form-select"}),
+            "meta_token": forms.PasswordInput(render_value=True, attrs={"class": "form-control", "placeholder": "Meta Access Token"}),
+            "meta_phone_id": forms.TextInput(attrs={"class": "form-control", "placeholder": "Meta Phone Number ID"}),
+            "twilio_sid": forms.TextInput(attrs={"class": "form-control", "placeholder": "Twilio Account SID"}),
+            "twilio_auth_token": forms.PasswordInput(render_value=True, attrs={"class": "form-control", "placeholder": "Twilio Auth Token"}),
+            "twilio_from": forms.TextInput(attrs={"class": "form-control", "placeholder": "whatsapp:+14155238886"}),
+            "custom_url": forms.URLInput(attrs={"class": "form-control", "placeholder": "https://api.gateway.com/send"}),
+            "custom_token": forms.PasswordInput(render_value=True, attrs={"class": "form-control", "placeholder": "Gateway API Token"}),
+            "admission_template": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "payment_template": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "enquiry_template": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "absent_template": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+
+class StudentExamRecordForm(forms.ModelForm):
+    class Meta:
+        model = StudentExamRecord
+        fields = [
+            "student",
+            "student_name",
+            "learner_id",
+            "exam_date",
+            "course",
+            "course_batch",
+            "result",
+            "percentage",
+        ]
+        widgets = {
+            "student": forms.Select(attrs={"class": "form-select"}),
+            "student_name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Student Name"}),
+            "learner_id": forms.TextInput(attrs={"class": "form-control", "placeholder": "Learner ID / Registration ID"}),
+            "exam_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "course": forms.TextInput(attrs={"class": "form-control", "placeholder": "Course Name"}),
+            "course_batch": forms.TextInput(attrs={"class": "form-control", "placeholder": "Batch Month/Year (e.g., January 2026)"}),
+            "result": forms.Select(attrs={"class": "form-select"}),
+            "percentage": forms.NumberInput(attrs={"class": "form-control", "placeholder": "Percentage (e.g. 84.50)", "step": "0.01", "min": "0", "max": "100"}),
+        }

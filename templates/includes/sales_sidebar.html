@@ -1,10 +1,11 @@
+{% load custom_filters %}
 <div class="sidebar-shell">
     <div class="sidebar-brand">
         <button id="sidebar-collapse-toggle-sales" class="sidebar-brand-toggle" type="button" aria-label="Toggle sidebar" title="Hide sidebar">
             <div class="sidebar-brand-mark">SA</div>
             <div class="sidebar-brand-copy">
                 <strong>Sales Suite</strong>
-                <span>Sales & services dashboard</span>
+                <span>Sales &amp; services dashboard</span>
             </div>
             <i class="fa-solid fa-chevron-left"></i>
         </button>
@@ -16,10 +17,31 @@
     </div>
 
     <div class="sidebar-scroll" id="salesSidebarScroll">
+
         <div class="sidebar-group">
             <div class="sidebar-label">Dashboard</div>
-            <a href="{% url 'sales_services_dashboard' %}" class="menu-item {% if active_page == 'sales_dashboard' %}active{% endif %}" data-menu-label="sales dashboard services dashboard">
+            <a href="{% url 'sales_services_dashboard' %}" class="menu-item {% if active_page == 'sales_dashboard' %}active{% endif %}" data-menu-label="sales dashboard overview">
                 <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
+            </a>
+        </div>
+
+        <div class="sidebar-group">
+            <div class="sidebar-label">Sales</div>
+            <a href="{% url 'inventory:add-sale' %}" class="menu-item {% if active_page == 'inventory_sales' %}active{% endif %}" data-menu-label="record sale customer receipt billing">
+                <i class="fa-solid fa-cash-register"></i><span>Record Sale</span>
+            </a>
+            <a href="{% url 'inventory:sale-history' %}" class="menu-item {% if active_page == 'inventory_sales_history' %}active{% endif %}" data-menu-label="sales history receipts reprint customer billing list">
+                <i class="fa-solid fa-receipt"></i><span>Sales History</span>
+            </a>
+        </div>
+
+        <div class="sidebar-group">
+            <div class="sidebar-label">Customers</div>
+            <a href="{% url 'inventory:customer-list' %}" class="menu-item {% if active_page == 'inventory_customers' %}active{% endif %}" data-menu-label="customers list all customers">
+                <i class="fa-solid fa-users"></i><span>All Customers</span>
+            </a>
+            <a href="{% url 'inventory:add-customer' %}" class="menu-item {% if active_page == 'inventory_add_customer' %}active{% endif %}" data-menu-label="add customer new customer register">
+                <i class="fa-solid fa-user-plus"></i><span>Add Customer</span>
             </a>
         </div>
 
@@ -28,29 +50,55 @@
             <a href="{% url 'inventory:item-list' %}" class="menu-item {% if active_page == 'inventory_items' %}active{% endif %}" data-menu-label="inventory items product stock finished register">
                 <i class="fa-solid fa-boxes-stacked"></i><span>Items</span>
             </a>
-            <a href="{% url 'inventory:add-sale' %}" class="menu-item {% if active_page == 'inventory_sales' %}active{% endif %}" data-menu-label="inventory record sale customer receipt billing">
-                <i class="fa-solid fa-cash-register"></i><span>Record Sale</span>
+            <a href="{% url 'inventory:add-item' %}" class="menu-item {% if active_page == 'inventory_add_item' %}active{% endif %}" data-menu-label="add item new product inventory">
+                <i class="fa-solid fa-plus-circle"></i><span>Add Item</span>
             </a>
-            <a href="{% url 'inventory:sale-history' %}" class="menu-item {% if active_page == 'inventory_sales_history' %}active{% endif %}" data-menu-label="inventory sales history receipts reprint customer billing list">
-                <i class="fa-solid fa-receipt"></i><span>Sales History</span>
-            </a>
-            <a href="{% url 'inventory:add-stock' %}" class="menu-item {% if active_page == 'inventory_add_stock' %}active{% endif %}" data-menu-label="inventory add stock record purchase supplier purchase">
+            <a href="{% url 'inventory:add-stock' %}" class="menu-item {% if active_page == 'inventory_add_stock' %}active{% endif %}" data-menu-label="add stock record purchase supplier">
                 <i class="fa-solid fa-cart-plus"></i><span>Add Stock</span>
             </a>
-            <a href="{% url 'inventory:category-list' %}" class="menu-item {% if active_page == 'inventory_categories' %}active{% endif %}" data-menu-label="inventory categories item category list">
-                <i class="fa-solid fa-layer-group"></i><span>Categories</span>
-            </a>
-            <a href="{% url 'inventory:supplier-list' %}" class="menu-item {% if active_page == 'inventory_suppliers' %}active{% endif %}" data-menu-label="inventory suppliers vendor supplier list">
-                <i class="fa-solid fa-truck-field"></i><span>Suppliers</span>
-            </a>
+            <button class="menu-item menu-toggle" type="button" onclick="toggleSalesSidebarMenu(this, 'inventorySubMenu')">
+                <span class="menu-item-main"><i class="fa-solid fa-folder-open"></i><span>More</span></span>
+                <i class="fa-solid fa-chevron-right toggle-arrow"></i>
+            </button>
+            <div class="submenu" id="inventorySubMenu">
+                <a href="{% url 'inventory:category-list' %}" class="submenu-item {% if active_page == 'inventory_categories' %}active{% endif %}" data-menu-label="categories item category">Categories</a>
+                <a href="{% url 'inventory:supplier-list' %}" class="submenu-item {% if active_page == 'inventory_suppliers' %}active{% endif %}" data-menu-label="suppliers vendor supplier list">Suppliers</a>
+                <a href="{% url 'inventory:purchase-list' %}" class="submenu-item {% if active_page == 'inventory_purchase_list' %}active{% endif %}" data-menu-label="purchase history list">Purchase History</a>
+            </div>
         </div>
 
         <div class="sidebar-group">
+            <div class="sidebar-label">Reports</div>
+            <a href="{% url 'inventory:inventory-report' %}" class="menu-item {% if active_page == 'inventory_report' %}active{% endif %}" data-menu-label="inventory report stock value">
+                <i class="fa-solid fa-chart-column"></i><span>Inventory Report</span>
+            </a>
+            <a href="{% url 'inventory:category-report' %}" class="menu-item {% if active_page == 'inventory_category_report' %}active{% endif %}" data-menu-label="category report">
+                <i class="fa-solid fa-layer-group"></i><span>Category Report</span>
+            </a>
+            <a href="{% url 'inventory:supplier-report' %}" class="menu-item {% if active_page == 'inventory_supplier_report' %}active{% endif %}" data-menu-label="supplier report vendor">
+                <i class="fa-solid fa-truck-field"></i><span>Supplier Report</span>
+            </a>
+            <a href="{% url 'inventory:low-stock-alerts' %}" class="menu-item {% if active_page == 'inventory_low_stock' %}active{% endif %}" data-menu-label="low stock alerts warning">
+                <i class="fa-solid fa-triangle-exclamation"></i><span>Low Stock Alerts</span>
+            </a>
+        </div>
+
+        {% if request.user.is_superuser or request.user|has_group:"Admin" %}
+        <div class="sidebar-group">
+            <div class="sidebar-label">Settings</div>
+            <a href="{% url 'whatsapp_settings' %}" class="menu-item {% if active_page == 'whatsapp_settings' %}active{% endif %}" data-menu-label="whatsapp notifications bot sales">
+                <i class="fa-brands fa-whatsapp"></i><span>WhatsApp Bot</span>
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="sidebar-group">
             <div class="sidebar-label">Navigation</div>
-            <a href="{% url 'education_home' %}" class="menu-item" data-menu-label="computer education dashboard">
+            <a href="{% url 'education_home' %}" class="menu-item" data-menu-label="computer education dashboard back">
                 <i class="fa-solid fa-arrow-left"></i><span>Back to Education</span>
             </a>
         </div>
+
     </div>
 </div>
 
@@ -63,6 +111,15 @@ function persistSalesSidebarScroll() {
     localStorage.setItem(salesSidebarScrollKey, String(sidebarScroll.scrollTop || 0));
 }
 
+function toggleSalesSidebarMenu(button, menuId) {
+    const menu = document.getElementById(menuId);
+    const arrow = button.querySelector('.toggle-arrow');
+    if (!menu) return;
+    menu.classList.toggle('open');
+    if (arrow) arrow.classList.toggle('open');
+    persistSalesSidebarScroll();
+}
+
 function filterSalesSidebarMenu(query) {
     const normalized = String(query || '').trim().toLowerCase();
     document.querySelectorAll('#salesSidebarScroll [data-menu-label]').forEach(function(item) {
@@ -73,16 +130,29 @@ function filterSalesSidebarMenu(query) {
 
 document.addEventListener('DOMContentLoaded', function() {
     const sidebarScroll = document.getElementById('salesSidebarScroll');
+
+    // Auto-open submenu if active item is inside
+    document.querySelectorAll('#salesSidebarScroll .submenu-item.active').forEach(function(item) {
+        const menu = item.closest('.submenu');
+        if (menu) {
+            menu.classList.add('open');
+            const button = menu.previousElementSibling;
+            if (button) {
+                const arrow = button.querySelector('.toggle-arrow');
+                if (arrow) arrow.classList.add('open');
+            }
+        }
+    });
+
     if (sidebarScroll) {
         const savedTop = parseInt(localStorage.getItem(salesSidebarScrollKey) || '0', 10);
         if (!Number.isNaN(savedTop)) {
             sidebarScroll.scrollTop = savedTop;
         }
-
         sidebarScroll.addEventListener('scroll', persistSalesSidebarScroll, { passive: true });
     }
 
-    document.querySelectorAll('#salesSidebarScroll a').forEach(function(item) {
+    document.querySelectorAll('#salesSidebarScroll a, #salesSidebarScroll button.menu-toggle').forEach(function(item) {
         item.addEventListener('click', persistSalesSidebarScroll);
     });
 });

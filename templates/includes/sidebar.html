@@ -43,6 +43,7 @@
             <div class="submenu" id="studentsMenu">
                 <a href="{% url 'new_admission' %}" class="submenu-item {% if active_page == 'new_admission' %}active{% endif %}" data-menu-label="new admission students">New Admission</a>
                 <a href="{% url 'admitted_students' %}" class="submenu-item {% if active_page == 'admitted_students' %}active{% endif %}" data-menu-label="students admissions">Students</a>
+                <a href="{% url 'exam_record_list' %}" class="submenu-item {% if active_page == 'exam_records' %}active{% endif %}" data-menu-label="exam records student marks results certifications imports">Exam Records</a>
             </div>
         </div>
 

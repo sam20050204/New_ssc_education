@@ -4,6 +4,7 @@ URL Configuration for Inventory Management
 
 from django.urls import path
 from inventory import views
+from inventory import customer_views
 
 app_name = "inventory"
 
@@ -30,7 +31,7 @@ urlpatterns = [
     path("suppliers/<int:pk>/", views.supplier_detail, name="supplier-detail"),
     path("suppliers/<int:pk>/edit/", views.edit_supplier, name="edit-supplier"),
 
-    # Purchases
+    # Purchases / Stock
     path("stock/add/", views.add_stock, name="add-stock"),
     path("sales/add/", views.add_sale, name="add-sale"),
     path("sales/history/", views.SaleReceiptListView.as_view(), name="sale-history"),
@@ -48,9 +49,17 @@ urlpatterns = [
     # Alerts
     path("alerts/low-stock/", views.low_stock_alerts, name="low-stock-alerts"),
 
+    # Customers
+    path("customers/", customer_views.CustomerListView.as_view(), name="customer-list"),
+    path("customers/add/", customer_views.add_customer, name="add-customer"),
+    path("customers/<int:pk>/", customer_views.customer_detail, name="customer-detail"),
+    path("customers/<int:pk>/edit/", customer_views.edit_customer, name="edit-customer"),
+    path("customers/<int:pk>/delete/", customer_views.delete_customer, name="delete-customer"),
+
     # API
     path("api/items/search/", views.search_item_autocomplete, name="item-search-api"),
     path("api/items/<int:pk>/insights/", views.item_insights_api, name="item-insights-api"),
     path("api/categories/create/", views.category_quick_create_api, name="category-quick-create-api"),
     path("api/suppliers/create/", views.supplier_quick_create_api, name="supplier-quick-create-api"),
+    path("api/customers/search/", customer_views.customer_search_api, name="customer-search-api"),
 ]

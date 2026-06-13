@@ -78,4 +78,8 @@ def record_fee_payment(*, student_id, amount, payment_mode, payment_date, remark
             "payment_mode": payment_mode,
         },
     )
+
+    from core.services.whatsapp_service import send_payment_notification
+    transaction.on_commit(lambda: send_payment_notification(payment))
+
     return payment
