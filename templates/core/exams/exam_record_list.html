@@ -412,10 +412,42 @@
                     <i class="fa-solid fa-magnifying-glass"></i> Filter
                 </button>
                 {% if query or course_filter or batch_filter or result_filter %}
-                    <a href="{% url 'exam_record_list' %}" class="btn-clear">Clear</a>
+                    <a href="{% url 'exam_record_list' %}" class="btn-clear" style="border-color: var(--danger); color: var(--danger);">Clear</a>
                 {% endif %}
             </div>
         </form>
+        {% if query or course_filter or batch_filter or result_filter %}
+        <div style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 0.85rem; padding-top: 12px; border-top: 1px dashed var(--line, #e2e8f0);">
+            <span style="font-weight: 600; color: var(--text-soft);">Active Filters:</span>
+            {% if query %}
+            <span class="badge" style="background: var(--panel-strong); border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); color: var(--text); padding: 4px 8px; font-weight: 600;">
+                Search: "{{ query }}"
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'q' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px; color: var(--danger, #dc2626) !important;">&times;</a>
+            </span>
+            {% endif %}
+            {% if course_filter %}
+            <span class="badge" style="background: var(--panel-strong); border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); color: var(--text); padding: 4px 8px; font-weight: 600;">
+                Course: {{ course_filter }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'course' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px; color: var(--danger, #dc2626) !important;">&times;</a>
+            </span>
+            {% endif %}
+            {% if batch_filter %}
+            <span class="badge" style="background: var(--panel-strong); border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); color: var(--text); padding: 4px 8px; font-weight: 600;">
+                Batch: {{ batch_filter }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'batch' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px; color: var(--danger, #dc2626) !important;">&times;</a>
+            </span>
+            {% endif %}
+            {% if result_filter %}
+            <span class="badge" style="background: var(--panel-strong); border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); color: var(--text); padding: 4px 8px; font-weight: 600;">
+                Result: {{ result_filter }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'result' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px; color: var(--danger, #dc2626) !important;">&times;</a>
+            </span>
+            {% endif %}
+            <a href="{% url 'exam_record_list' %}" style="font-size: 0.82rem; text-decoration: none; font-weight: 600; margin-left: 5px; color: var(--danger, #dc2626);">
+                Clear All
+            </a>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Records Table Card -->

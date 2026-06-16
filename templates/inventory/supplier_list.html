@@ -117,10 +117,15 @@
                         <input type="text" name="search" class="form-control" placeholder="Search by supplier name, email, or phone"
                                value="{{ request.GET.search }}">
                     </div>
-                    <div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-filter"></i> Search
+                    <div style="display: flex; gap: 8px;">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Search
                         </button>
+                        {% if request.GET.search %}
+                        <a href="{% url 'inventory:supplier-list' %}" class="btn btn-outline-danger" title="Clear search">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                        {% endif %}
                     </div>
                 </form>
             </div>

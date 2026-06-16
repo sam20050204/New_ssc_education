@@ -50,11 +50,45 @@
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-filter"></i> Filter
                 </button>
-                <a href="{% url 'inventory:purchase-list' %}" class="btn btn-outline-secondary">
+                {% if request.GET.item or request.GET.supplier or request.GET.start_date or request.GET.end_date %}
+                <a href="{% url 'inventory:purchase-list' %}" class="btn btn-outline-danger">
                     <i class="fas fa-times"></i> Clear
                 </a>
+                {% endif %}
             </div>
         </form>
+        {% if request.GET.item or request.GET.supplier or request.GET.start_date or request.GET.end_date %}
+        <div style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 0.85rem; padding-top: 12px; border-top: 1px dashed var(--inventory-line, #e2e8f0);">
+            <span style="font-weight: 600; color: var(--inventory-muted);">Active Filters:</span>
+            {% if request.GET.item %}
+            <span class="badge bg-light text-dark border px-2 py-1.5" style="background: #f1f5f9; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1 !important; color: #334155 !important;">
+                {% for item in items %}{% if request.GET.item|stringformat:"s" == item.id|stringformat:"s" %}Item: {{ item.name }}{% endif %}{% endfor %}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'item' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px;">&times;</a>
+            </span>
+            {% endif %}
+            {% if request.GET.supplier %}
+            <span class="badge bg-light text-dark border px-2 py-1.5" style="background: #f1f5f9; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1 !important; color: #334155 !important;">
+                {% for supplier in suppliers %}{% if request.GET.supplier|stringformat:"s" == supplier.id|stringformat:"s" %}Supplier: {{ supplier.name }}{% endif %}{% endfor %}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'supplier' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px;">&times;</a>
+            </span>
+            {% endif %}
+            {% if request.GET.start_date %}
+            <span class="badge bg-light text-dark border px-2 py-1.5" style="background: #f1f5f9; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1 !important; color: #334155 !important;">
+                From: {{ request.GET.start_date }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'start_date' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px;">&times;</a>
+            </span>
+            {% endif %}
+            {% if request.GET.end_date %}
+            <span class="badge bg-light text-dark border px-2 py-1.5" style="background: #f1f5f9; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1 !important; color: #334155 !important;">
+                To: {{ request.GET.end_date }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'end_date' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px;">&times;</a>
+            </span>
+            {% endif %}
+            <a href="{% url 'inventory:purchase-list' %}" class="btn btn-sm btn-link text-danger p-0" style="font-size: 0.82rem; text-decoration: none; font-weight: 600; margin-left: 5px;">
+                Clear All
+            </a>
+        </div>
+        {% endif %}
     </div>
 </div>
 

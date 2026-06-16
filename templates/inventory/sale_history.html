@@ -188,12 +188,50 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-filter"></i> Filter
                             </button>
-                            <a href="{% url 'inventory:sale-history' %}" class="btn btn-outline-secondary" title="Clear filters">
-                                <i class="fas fa-times"></i>
+                            {% if request.GET.search or request.GET.payment_mode or request.GET.start_date or request.GET.end_date %}
+                            <a href="{% url 'inventory:sale-history' %}" class="btn btn-outline-danger" title="Clear all filters">
+                                <i class="fas fa-times"></i> Clear
                             </a>
+                            {% else %}
+                            <a href="{% url 'inventory:sale-history' %}" class="btn btn-outline-secondary" title="Reset Filters">
+                                <i class="fas fa-undo"></i> Reset
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </form>
+                {% if request.GET.search or request.GET.payment_mode or request.GET.start_date or request.GET.end_date %}
+                <div style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 0.85rem; padding-top: 12px; border-top: 1px dashed var(--inventory-line, #e2e8f0);">
+                    <span style="font-weight: 600; color: var(--inventory-muted);">Active Filters:</span>
+                    {% if request.GET.search %}
+                    <span class="badge bg-light text-dark border px-2 py-1.5" style="background: #f1f5f9; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1 !important; color: #334155 !important;">
+                        Search: "{{ request.GET.search }}"
+                        <a href="?{% for k,v in request.GET.items %}{% if k != 'search' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px;">&times;</a>
+                    </span>
+                    {% endif %}
+                    {% if request.GET.payment_mode %}
+                    <span class="badge bg-light text-dark border px-2 py-1.5" style="background: #f1f5f9; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1 !important; color: #334155 !important;">
+                        Mode: {{ request.GET.payment_mode }}
+                        <a href="?{% for k,v in request.GET.items %}{% if k != 'payment_mode' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px;">&times;</a>
+                    </span>
+                    {% endif %}
+                    {% if request.GET.start_date %}
+                    <span class="badge bg-light text-dark border px-2 py-1.5" style="background: #f1f5f9; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1 !important; color: #334155 !important;">
+                        From: {{ request.GET.start_date }}
+                        <a href="?{% for k,v in request.GET.items %}{% if k != 'start_date' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px;">&times;</a>
+                    </span>
+                    {% endif %}
+                    {% if request.GET.end_date %}
+                    <span class="badge bg-light text-dark border px-2 py-1.5" style="background: #f1f5f9; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1 !important; color: #334155 !important;">
+                        To: {{ request.GET.end_date }}
+                        <a href="?{% for k,v in request.GET.items %}{% if k != 'end_date' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 1.1rem; line-height: 1; margin-left: 2px;">&times;</a>
+                    </span>
+                    {% endif %}
+                    <a href="{% url 'inventory:sale-history' %}" class="btn btn-sm btn-link text-danger p-0" style="font-size: 0.82rem; text-decoration: none; font-weight: 600; margin-left: 5px;">
+                        Clear All
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -217,19 +255,23 @@
                         {% for receipt in receipts %}
                         <tr>
                             <td>
-                                <span class="receipt-no-badge">{{ receipt.receipt_no }}</span>
+                                <a href="{% url 'inventory:sale-receipt-detail' receipt.pk %}" class="receipt-no-badge text-decoration-none" title="View Receipt Details">
+                                    {{ receipt.receipt_no }}
+                                </a>
                             </td>
                             <td class="customer-cell">
-                                <strong>{{ receipt.customer_name }}</strong>
+                                <a href="{% url 'inventory:sale-receipt-detail' receipt.pk %}" class="text-decoration-none" style="color: inherit;" title="View Receipt Details">
+                                    <strong>{{ receipt.customer_name }}</strong>
+                                </a>
                                 {% if receipt.customer_phone %}
-                                <small><i class="fas fa-phone fa-xs"></i> {{ receipt.customer_phone }}</small>
+                                <small style="display:block; margin-top:2px;"><i class="fas fa-phone fa-xs"></i> {{ receipt.customer_phone }}</small>
                                 {% endif %}
                             </td>
                             <td style="white-space:nowrap; color:var(--inventory-muted); font-size:0.9rem;">
                                 {{ receipt.sale_date|date:"d M Y" }}
                             </td>
                             <td>
-                                <div class="item-pills">
+                                <div class="item-pills" title="{% for line in receipt.lines.all %}{{ line.item.name }} ×{{ line.quantity }}{% if not forloop.last %}&#10;{% endif %}{% endfor %}">
                                     {% for line in receipt.lines.all|slice:":3" %}
                                     <span class="item-pill">{{ line.item.name }} ×{{ line.quantity }}</span>
                                     {% endfor %}
@@ -239,7 +281,15 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="badge bg-secondary">{{ receipt.payment_mode }}</span>
+                                {% if receipt.payment_mode|lower == 'cash' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1.5" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.2); font-weight: 600;">{{ receipt.payment_mode }}</span>
+                                {% elif receipt.payment_mode|lower == 'card' %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1.5" style="background: rgba(59, 130, 246, 0.12); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.2); font-weight: 600;">{{ receipt.payment_mode }}</span>
+                                {% elif receipt.payment_mode|lower == 'upi' or receipt.payment_mode|lower == 'online' %}
+                                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1.5" style="background: rgba(124, 58, 237, 0.12); color: #7c3aed; border: 1px solid rgba(124, 58, 237, 0.2); font-weight: 600;">{{ receipt.payment_mode }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1.5" style="background: rgba(107, 114, 128, 0.12); color: #4b5563; border: 1px solid rgba(107, 114, 128, 0.2); font-weight: 600;">{{ receipt.payment_mode }}</span>
+                                {% endif %}
                             </td>
                             <td class="amount-cell">
                                 <strong>Rs {{ receipt.grand_total|floatformat:2 }}</strong>

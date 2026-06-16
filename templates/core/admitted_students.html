@@ -266,11 +266,39 @@
             <span>students visible in the current operational view.</span>
         </div>
         <div class="summary-tags">
-            {% if search %}<span class="summary-tag">Search: {{ search }}</span>{% endif %}
-            {% if course %}<span class="summary-tag">Course: {{ course }}</span>{% endif %}
-            {% if batch_month or batch_year %}<span class="summary-tag">Batch: {{ batch_month }} {{ batch_year }}</span>{% endif %}
-            {% if month or year %}<span class="summary-tag">Admission: {{ month }}/{{ year }}</span>{% endif %}
-            {% if sort %}<span class="summary-tag">Sort: {{ sort }}</span>{% endif %}
+            {% if search %}
+            <span class="summary-tag">
+                Search: {{ search }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'search' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold ms-1" style="text-decoration:none; font-size:1.1rem; line-height:1; color: var(--danger, #dc2626) !important;">&times;</a>
+            </span>
+            {% endif %}
+            {% if course %}
+            <span class="summary-tag">
+                Course: {{ course }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'course' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold ms-1" style="text-decoration:none; font-size:1.1rem; line-height:1; color: var(--danger, #dc2626) !important;">&times;</a>
+            </span>
+            {% endif %}
+            {% if batch_month or batch_year %}
+            <span class="summary-tag">
+                Batch: {{ batch_month }} {{ batch_year }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'batch_month' and k != 'batch_year' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold ms-1" style="text-decoration:none; font-size:1.1rem; line-height:1; color: var(--danger, #dc2626) !important;">&times;</a>
+            </span>
+            {% endif %}
+            {% if month or year %}
+            <span class="summary-tag">
+                Admission: {{ month }}/{{ year }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'month' and k != 'year' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold ms-1" style="text-decoration:none; font-size:1.1rem; line-height:1; color: var(--danger, #dc2626) !important;">&times;</a>
+            </span>
+            {% endif %}
+            {% if sort %}
+            <span class="summary-tag">
+                Sort: {{ sort }}
+                <a href="?{% for k,v in request.GET.items %}{% if k != 'sort' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold ms-1" style="text-decoration:none; font-size:1.1rem; line-height:1; color: var(--danger, #dc2626) !important;">&times;</a>
+            </span>
+            {% endif %}
+            {% if search or course or batch_month or batch_year or month or year or sort %}
+            <a href="{% url 'admitted_students' %}" class="text-danger fw-bold ms-2" style="text-decoration:none; font-size: 0.82rem;">Clear All</a>
+            {% endif %}
         </div>
     </div>
 

@@ -129,24 +129,38 @@
         <span class="summary-label">Visible Enquiries</span>
         <strong>{{ page_obj.paginator.count }}</strong>
     </div>
+    {% if search %}
     <div class="summary-chip">
         <span class="summary-label">Search</span>
-        <strong>{% if search %}{{ search }}{% else %}All{% endif %}</strong>
-    </div>
-    <div class="summary-chip">
-        <span class="summary-label">Course</span>
-        <strong>{% if course %}{{ course }}{% else %}All Courses{% endif %}</strong>
-    </div>
-    <div class="summary-chip">
-        <span class="summary-label">Period</span>
-        <strong>
-            {% if month or year %}
-                {% if month %}Month {{ month }}{% else %}All Months{% endif %} / {% if year %}{{ year }}{% else %}All Years{% endif %}
-            {% else %}
-                All Time
-            {% endif %}
+        <strong style="display: inline-flex; align-items: center; gap: 4px;">
+            {{ search }}
+            <a href="?{% for k,v in request.GET.items %}{% if k != 'search' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size:1.1rem; line-height:1; color: var(--danger, #dc2626) !important;">&times;</a>
         </strong>
     </div>
+    {% endif %}
+    {% if course %}
+    <div class="summary-chip">
+        <span class="summary-label">Course</span>
+        <strong style="display: inline-flex; align-items: center; gap: 4px;">
+            {{ course }}
+            <a href="?{% for k,v in request.GET.items %}{% if k != 'course' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size:1.1rem; line-height:1; color: var(--danger, #dc2626) !important;">&times;</a>
+        </strong>
+    </div>
+    {% endif %}
+    {% if month or year %}
+    <div class="summary-chip">
+        <span class="summary-label">Period</span>
+        <strong style="display: inline-flex; align-items: center; gap: 4px;">
+            {% if month %}Month {{ month }}{% else %}All Months{% endif %} / {% if year %}{{ year }}{% else %}All Years{% endif %}
+            <a href="?{% for k,v in request.GET.items %}{% if k != 'month' and k != 'year' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="text-danger fw-bold" style="text-decoration:none; font-size:1.1rem; line-height:1; color: var(--danger, #dc2626) !important;">&times;</a>
+        </strong>
+    </div>
+    {% endif %}
+    {% if search or course or month or year %}
+    <div class="summary-chip" style="background: transparent; border: 0; box-shadow: none; display: flex; align-items: center; padding: 0;">
+        <a href="{% url 'enquiry_list' %}" class="text-danger fw-bold" style="text-decoration:none; font-size: 0.88rem; margin-left: 10px;">Clear All Filters</a>
+    </div>
+    {% endif %}
 </div>
 
 <!-- ENQUIRIES TABLE -->
