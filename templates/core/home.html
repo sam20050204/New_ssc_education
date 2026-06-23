@@ -8,7 +8,7 @@
 {% load static %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 <link rel="stylesheet" href="{% static 'core/style.css' %}?v={{ STATIC_VERSION }}">
 <script>
@@ -23,6 +23,7 @@
 </head>
 
 <body>
+<div class="cyber-backdrop-glow"></div>
 <script>
     if (document.documentElement.getAttribute('data-theme') === 'dark') {
         document.body.classList.add('dark-mode');
@@ -60,12 +61,15 @@
 
 <!-- HERO -->
 <div class="hero" id="home">
-    <h1>Build Your Career with Industry-Ready Education</h1>
-    <p>
-        Shri Samarth Computer Education provides professional IT training, 
-        practical certification programs, and expert career guidance to excel in modern workplaces.
-    </p>
-    <button class="btn-hero" onclick="openModal()">Enquire Now &nbsp;<i class="fa-solid fa-arrow-right"></i></button>
+    <div class="hero-scanline"></div>
+    <div class="hero-content">
+        <h1>Build Your Career with Next-Gen IT Education</h1>
+        <p>
+            Shri Samarth Computer Education delivers professional futuristic tech training, 
+            practical certification programs, and expert cyber-career readiness guides to build the developers, analysts, and systems engineers of tomorrow.
+        </p>
+        <button class="btn-hero" onclick="openModal()">Enquire Now &nbsp;<i class="fa-solid fa-arrow-right"></i></button>
+    </div>
 </div>
 
 <!-- TRUST STATS STRIP -->
@@ -87,6 +91,48 @@
         <div class="stat-label">Completion Rate</div>
     </div>
 </div>
+
+<!-- CAMPUS ANNOUNCEMENTS & ADS -->
+<section id="announcements" class="ads-section">
+    <h2>Special Announcements & Offers</h2>
+    <div class="ads-grid">
+        <!-- Advertisement 1 -->
+        <div class="ad-card">
+            <div class="ad-badge">AI & coding</div>
+            <h3>Advanced Python & AI Development Bootcamp</h3>
+            <p>Master machine learning, deep neural networks, and Python-driven full-stack development. Includes practical robotic automation modules and AI projects.</p>
+            <div class="ad-meta">
+                <span><i class="fa-solid fa-calendar-days"></i> Starts July 1st</span>
+                <span><i class="fa-solid fa-bolt"></i> 50% Tech Scholarship</span>
+            </div>
+            <button class="ad-action-btn" onclick="openModalWithCourse('Other', 'Python & AI Development Bootcamp')">Enquire Program <i class="fa-solid fa-angle-right"></i></button>
+        </div>
+        
+        <!-- Advertisement 2 (Featured) -->
+        <div class="ad-card ad-featured">
+            <div class="ad-badge">PLACEMENT PACK</div>
+            <h3>Corporate Tally Prime & Advance Excel Elite</h3>
+            <p>100% Job Placement Guarantee. Train on real-world tax auditing ledger simulations, GST invoice setups, dynamic dashboard macros, and corporate financial sheets.</p>
+            <div class="ad-meta">
+                <span><i class="fa-solid fa-user-graduate"></i> Job Guarantee</span>
+                <span><i class="fa-solid fa-fire"></i> Hot Choice</span>
+            </div>
+            <button class="ad-action-btn" onclick="openModalWithCourse('Tally')">Secure Seat <i class="fa-solid fa-angle-right"></i></button>
+        </div>
+        
+        <!-- Advertisement 3 -->
+        <div class="ad-card">
+            <div class="ad-badge">IOT & HARDWARE</div>
+            <h3>Summer Robotics & Smart IoT Systems Workshop</h3>
+            <p>Build real-world smart automated appliances. Learn controller programming, sensor mesh networking, and custom circuitry. Receive a free hardware engineering kit upon registration!</p>
+            <div class="ad-meta">
+                <span><i class="fa-solid fa-microchip"></i> Hardware Kit Free</span>
+                <span><i class="fa-solid fa-network-wired"></i> IoT Lab Live</span>
+            </div>
+            <button class="ad-action-btn" onclick="openModalWithCourse('IOT')">Register Lab <i class="fa-solid fa-angle-right"></i></button>
+        </div>
+    </div>
+</section>
 
 <!-- COURSES -->
 <section id="programs">
@@ -111,22 +157,38 @@
             </div>
             <h3>{{ course.name }}</h3>
             <p>{{ course.description|default:"Acquire industry-ready professional training with hands-on practice, verified credentials, and career readiness guides." }}</p>
+            <div class="box-meta">
+                <span><i class="fa-solid fa-shield-halved"></i> Verified Course</span>
+                <span>LOAD: {% if "Tally" in course.name %}92%{% elif "Excel" in course.name %}86%{% else %}95%{% endif %}</span>
+            </div>
         </div>
         {% empty %}
         <div class="box">
             <div class="box-icon"><i class="fa-solid fa-desktop"></i></div>
             <h3>MS-CIT</h3>
             <p>Computer fundamentals, OS basics, and office productivity tools for modern careers.</p>
+            <div class="box-meta">
+                <span><i class="fa-solid fa-shield-halved"></i> Verified Course</span>
+                <span>LOAD: 95%</span>
+            </div>
         </div>
         <div class="box">
             <div class="box-icon"><i class="fa-solid fa-calculator"></i></div>
             <h3>Tally Prime</h3>
             <p>Professional business accounting, inventory management, and GST taxation computations.</p>
+            <div class="box-meta">
+                <span><i class="fa-solid fa-shield-halved"></i> Verified Course</span>
+                <span>LOAD: 92%</span>
+            </div>
         </div>
         <div class="box">
             <div class="box-icon"><i class="fa-solid fa-chart-simple"></i></div>
             <h3>Advance Excel</h3>
             <p>Data analysis, lookup functions, pivot tables, dashboard visualization, and macros.</p>
+            <div class="box-meta">
+                <span><i class="fa-solid fa-shield-halved"></i> Verified Course</span>
+                <span>LOAD: 88%</span>
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -223,7 +285,7 @@
     <div class="modal-content">
         <!-- Modal Header -->
         <div class="modal-header">
-            <h3>📝 Quick Enquiry Form</h3>
+            <h3>⚡ Secure Database Enrollment System</h3>
             <button class="close" onclick="closeModal()" type="button" aria-label="Close modal">&times;</button>
         </div>
 
@@ -239,7 +301,7 @@
                 <div class="form-container">
                     <!-- LEFT: Personal Information -->
                     <div class="form-section">
-                        <h4>👤 Personal Information</h4>
+                        <h4><i class="fa-solid fa-user-astronaut"></i> System User Profile</h4>
                         <input type="text" name="name" id="name" placeholder="Full Name *" required aria-label="Full Name">
                         <input type="text" name="mobile" id="mobile" placeholder="Mobile Number (10 digits) *" 
                                pattern="[0-9]{10}" maxlength="10" required aria-label="Mobile Number">
@@ -248,8 +310,8 @@
 
                     <!-- RIGHT: Address Information -->
                     <div class="form-section">
-                        <h4>🏠 Address Information</h4>
-                        <p class="form-note">All address fields are optional</p>
+                        <h4><i class="fa-solid fa-network-wired"></i> Core Locator Coordinates</h4>
+                        <p class="form-note">All locator fields are optional</p>
                         <textarea name="address" id="address" placeholder="Full Address (Optional)" aria-label="Full Address"></textarea>
                         <input type="text" name="city" id="city" placeholder="City (Optional)" aria-label="City">
                         <input type="text" name="taluka" id="taluka" placeholder="Taluka (Optional)" aria-label="Taluka">
@@ -259,7 +321,7 @@
 
                 <!-- BOTTOM: Course Selection (Full Width) -->
                 <div class="course-section">
-                    <h4>📚 Course Selection</h4>
+                    <h4><i class="fa-solid fa-graduation-cap"></i> Training Modules Selection</h4>
                     <select name="course" id="course" required aria-label="Course select">
                         <option value="">-- Select Course --</option>
                         <option value="MS-CIT">MS-CIT</option>
@@ -300,6 +362,18 @@ const modal = document.getElementById('enquiryModal');
 function openModal() {
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+}
+function openModalWithCourse(courseValue, otherValue = '') {
+    openModal();
+    const courseSelect = document.getElementById('course');
+    if (courseSelect) {
+        courseSelect.value = courseValue;
+        courseSelect.dispatchEvent(new Event('change'));
+    }
+    const otherCourseField = document.getElementById('otherCourse');
+    if (otherCourseField && otherValue) {
+        otherCourseField.value = otherValue;
+    }
 }
 function closeModal() {
     modal.classList.remove('active');
